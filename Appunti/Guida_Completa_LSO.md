@@ -1,4 +1,4 @@
-﻿# Laboratorio di Sistemi Operativi — Guida Completa allo Studio
+# Laboratorio di Sistemi Operativi — Guida Completa allo Studio
 
 > **Corso di Laurea in Informatica — A.A. 2025-2026**  
 > **Prof. Alberto Finzi**  
@@ -1250,7 +1250,6 @@ if (pid == 0) {
 **Proprietà NON ereditate da `exec`:**
 - effective user ID e effective group ID (reimpostati dai bit di protezione del file)
 - File descriptor con flag `FD_CLOEXEC` (`close-on-exec`) attivo → vengono chiusi automaticamente
-```
 
 ### 11.8 `vfork()`
 
