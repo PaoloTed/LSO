@@ -1,4 +1,4 @@
-# Laboratorio di Sistemi Operativi — Guida Completa allo Studio
+﻿# Laboratorio di Sistemi Operativi — Guida Completa allo Studio
 
 > **Corso di Laurea in Informatica — A.A. 2025-2026**  
 > **Prof. Alberto Finzi**  
@@ -1240,6 +1240,18 @@ if (pid == 0) {
 }
 ```
 
+**Proprietà ereditate da `exec`:**
+- process ID e parent process ID
+- real uid e real gid, supplementary gid
+- process group ID, session ID, terminale di controllo
+- current working directory, root directory
+- umask, file locks, maschera dei segnali, segnali in attesa
+
+**Proprietà NON ereditate da `exec`:**
+- effective user ID e effective group ID (reimpostati dai bit di protezione del file)
+- File descriptor con flag `FD_CLOEXEC` (`close-on-exec`) attivo → vengono chiusi automaticamente
+```
+
 ### 11.8 `vfork()`
 
 Simile a `fork()`, ma:
@@ -1267,7 +1279,28 @@ extern char **environ;                 // variabile globale con tutto l'ambiente
 
 // Accesso tramite main
 int main(int argc, char **argv, char **envp) { ... }
+
+// Passare ambiente custom a exec
+execle(path, arg0, arg1, (char*)0, envp);  // con lista argomenti
+execve(path, argv, envp);                  // con array argomenti
 ```
+
+**Cambiare directory e root del processo:**
+```c
+#include <unistd.h>
+int chdir(const char *path);   // cambia la CWD del processo (ereditata dai figli)
+int chroot(const char *path);  // cambia la root directory del processo
+// chroot: utile per sandboxing (es. nei container prima di pivot_root)
+```
+
+**`exit()` vs `_exit()`:**
+
+| Funzione | Comportamento |
+|----------|---------------|
+| `exit(status)` | Invoca exit handlers registrati, chiude stream I/O, poi chiama `_exit()` |
+| `_exit(status)` | Ritorna immediatamente al kernel senza flush dei buffer |
+
+> Nei processi figli dopo `fork()` si usa `_exit()` (mai `exit()`) per evitare di fluscare buffer del padre che non appartengono al figlio.
 
 ---
 
@@ -1678,6 +1711,33 @@ pthread_cond_destroy(&cond);
 > pthread_mutex_unlock(&mtx);
 > ```
 
+**`pthread_cond_timedwait` — attesa con timeout:**
+
+```c
+#include <time.h>
+
+// Calcola deadline: ora + N secondi
+struct timespec ts;
+clock_gettime(CLOCK_REALTIME, &ts);
+ts.tv_sec += 2;  // deadline tra 2 secondi
+
+pthread_mutex_lock(&mtx);
+int rc = 0;
+while (!ready && rc == 0) {
+    rc = pthread_cond_timedwait(&cond, &mtx, &ts);
+    // rc == 0        → segnalato prima della deadline (ricontrolla condizione)
+    // rc == ETIMEDOUT → deadline scaduta
+}
+if (ready) {
+    printf("Evento ricevuto entro la deadline\n");
+} else if (rc == ETIMEDOUT) {
+    printf("Timeout scaduto\n");
+}
+pthread_mutex_unlock(&mtx);
+```
+
+> Si usa comunque il `while` per proteggersi da **spurious wakeup** anche con `timedwait`.
+
 ### 15.4 Semafori POSIX
 
 Un **semaforo** è una variabile intera modificata con due operazioni atomiche: `wait()` (P) e `signal()` (V).
@@ -2059,20 +2119,7 @@ for (;;) {
 }
 ```
 
-> **Per evitare zombie** con fork: installare un handler per SIGCHLD che chiama `waitpid(-1, NULL, WNOHANG)`.
-
-### 17.12 Opzioni Socket
-
-| Opzione | Significato |
-|---------|-------------|
-| `SO_REUSEADDR` | Permette il riuso dell'indirizzo (evita "address already in use") |
-| `SO_REUSEPORT` | Più socket sulla stessa porta (load balancing) |
-| `SO_RCVTIMEO` | Timeout di ricezione |
-| `SO_SNDTIMEO` | Timeout di invio |
-| `SO_KEEPALIVE` | Verifica che la connessione sia ancora attiva |
-| `SO_LINGER` | Comportamento di close() con dati pendenti |
-| `SO_SNDBUF` | Dimensione buffer di invio |
-| `SO_RCVBUF` | Dimensione buffer di ricezione |
+### 17.12 Opzioni Socket (`setsockopt`)
 
 ```c
 int opt = 1;
@@ -2082,6 +2129,56 @@ struct timeval tv = {5, 0};  // 5 secondi
 setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 ```
 
+**`SO_REUSEADDR`** — evita "address already in use" dopo riavvio server:
+```c
+// TCP rimane in TIME_WAIT (~1-4 min) dopo close();
+// SO_REUSEADDR permette di bindare quella porta lo stesso
+int opt = 1;
+setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));  // prima di bind()
+```
+
+**`SO_REUSEPORT`** — load balancing nativo (ogni thread il suo listening socket):
+```c
+int opt = 1;
+setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+bind(fd, ...); listen(fd, ...);
+// Kernel distribuisce le connessioni con round-robin/hash tra i socket
+```
+
+**`SO_SNDTIMEO` / `SO_RCVTIMEO`** — timeout su operazioni bloccanti:
+```c
+struct timeval tv = { .tv_sec = 5, .tv_usec = 0 };  // 5 secondi
+setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+// Se scade: recv()/send() ritornano -1, errno = EAGAIN o EWOULDBLOCK
+```
+
+**`SO_KEEPALIVE`** — keepalive TCP a livello kernel:
+```c
+int on = 1;
+setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on));
+// Default Linux: ~2 ore idle prima del primo probe TCP
+// Per timeout precisi usare SO_RCVTIMEO, non SO_KEEPALIVE
+```
+
+**`SO_LINGER`** — controllo di `close()` con dati in sospeso:
+```c
+struct linger opt = { .l_onoff = 1, .l_linger = 5 };
+setsockopt(fd, SOL_SOCKET, SO_LINGER, &opt, sizeof(opt));
+// l_onoff=0           → close() torna subito, kernel invia i dati in bg (default)
+// l_onoff=1, linger=X → close() si BLOCCA fino a X sec, poi RST se fallisce
+// l_onoff=1, linger=0 → close() invia RST immediato, dati scartati
+```
+
+**`SO_SNDBUF` / `SO_RCVBUF`** — dimensione buffer kernel:
+```c
+int size = 65536;  // 64 KB
+setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size));  // send buffer
+setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));  // recv buffer
+// Buffer più grandi riducono short-write/short-read, consumano più RAM
+```
+
+
 ### 17.13 Socket Non Bloccante
 
 ```c
@@ -2089,7 +2186,98 @@ setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 int flags = fcntl(fd, F_GETFL, 0);
 fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 // Ora recv/send restituiscono -1 con errno=EAGAIN se non possono procedere
+// Funziona su TCP, UDP, pipe
 ```
+
+### 17.14 Pattern `recv_all` / `send_all` (lettura/scrittura safe)
+
+Su TCP, `recv()` e `send()` possono restituire meno byte del richiesto (**short read/write**). Le funzioni safe gestiscono questo:
+
+```c
+// Legge esattamente n byte (gestisce EINTR e short-read)
+ssize_t recv_all(int fd, void *buf, size_t n) {
+    size_t received = 0;
+    char *p = buf;
+    while (received < n) {
+        ssize_t r = recv(fd, p + received, n - received, 0);
+        if (r > 0)  { received += (size_t)r; continue; }
+        if (r == 0) return (ssize_t)received;      // EOF: peer ha chiuso
+        if (errno == EINTR)   continue;             // interrotto da segnale
+        if (errno == EAGAIN || errno == EWOULDBLOCK) return -2;  // timeout
+        return -1;                                  // altro errore
+    }
+    return (ssize_t)received;   // == n
+}
+
+// Invia esattamente n byte
+ssize_t send_all(int fd, const void *buf, size_t n) {
+    size_t sent = 0;
+    const char *p = buf;
+    while (sent < n) {
+        ssize_t w = send(fd, p + sent, n - sent, 0);
+        if (w > 0)  { sent += (size_t)w; continue; }
+        if (errno == EINTR)   continue;
+        if (errno == EAGAIN || errno == EWOULDBLOCK) return -2;
+        return -1;
+    }
+    return (ssize_t)sent;   // == n
+}
+```
+
+### 17.15 Server Concorrente — Anti-Zombie con SIGCHLD
+
+Il server con fork crea un figlio per ogni client. Bisogna evitare zombie:
+
+```c
+// Handler per raccogliere i figli terminati
+static void reap(int sig) {
+    (void)sig;
+    while (waitpid(-1, NULL, WNOHANG) > 0) {}  // raccoglie TUTTI i figli terminati
+}
+
+int main(void) {
+    // Installa handler SIGCHLD con SA_RESTART
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = reap;
+    sa.sa_flags   = SA_RESTART;  // riavvia accept/recv interrotti dal segnale
+    sigemptyset(&sa.sa_mask);
+    sigaction(SIGCHLD, &sa, NULL);
+
+    // ... bind, listen ...
+    for (;;) {
+        int c = accept(s, NULL, NULL);
+        if (c < 0) { if (errno == EINTR) continue; break; }
+        pid_t pid = fork();
+        if (pid == 0) {
+            close(s);          // figlio non usa la listening socket
+            handle_client(c); // non ritorna
+            _exit(0);          // usa _exit, non exit!
+        }
+        close(c);              // padre chiude il socket del client
+    }
+}
+```
+
+> **`SA_RESTART`**: fa sì che `accept()` (e altre syscall bloccanti) vengano riavviate automaticamente se interrotte da SIGCHLD, anziché ritornare `-1/EINTR`.
+
+### 17.16 `connect()` con UDP
+
+`connect()` può essere usata anche su socket UDP (SOCK_DGRAM):
+
+```c
+// Fissa la destinazione di default e abilita ricezione errori ICMP
+connect(sd, (struct sockaddr*)&servaddr, sizeof(servaddr));
+
+// Dopo connect() si può usare send()/write() invece di sendto():
+send(sd, buf, len, 0);    // invia a servaddr (come sendto con NULL indirizzo)
+recv(sd, buf, len, 0);    // riceve solo da servaddr (filtraggio implicito)
+
+// Con sendto si può omettere l'indirizzo:
+sendto(sd, buf, len, 0, NULL, 0);
+```
+
+Vantaggi: filtraggio automatico del mittente, ricezione di errori ICMP (es. host unreachable).
 
 ---
 
