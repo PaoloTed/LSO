@@ -3141,3 +3141,93 @@ docker compose down -v              # ferma e rimuove anche i volumi dichiarati
 ---
 
 > **Fine della guida.** Questo documento copre **tutti** gli argomenti trattati nelle lezioni 1–32 del corso di Laboratorio di Sistemi Operativi, inclusi: Unix, file system, shell, comandi, grep/regex, scripting, sed/awk, funzioni bash, compilazione C/GCC, I/O di basso livello, processi, segnali, IPC (pipe/FIFO/mmap), thread, sincronizzazione, problemi classici, socket (locali/TCP/UDP), I/O multiplexing (select), broadcast/multicast, comandi di rete, DNS (getaddrinfo), virtualizzazione, container (namespace/cgroups/OverlayFS) e Docker.
+
+---
+
+## 25. Soluzioni Esercizi d'Esame
+
+Di seguito sono riportate le soluzioni agli esercizi d'esame mostrati nelle immagini, utili per verificare la propria preparazione e ripassare i concetti.
+
+### Esercizio 1 (Pipeline Bash)
+**Consegna**: Stampare il nome degli utenti che hanno almeno 2 processi attivi nello stato *sleeping* (STAT inizia per S) e avviati da meno di 90 secondi (ELAPSED < 90). Ogni utente deve comparire una sola volta.
+
+**Soluzione**:
+```bash
+ps -eo user,stat,etimes | awk 'NR>1 && $2 ~ /^S/ && $3 < 90 {print $1}' | sort | uniq -c | awk '$1 >= 2 {print $2}'
+```
+**Spiegazione**:
+1. `ps` produce la lista dei processi. `NR>1` salta l'intestazione stampata dal comando `ps`.
+2. `awk` filtra le righe la cui seconda colonna (`$2`, STAT) inizia per `S` (tramite regex `/^S/`) e la cui terza colonna (`$3`, ELAPSED) è `< 90`. Per ogni riga valida, stampa il nome dell'utente (colonna 1).
+3. `sort` ordina alfabeticamente i nomi degli utenti (necessario come passo preliminare prima di usare `uniq`).
+4. `uniq -c` collassa i duplicati contando le occorrenze di ciascun utente (creando un output del tipo `   3 alice`).
+5. L'ultimo `awk` filtra la lista numerata, stampando il nome dell'utente (seconda colonna) solo dove il conteggio (prima colonna) è `>= 2`.
+
+### Esercizio 2 (Pipeline ls, grep, awk)
+**Consegna**: Dato l'output di `ls -l`, estrarre i soli nomi dei file che: sono regolari, hanno estensione `.log`, hanno permesso di lettura per il gruppo, non hanno permesso di scrittura per altri e pesano più di 3000 byte.
+
+**Soluzione**:
+Usando unicamente `awk` applicato ai metadati:
+```bash
+ls -l | awk '/^-...r...[^w]/ && $5 > 3000 && $9 ~ /\.log$/ {print $9}'
+```
+In alternativa usando `grep` per le stringhe dei permessi come suggerito:
+```bash
+ls -l | grep '^-...r...[^w]' | awk '$5 > 3000 && $9 ~ /\.log$/ {print $9}'
+```
+**Spiegazione**:
+* La Regex `^-...r...[^w]` verifica i permessi:
+  * `^` indica l'inizio della riga.
+  * `-` impone che sia un file regolare (esclude directory `d` o link `l`).
+  * I 3 puntini `...` ignorano i permessi *rwx* del proprietario (posizioni 2-4).
+  * La `r` si posiziona al quinto carattere (primo del gruppo), imponendo il permesso di lettura per il gruppo.
+  * I 3 puntini successivi ignorano il resto del gruppo e il primo flag di lettura per gli *others* (posizioni 6-8).
+  * `[^w]` al nono carattere impone che il permesso in scrittura per *others* **non** sia `w`.
+* `$5 > 3000` in `awk` filtra la dimensione (quinta colonna in `ls -l`).
+* `$9 ~ /\.log$/` in `awk` assicura che il nome del file (nona colonna) finisca in `.log`.
+
+### Esercizio 3 (Thread e Sincronizzazione C)
+**Frammento**:
+Due thread `t1` e `t2` accedono e modificano variabili globali `x` e `y`. Il main genera un figlio tramite `fork()`, modifica localmente `x` e `y` e lancia in parallelo i due thread (sia nel processo padre che nel processo figlio).
+
+**Risposte**:
+a) **Quanti processi e thread vengono creati?**
+Viene creato 1 nuovo processo figlio dalla `fork()`, per un totale di **2 processi** attivi (padre e figlio).
+**Per ogni processo** (padre e figlio) vengono creati tramite `pthread_create` 2 nuovi thread (`t1` e `t2`). Tali 2 thread si sommano al thread base originario, risultando in 3 thread per processo. In sintesi, a livello applicativo vengono istanziati **4 nuovi thread** (escluso il main thread e includendo sia l'esecuzione nel padre che nel figlio).
+
+b) **Il programma termina correttamente? Segnalare e correggere eventuali anomalie.**
+Sì, ma presenta alcune anomalie di rilievo:
+1. **Chiamata errata a `wait()`**: L'istruzione `wait(NULL);` viene eseguita indistintamente dal main di entrambi i processi. Poiché il figlio non ne possiede a sua volta, la sua invocazione a wait(NULL) fallirà subito ritornando il codice d'errore `ECHILD`.  
+   *Correzione*: Racchiudere la wait in uno scope ristretto (es. `if (pid > 0) { wait(NULL); }`) oppure concludere il path d'esecuzione del processo figlio con una `exit(0)`.
+2. **Race condition nel processo figlio**: il figlio inizializza `x=50` e `y=20`. Quando avvia `t1`, la condizione del loop `while (x <= y)` (50 <= 20) è immediatamente falsa: il thread elude l'attesa condizionale ed esegue subito la sottrazione `x = x - y`. Il thread `t2`, se non eseguito prima, imposterà incondizionatamente `x = y + 4` ignorando i calcoli precedenti. In assenza di vincoli temporali forzati via condition variable (come accade nel padre), il risultato finale di `x` varia (24 oppure 4) assecondando lo scheduler, configurando un evidente non-determinismo logico.
+
+c) **Cosa stampa il programma?**
+* **Nel padre**: la fork ha re-inviato `x = y` configurando `x=3` e `y=3`. `t1` si bloccherà nella condition wait (essendo `3 <= 3`). `t2` imposterà quindi `x = 3 + 4 = 7` inviando poi un segnale per sbloccare la wait. `t1` ricalcolerà il test (`7 <= 3` ora FALSO) ed uscirà dal loop facendo `x = 7 - 3 = 4`. L'ordine deterministico farà stampare esattamente: `4 3`.
+* **Nel figlio**: a causa della race condition spiegata sopra, l'output non è deterministico e potrà casualmente stampare `24 20` (se `t1` termina prima che parta `t2`) oppure `4 20` (se `t2` esegue prima, sovrascritto poi dalla sottrazione di `t1`). L'ordine temporale generale tra la printf del padre e quella del figlio sarà inoltre misto.
+
+### Esercizio 4 (Pipe, Fork, Select in C)
+**Frammento**:
+Il processo padre esegue delle `read()` via multiplexing attendendo byte che un figlio inietta in un costrutto pipe `p[2]`.
+
+**Risposte**:
+1. **Le tre `select()` del padre si bloccano oppure ritornano subito?**
+La **prima** `select()` si **bloccherà** attendendo che i byte giungano nel buffer di rete o che il file descriptor attiguo venga chiuso. Le **successive**, dopo l'acquisizione dei primi due byte, ritorneranno invece **subito**, rilevando la permanenza del byte mancante in circolo nel kernel buffer o lo stato latente della socket già liberata dal lato in scrittura.
+2. **Quanto valgono `n1`, `n2`, `n3`?**
+Il figlio ha scritto la stringa "XYZ" per un totale di 3 byte.
+- La 1ª `read(p[0], buff, 2)` legge una limitazione fissata a 2 byte ("XY"), popolando il buffer e restituendo il valore effettivo `n1 = 2`.
+- La 2ª `read(p[0], buff, 2)` legge il residuo decurtato ad 1 byte ("Z"). `n2 = 1`.
+- La 3ª `read(p[0], buff, 2)` esegue la lettura ma non rintraccia altri flussi per intercorsa chiusura lato figli, ricevendo per prassi **End-Of-File (EOF)** che su interi equivale a `n3 = 0`.
+3. **Cosa indica il valore restituito dalla terza `read()`? Il programma termina correttamente?**
+Il valore **0** esprime la fine del file, la condizione di tranciamento del canale per avvenuta operazione. Il programma si spegne correttamente stampando `n1=2 n2=1 n3=0`.
+4. **C'è il rischio che il processo figlio rimanga temporaneamente in stato zombie?**
+**Sì**. Il processo generato fa `exit(0)` rilasciando il core per chiudere il proprio ciclo biologico, ma la routine del suo parent logico continua ignorandolo sistematicamente poiché nel costrutto priva di alcuna chiamata alla the system-call `wait()`. Egli permane nell'albero in stato `Z` (zombie) fintanto che il padre stesso terminerà il suo eseguibile, delegandone la rimozione ad _Init_ all'uscita complessiva.
+
+### Esercizio 5 (Namespace e Docker)
+**Scenario**: Innesco ravvicinato di due isolatori bash mediante container da un SO denominato _MioPC_.
+
+**Risposte**:
+(a) **Quale PID avrà il processo bash visualizzato con ps -ef nel contenitore2?**
+Il processo bash deterrà senza dubbio il **PID 1**. Ogni contenimento su _Docker_ sfrutta le feature del modulo **PID Namespace** a livello di Kernel, staccandolo percettivamente dalla numerazione standard dell'OS host per instaurarlo in cima a un suo sottoramo privato partendo proprio dal PID 1.
+(b) **Quale valore restituirà il comando hostname?**
+Visualizzerà la stringa **nodo2**. Passando flag `--hostname` si invoca il distaccamento del **UTS Namespace** del container, il cui obiettivo è slegare i dati nominali del domain dall'effettivo server.
+(c) **Saranno presenti la directory e il file `/lavoro/info.txt` creati in precedenza nel `contenitore1`?**
+**No**, assolutamente assenti. Ciò deriva dalla specificità intrinseca degli **Overlay File System**. I due sub-sistemi sono originati dall'identica `ubuntu` *Read-Only* ma appositamente instradati ciascuno nel proprio *layer* virtuale indipendente detto **upperdir** (leggibile e scrivibile separato ed effimero). Qualsiasi directory forgiata in uno sfocia in un suo file d'overlay e decade appena cancellato.
