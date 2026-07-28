@@ -1,0 +1,549 @@
+Virtualizzazione
+Concetti base
+Problema: 
+•
+eseguire ambienti diversi sulla stessa macchina
+Principio: 
+•
+creare una versione virtuale di una risorsa reale  
+Parole chiave: 
+•
+host, guest, hypervisor, VMM
+
+---PAGE BREAK---
+Virtualizzazione
+Concetti base
+Definizione
+•
+Per virtualizzazione si intende la creazione di una versione virtuale di 
+una risorsa normalmente fornita fisicamente  
+•
+La risorsa può essere:
+CPU • Memoria • Disco • Schede di rete • sistemi operativi
+•
+È possibile eseguire, su una sola macchina (detta sistema host), altri 
+sistemi operativi (detti sistemi guest) simultaneamente:
+• Es. mettendo a disposizione un sistema Windows e un sistema Linux 
+contemporaneamente. 
+
+---PAGE BREAK---
+Virtualizzazione
+Tipi di “virtualizzazioni”
+
+Astrazione: L’astrazione è il processo con cui si rappresenta un oggetto reale 
+(risorsa fisica) tramite un modello semplificato (risorsa virtuale), che: mette in 
+evidenza solo le proprietà utili all’utilizzatore nasconde i dettagli implementativi 
+non necessari. Es., tipi di dato (int, float, …) nascondono la loro rappresentazione 
+binaria in memoria.
+
+Linguaggi di programmazione: Un programma scritto può essere eseguito su 
+architetture diverse grazie a una macchina virtuale (es. java virtual machine) che 
+interpreta o traduce le istruzioni, indipendentemente da sistema operativo e 
+hardware.
+
+Virtualizzazione a livello di processo: Nei sistemi multitasking, più processi 
+possono essere eseguiti contemporaneamente. Ogni processo vede un proprio 
+ambiente virtuale dedicato (CPU, memoria, dispositivi), pur condividendo le 
+risorse fisiche. Questa forma di virtualizzazione è realizzata dal kernel del 
+sistema operativo.
+
+---PAGE BREAK---
+Virtualizzazione
+Virtualizzazione di Sistema
+
+Piattaforma hardware può eseguire contemporaneamente più macchine virtuali 
+(VM). Ogni VM fornisce un ambiente isolato, composto da un proprio sistema 
+operativo e dalle applicazioni che vi girano.
+
+La condivisione dell’hardware è gestita da un componente centrale chiamato 
+Virtual Machine Monitor (VMM) o hypervisor, che: 
+•
+crea e gestisce le VM
+•
+isola le VM tra loro
+•
+arbitra l’accesso alle risorse fisiche (CPU, memoria, I/O)
+
+Il VMM è il mediatore unico nelle interazioni tra le macchine virtuali e l’hardware 
+sottostante
+
+---PAGE BREAK---
+Virtualizzazione
+Virtualizzazione di Sistema
+
+La condivisione dell’hardware è gestita da un componente centrale chiamato 
+Virtual Machine Monitor (VMM) o hypervisor, che: 
+•
+crea e gestisce le VM
+•
+isola le VM tra loro
+•
+arbitra l’accesso alle risorse fisiche (CPU, memoria, I/O)
+
+---PAGE BREAK---
+Virtualizzazione
+Motivazioni 
+•
+Isolamento: software difettoso o dannoso non tocca l’host
+•
+Testing: posso provare modifiche e poi tornare indietro
+•
+Portabilità: sposto una VM dove voglio
+•
+Consolidamento: più server sulla stessa macchina = meno costi
+•
+Compatibilità: far girare SO/app vecchi su hardware nuovo
+
+---PAGE BREAK---
+Tipologie di Virtualizzazione
+
+Il concetto di virtualizzazione non è certo una novità: il termine risale infatti agli 
+anni ’60.
+
+Possiamo distinguere diverse forme di virtualizzazione:
+•
+Livello hardware
+•
+Virtualizzazione completa
+•
+Paravirtualizzazione
+
+---PAGE BREAK---
+Virtualizzazione
+
+Il concetto di virtualizzazione non è certo una novità: il termine risale infatti agli 
+anni ’60.
+
+Come rappresento una macchina?
+•
+Simulazione
+•
+Emulazione
+•
+Virtualizzazione
+
+Come implemento la virtualizzazione hardware? 
+•
+Virtualizzazione completa (full)
+•
+Paravirtualizzazione
+•
+Virtualizzazione assistita da hardware
+
+---PAGE BREAK---
+Rappresentazione
+Come rappresento una macchina?
+
+“Simulazione”
+•
+Rappresenta una macchina in modo astratto, non fedele.
+Serve a modellare il comportamento, non a eseguire codice reale.
+→ Utile per studio, non per esecuzione di programmi reali.
+Esempio: simulatori di rete, modelli di protocolli.
+
+“Emulazione”
+•
+Riproduco un’architettura hardware diversa da quella reale.
+Così posso eseguire programmi compilati per un’altra CPU.
+→ Lenta perché il codice viene interpretato/convertito.
+Esempio: QEMU (Quick EMUlator) che emula ARM su x86
+•
+grande flessibilità, bassa efficienza.
+
+“Virtualizzazione”
+•
+Faccio girare più sistemi operativi della stessa architettura sull’hardware reale.
+Non simula la CPU → i guest girano nativamente.
+→ Molto più veloce dell’emulazione.
+
+---PAGE BREAK---
+Virtualizzazione
+Come implemento la virtualizzazione hardware? 
+
+Virtualizzazione completa (full)
+•
+Il guest non sa di essere virtualizzato.
+Pensa di parlare con hardware reale → massima compatibilità.
+→ Overhead maggiore a causa della gestione trasparente dell’hardware.
+•
+Esempio: VMware ESXi
+
+Paravirtualizzazione
+•
+Il guest sa di essere virtualizzato e collabora con l’hypervisor tramite API speciali. Meno 
+overhead, ma richiede OS modificati.
+Esempio storico: Xen paravirtualizzato.
+•
+Oggi la parav viene usata come ottimizzazione (es. virtio), non come modello puro.
+
+Virtualizzazione assistita da hardware
+•
+Le CPU (Intel VT-x, AMD-V, ARM Virt. Ext.) forniscono istruzioni speciali
+che rendono la virtualizzazione più efficiente.
+•
+→ È la base della virtualizzazione moderna.
+→ Riduce costi di gestione del guest.
+•
+Oggi quasi tutte le VM usano questo modello.
+
+---PAGE BREAK---
+Virtualizzazione
+
+Permette di eseguire più sistemi operativi sulla stessa macchina fisica. Ogni 
+SO esegue le proprie applicazioni come se avesse hardware dedicato.
+
+Virtualizzazione – sistema operativo compilato in modo nativo per la CPU, 
+che esegue anche sistemi operativi guest compilati in modo nativo
+•
+VMM (Virtual Machine Manager/Monitor) fornisce servizi di virtualizzazione
+•
+Tipo 1:
+•
+VMM come Sistema operative host, comunica direttamente con hardware (es. VMware 
+ESXi, Xen, Hyper-V, KVM)
+•
+Tipo 2:
+•
+VMM installato sopra un SO host (es. VMWare, Oracle VirtualBox)
+
+---PAGE BREAK---
+Virtualizzazione
+
+Virtualizzazione – VMM/Hypervisor fornisce servizi di virtualizzazione per 
+eseguire guest compilati nativamente.
+•
+VMM (Virtual Machine Manager/Monitor) fornisce servizi di virtualizzazione
+•
+Tipo 1: 
+•
+VMM come Sistema operative host, comunica direttamente con hardware (es. 
+VMware ESXi, Xen, Hyper-V, KVM)
+•
+Tipo 2:
+•
+VMM installato sopra un SO host (es. VMWare, Oracle VirtualBox)
+
+---PAGE BREAK---
+Gestione delle risorse nella virtualizzazione
+Gestione delle risorse (CPU, RAM, Storage, Rete)
+•
+L’hypervisor assegna risorse virtuali alle VM (vCPU, vRAM, vDisk, vNIC)
+•
+Supporto all’overcommit: possono essere allocate più risorse virtuali di 
+quelle fisiche
+•
+Scheduler CPU gestisce la contesa tra VM → possibili latenze
+•
+La memoria può essere ottimizzata tramite tecniche come:
+• Ballooning (restituzione memoria all’host)
+• Deduplica delle pagine (KSM)
+•
+Lo storage è astratto tramite dischi virtuali (es. VMDK, QCOW2)
+•
+Possibile allocazione dinamica delle risorse (scaling verticale delle VM)
+
+---PAGE BREAK---
+Virtual Machine vs Container
+
+Virtual Machine 
+•
+Ogni VM ha un proprio sistema operativo guest e kernel
+•
+Maggiore isolamento, ma più risorse richieste
+•
+Avvio lento, peso in GB
+•
+Gestita da un hypervisor
+
+Container
+•
+Condivide il kernel dell’host
+•
+Isolamento a livello di processo (namespaces, cgroups)
+•
+Avvio rapidissimo, peso in MB
+•
+Gestito da un container runtime (Docker, containerd, Podman)
+
+---PAGE BREAK---
+Virtualizzazione
+Caso Linux
+•
+Hypervisor: KVM (Kernel-based Virtual Machine)
+•
+È integrato direttamente nel kernel Linux (hyp tipo 1)
+•
+Linux è quindi l’host nativo ed è implementato come un modulo del kernel
+•
+Si attiva solo quando una VM lo usa (es. QEMU, libvirt, Docker con KVM, 
+Firecracker)
+•
+Il kernel Linux diventa un hypervisor usando le estensioni (intel VT-x/AMD-V)
+•
+Le VM sono processi user-space che accedono a KVM via /dev/kvm
+
+---PAGE BREAK---
+Virtualizzazione
+Supporto Hardware
+•
+Il kernel diventa un hypervisor utilizzando le estensioni hardware di
+virtualizzazione
+•
+AMD-V su AMD e le ARM Virtualization Extensions (livello EL2) su ARM
+•
+Es. in VT-x, oltre alle due modalità Kernel/User (ring 0, 3) vengono aggiunte 
+le modalità 
+•
+VMX Root Mode → Hypervisor
+•
+VMX Non-Root Mode → Guest VM
+•
+In VMX Root Mode l’hypervisor può avere ring 0 e 3, come un SO normale 
+(es. Linux + KVM → il kernel Linux è ring 0 nel root).
+•
+In VMX Non-Root Mode la VM ha i suoi ring 0 e 3, isolati dal root.
+
+---PAGE BREAK---
+Virtualizzazione
+Traduzione indirizzi
+•
+La virtualizzazione hardware aggiunge un secondo livello di paginazione
+•
+La VM vede una memoria virtuale solo sua, la CPU la rimappa in quella reale 
+tramite EPT/NPT/S2 tables.
+•
+Si ottiene isolamento e velocità senza coinvolgere il kernel host
+Processo della VM
+│
+▼
+Guest Virtual Address
+│
+▼
+Guest Page Tables (kernel guest)
+│
+▼
+Guest Physical Address   ←(non è RAM reale)
+│
+▼
+EPT / NPT / S2 tables (hypervisor)
+│
+▼
+Host Physical Memory (RAM reale)
+Intel 
+Ext. PT
+AMD
+Nested PT
+ARM
+Stage2 Tables
+
+---PAGE BREAK---
+Virtualizzazione
+Caso Windows 11 
+•
+Hyper-V è un hypervisor di tipo 1 (bare-metal)
+•
+Windows non è l’host
+•
+Windows è una VM privilegiata chiamata root partition
+•
+Le altre VM (WSL2, macchine Hyper-V, Docker) sono guest partitions
+Hardware
+│
+▼
+Hyper-V Hypervisor  (TYPE 1)
+│
+── Windows (Root VM / Parent Partition)
+└── Linux WSL2 VM (Guest)
+Attivazione:
+In windows PowShell: 
+wsl --install 
+Per verificare WSL:
+wsl --status
+
+---PAGE BREAK---
+Virtualizzazione
+Caso Windows 11 
+•
+Hyper-V è un hypervisor di tipo 1 (bare-metal)
+•
+Windows non è l’host
+•
+Windows è una VM privilegiata chiamata root partition
+•
+Le altre VM (WSL2, macchine Hyper-V, Docker) sono guest partitions
+Hardware
+│
+▼
+Hyper-V Hypervisor  (TYPE 1)
+│
+── Windows (Root VM / Parent Partition)
+└── Linux WSL2 VM (Guest)
+Verifica:
+In windows PowShell: 
+systeminfo | Select-String “Hyper-V”
+Per verificare WSL:
+wsl -l -v
+
+---PAGE BREAK---
+Virtualizzazione
+Caso Windows 11 
+•
+Hyper-V è un hypervisor di tipo 1 (bare-metal)
+•
+Windows non è l’host
+•
+Windows è una VM privilegiata chiamata root partition
+•
+Le altre VM (WSL2, macchine Hyper-V, Docker) sono guest partitions
+Hardware
+│
+▼
+Hyper-V Hypervisor  (TYPE 1)
+│
+── Windows (Root VM / Parent Partition)
+└── Linux WSL2 VM (Guest)
+Verifica:
+In ubntu WSL2: 
+uname –a %info su kernel Linux
+ls /mnt/
+ls /mnt/c
+ls /mnt/c/Users
+%filesystem windows montato su quello linux
+
+---PAGE BREAK---
+Virtualizzazione
+In un hypervisor di tipo 1:
+•
+Root Partition
+– è il SO privilegiato (in Windows → Windows stesso)
+– gestisce driver, I/O, networking, storage
+– controlla e avvia le macchine virtuali
+•
+Guest Partition
+– sono le VM vere e proprie (WSL2, VM Hyper-V, ecc.)
+Hardware
+↓
+Hyper-V (tipo 1)
+↓
+Root Partition →Windows
+↓
+Guest Partitions →WSL2, VM Hyper-V
+Es. in Hyper-V “Windows non è più l’host, ma una VM privilegiata” 
+(Root Partition in Hyper-V, Dom0 in Xen, Host Linux in KVM, VMkernel per ESXi )
+
+---PAGE BREAK---
+Virtualizzazione
+Caso Windows 11 
+•
+Hyper-V è un hypervisor di tipo 1 (bare-metal)
+•
+Windows non è l’host
+•
+Windows è una VM privilegiata chiamata root partition
+•
+Le altre VM (WSL2, macchine Hyper-V, Docker) sono guest partitions
+Verifica:
+Lanciare WSL settings
+
+---PAGE BREAK---
+Virtualizzazione
+Caso Windows 11 
+•
+Hyper-V è un hypervisor di tipo 1 (bare-metal)
+•
+Windows non è l’host
+•
+Windows è una VM privilegiata chiamata root partition
+•
+Le altre VM (WSL2, macchine Hyper-V, Docker) sono guest partitions
+Verifica:
+Lanciare task manager
+VmmemWSL è la macchina 
+virtuale Linux di WSL2 gestita 
+dall’hypervisor Hyper-V.
+VMware* sono processi delle 
+VM gestite da Vmware.
+Hyper-V è l’hypervisor 
+principale e VMware usa una 
+modalità compatibile.
+
+---PAGE BREAK---
+Virtualizzazione
+WSL vs VMware
+VMware Workstation
+WSL2
+Caratteristica
+Lento (boot completo)
+Istantaneo
+Avvio
+Limitata
+Molto alta (filesystem, GUI)
+Integrazione con 
+Windows
+Alta (CPU, RAM, rete, 
+dischi)
+Bassa (CPU/RAM fissi)
+Configurabilità
+Sì
+No
+Snapshot
+Qualunque OS
+Solo Linux
+Sistemi supportati
+NAT, Bridged, Host-only
+NAT + Mirrored Mode
+Networking
+Buone ma più overhead
+Molto alte
+Prestazioni Linux
+Elevato
+Parziale
+Isolamento
+
+---PAGE BREAK---
+Virtualizzazione
+Caso macOS (Apple Silicon)
+•
+Non ha un hypervisor nel kernel
+•
+Non entra in modalità hypervisor come Linux/KVM o Hyper-V
+•
+Usa Hypervisor.framework, un’API user-space
+•
+Le VM sono gestite da applicazioni user-space che usano
+Hypervisor.framework (UTM, Docker Desktop, VMware Fusion) 
+•
+Il supporto hardware gestisce:
+•
+modalità hypervisor (EL2)
+•
+guest mode
+•
+Stage-2 paging (Stage-2 ARM)
+•
+Il kernel macOS resta in EL1 (non è un hypervisor)
+
+---PAGE BREAK---
+VM vs Container
+Virtualizzazione
+•
+Ogni VM ha un kernel
+•
+Boot lento
+•
+Pesante in RAM e CPU
+•
+Isolamento fortissimo
+Containerizzazione:
+•
+Non emula hardware
+•
+Non c’è un kernel guest
+•
+Avvio immediato
+•
+Leggerissima
+•
+Isolamento tramite kernel host (non hardware)
+
+---PAGE BREAK---

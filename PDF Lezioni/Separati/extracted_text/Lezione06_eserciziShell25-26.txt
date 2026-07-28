@@ -1,0 +1,103 @@
+Esercizio
+•
+Si realizzi uno script che chiameremo “scriviNumeri.sh” che scrive a 
+video i numeri da 20 a 10: 20,19,18,……….,10
+•
+Esempio di lancio: $ ./scriviNumeri.sh 
+•
+25
+Soluzione
+#!/bin/bash 
+COUNTER=20 
+until [ $COUNTER -lt 10 ]; 
+do 
+echo COUNTER: $COUNTER 
+COUNTER=$((COUNTER-1))
+done 
+
+---PAGE BREAK---
+Esercizio
+•
+Si realizzi uno script che stampa tutti i file regolari con permessi di 
+lettura della directory passata come argomento
+•
+Esempio di lancio: $ ./leggiTutto.sh  
+26
+
+---PAGE BREAK---
+Esercizio
+•
+Si realizzi uno script che stampa tutti i file regolari con permessi di 
+lettura della directory corrente
+•
+Esempio di lancio: $ ./leggiTutto.sh 
+•
+27
+#!/bin/bash
+if [ -z $1 ] ; then
+echo "serve un argomento"
+exit 1
+fi
+cd $1
+for f in *; do
+if [ -f "$f" ] && [ -r "$f" ] && [ "$f" != " $0" ]; then
+cat "$f"
+fi
+done
+
+---PAGE BREAK---
+Esercizio
+•
+Si realizzi uno script che lancia tutti i file regolari con permessi di 
+esecuzione della directory passata come argomento
+•
+Esempio di lancio: $ ./lanciaTutto.sh . 
+28
+
+---PAGE BREAK---
+Esercizio
+•
+Si realizzi uno script che lancia tutti i file regolari con permessi di 
+esecuzione della directory passata come argomento
+•
+Esempio di lancio: $ ./lanciaTutto.sh .  
+29
+#!/bin/bash
+if [ -z $1 ] ; then
+echo "serve un argomento"
+exit 1
+fi
+cd $1
+for f in *; do
+if [ -x "$f" ] && [ "$f" != "lanciaTutto.sh" ]; then
+./"$f" &
+fi
+done
+
+---PAGE BREAK---
+Esercizio
+•
+Si realizzi uno script che crea un file per ogni utente che ha almeno 
+un processo in esecuzione, nel file si elenchino i pid dei processi 
+dell’utente
+•
+Esempio di lancio: $ ./processi.sh .  
+30
+
+---PAGE BREAK---
+Esercizio
+•
+Si realizzi uno script che crea un file per ogni utente che ha almeno 
+un processo in esecuzione, nel file si elenchino i pid dei processi 
+dell’utente
+•
+Esempio di lancio: $ ./processi.sh .  
+31
+#!/bin/bash
+# Per ogni utente che ha almeno un processo
+for u in $(ps -e -o user= | sort -u); do
+# Crea un file pids-<utente>.txt con tutti i PID dei processi di quell'utente
+ps -u "$u" -o pid= > "pids-$u.txt"
+done
+
+---PAGE BREAK---

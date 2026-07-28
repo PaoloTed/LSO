@@ -1,0 +1,86 @@
+Funzioni in Bash
+Definizione (standard POSIX)
+nome_funzione () {
+# comandi
+}
+In bash anche così
+function nome_funzione {
+# comandi
+}
+Chiamata
+nome_funzione arg1 arg2
+1
+Parametri interni
+•$1, $2, ... → Argomenti passati
+•$# → Numero di argomenti
+•$@ → Tutti gli argomenti
+•$? → Ultimo codice di uscita
+•return <val> → Valore di uscita (0 = ok)
+
+---PAGE BREAK---
+Funzioni in Bash
+definizione
+nome_funzione () {
+# comandi
+}
+function nome_funzione {
+# comandi
+}
+Chiamata
+nome_funzione arg1 arg2
+2
+Parametri interni
+•$1, $2, ... → Argomenti passati
+•$# → Numero di argomenti
+•$@ → Tutti gli argomenti
+•$? → Ultimo codice di uscita
+•return <val> → Valore di uscita (0 = ok)
+somma () {
+echo $(($1 + $2))
+}
+ris=$(somma 4 7)
+echo "Risultato: $ris"
+
+---PAGE BREAK---
+Funzioni in Bash
+3
+Parametri interni
+•$1, $2, ... → Argomenti passati
+•$# → Numero di argomenti
+•$@ → Tutti gli argomenti
+•$? → Ultimo codice di uscita
+•return <val> → Valore di uscita (0 = ok)
+check_file () {
+if [[ -f "$1" ]]; then
+echo " Il file '$1' esiste!"
+else
+echo "Il file '$1' NON esiste."
+fi
+}
+# Uso
+check_file /etc/passwd
+check_file /tmp/pippo.txt
+
+---PAGE BREAK---
+Funzioni in Bash
+4
+Parametri interni
+•$1, $2, ... → Argomenti passati
+•$# → Numero di argomenti
+•$@ → Tutti gli argomenti
+•$? → Ultimo codice di uscita
+•return <val> → Valore di uscita (0 = ok)
+#!/bin/bash
+# Funzione che conta i processi di un utente
+count_processes () {
+user=$1
+num=$(ps -u "$user" --no-headers | wc -l)
+echo "L'utente '$user' ha $num processi 
+attivi."
+}
+# --- Programma principale ---
+echo "Inserisci il nome utente:"
+read utente
+count_processes "$utente"
+
+---PAGE BREAK---

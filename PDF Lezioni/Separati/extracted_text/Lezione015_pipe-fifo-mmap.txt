@@ -1,0 +1,201 @@
+IPC
+Pipe, FIFO, MMAP
+
+---PAGE BREAK---
+Pipe Ordinarie
+•
+Pipe ordinarie comunicano in modalità produttore-consumatore
+•
+Produttore scrive su un’estremità (write-end della pipe)
+•
+Consumatore legge dall’altra estremità (read-end della pipe)
+•
+Le pipe ordinarie sono unidirezionali
+•
+Richiedono una relazione parentale tra i processi che 
+comunicano
+
+---PAGE BREAK---
+Pipe Ordinarie
+
+---PAGE BREAK---
+Pipe Ordinarie
+
+---PAGE BREAK---
+Pipe Ordinarie
+•
+Occorre chiudere le imboccature non utilizzate
+int main(void) {
+int fd[2];
+char buf[64];
+pid_t pid;
+pipe(fd);
+if ((pid = fork()) == 0) {   // Figlio lettore
+// ERRORE: non chiude fd[1] (scrittura)
+// close(fd[1]);   // <- manca di proposito
+while (read(fd[0], buf, sizeof(buf)) > 0)
+write(STDOUT_FILENO, buf, 5);
+close(fd[0]);
+_exit(0);
+} else {                     // Padre scrittore
+close(fd[0]);            // chiude lettura
+write(fd[1], "ciao\n", 5);
+close(fd[1]);            // segnala EOF (ma figlio tiene ancora aperto fd[1])
+printf("Padre: attendo il figlio...\n");
+wait(NULL);              // <-- si blocca per sempre!
+printf("Padre: figlio terminato.\n");
+}
+}
+
+---PAGE BREAK---
+Pipe con Nome
+•
+Named Pipes (FIFO) sono più potenti delle pipe ordinarie
+•
+Non è necessaria una relazione parentale tra processi comunicanti
+•
+Molti processi possono usare le named pipe per comunicare
+•
+Creato un file speciale con makefifo(nome,modo) nel FS
+•
+Ha un i-node e può essere aperto in lettura/scrittura
+•
+Deve essere cancellato con unlink
+•
+Si usa in modalità unidirezionale (anche se può essere aperta RW)
+
+---PAGE BREAK---
+Pipe con Nome
+
+---PAGE BREAK---
+Pipe con Nome
+
+---PAGE BREAK---
+Pipe con Nome
+
+---PAGE BREAK---
+Pipe con Nome
+Cosa fa il kernel
+Operazione
+Blocca finché non c’è almeno un writer aperto
+open("fifo", O_RDONLY)
+Blocca finché non c’è almeno un reader aperto
+open("fifo", O_WRONLY)
+Non blocca mai (apre entrambe le direzioni nello 
+stesso processo, ma è raro/ambiguo)
+open("fifo", O_RDWR)
+• Se apre con O_WRONLY | O_NONBLOCK, il writer non si blocca, se senza lettori riceve
+subito errore ENXIO
+• Se apre con O_RDONLY | O_NONBLOCK, il reader non si blocca, ma restituirà subito 0 
+(EOF) finché non arriva un writer
+
+---PAGE BREAK---
+Memoria Condivisa
+•
+Comunicazione su regione di shared memory
+•
+Tipicamente creata nello spazio di indirizzamento del processo 
+che la crea (segmento di shared memory)
+•
+Gli altri processi devono accedere a questo spazio che 
+generalmente è proibito (va rilassata la restrizione)
+•
+I processi leggono e scrivono su questo spazio che è gestito 
+dai processi (modalità utente)
+•
+La coordinazione di lettura e scrittura è sotto la responsabilità 
+dei processi coinvolti, il SO lascia fare
+
+---PAGE BREAK---
+Memoria Condivisa vs Pipe
+(a) Message passing.  (b) shared memory. 
+Scambio di poca informazione, tutti 
+gli scambi passano per il Kernel
+Più veloce (kernel alloca la zona condivisa), più 
+semplice accesso, problema coordinazione tra 
+processi
+
+---PAGE BREAK---
+mmap
+void * mmap (void *address, size_t length, int protect, int flags, int filedes, off_t offset)
+•
+La funzione mmap: mappa in process address space un file o un device
+•
+Una volta mappato accessibile in modo diretto
+-
+address: indirizzo di partenza
+-
+length: bytes richiesti
+-
+protect: 
+PROT_READ | PROT_WRITE | 
+PROT_EXEC | PROT_NONE
+-
+flags:
+MAP_SHARED, MAP_PRIVATE
+MAP_ANON, MAP_FIXED
+-
+fildes: descrittore di file
+-
+offset: offset del file
+
+---PAGE BREAK---
+Produttore
+Aperta con nome “OS” in modalità 
+R/W - se non esiste creata con 
+permessi R/W -
+Dimensione SIZE
+Mappata in memoria in modalità 
+MAP_SHARED - cambiamenti visibili a 
+chi condivide la memoria
+PROT_WRITE permette la scrittura
+Puntatore ptr incrementato in 
+modalità non automatica
+
+---PAGE BREAK---
+Consumatore
+Aperta con nome “OS” in 
+modalità lettura con permessi 
+R/W
+Dimensione SIZE
+Mappata in memoria in modalità 
+MAP_SHARED - cambiamenti 
+visibili a chi condivide la 
+memoria
+PROT_READ permette la lettura
+Rimuove l’oggetto shared mem
+
+---PAGE BREAK---
+Mmap Anonima
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <string.h>
+int main(void) {
+size_t SIZE = 256;
+char *shared = mmap(NULL, SIZE,
+PROT_READ | PROT_WRITE,
+MAP_SHARED | 
+MAP_ANONYMOUS,
+-1, 0);
+if (shared == MAP_FAILED) {
+perror("mmap");
+return 1;
+}
+pid_t pid = fork();
+if (pid == -1) { perror("fork"); return 1; }
+if (pid == 0) {
+// FIGLIO: scrive nel buffer
+strcpy(shared, "Ciao dal figlio via mmap anonima!");
+_exit(0);
+}
+// PADRE: aspetta e poi legge
+waitpid(pid, NULL, 0);
+printf("[Padre] Letto: \"%s\"\n", shared);
+munmap(shared, SIZE);
+return 0;
+}
+
+---PAGE BREAK---

@@ -1,0 +1,571 @@
+- AWK -
+15
+
+---PAGE BREAK---
+- Esempi d’uso -
+AWK: ha bisogno di due elementi per funzionare: 
+
+il flusso in input (file_testo) 
+
+e il codice per elaborarlo (codice_awk).
+16
+Quindi:
+awk -opzioni '{ codice_awk }' file_testo
+Oppure
+cat file_testo | awk -opzioni '{ codice_awk }'
+
+---PAGE BREAK---
+Invocazioni
+1. awk programma file-dati
+awk ‘{ print “hello” }’ pippo.txt
+Esegue il programma sul contenuto del file
+1. awk programma
+Esegue il programma su stdin
+1. awk -f file-programma file-dati
+2. awk -f file-programma
+Esegue il programma contenuto nel primo file sul 
+contenuto del secondo file (o su stdin)
+
+---PAGE BREAK---
+Sintassi di un Programma
+Sequenza di regole:
+[pattern] [azione]
+●Pattern:
+○espressione booleana
+a >= 1
+○espressione regolare
+/ciao/
+●Azione:
+○blocco di istruzioni
+{ a = b + 1; print $0 }
+
+---PAGE BREAK---
+Semantica
+Sequenza di regole:
+[pattern] [azione]
+1. Divide l’input in righe
+2. Per ogni riga valuta tutte le regole in ordine
+3. Esegue tutte le azioni il cui pattern risulta “vero”
+
+---PAGE BREAK---
+Esempio
+awk ‘/a/{ print “trovato” }’
+Stampa “trovato” per ogni riga che contiene almeno una “a”
+
+---PAGE BREAK---
+Variabili Speciali
+●
+$0 
+riga corrente
+●
+$1…$9
+colonna i-esima della riga corrente
+●
+NF
+numero di colonne nella riga corrente (number of fields)
+●
+NR
+numero della riga corrente
+Variabili modificabili:
+●
+FS
+separatore di colonna (field separator)
+●
+RS
+separatore di riga (row separator)
+
+---PAGE BREAK---
+Cambiare il Separatore di 
+Colonna
+●Default: spazi e tabulazioni
+●Cambiare separatore internamente: FS=”:”
+●Cambiare separatore esternamente:
+awk -F<separatore> ...
+●Esempio:
+awk -F”:” '{ print $1 }' /etc/passwd
+
+---PAGE BREAK---
+Esercizio
+Senza utilizzare il comando sed (solo awk e sort ) a partire dal file dei 
+gruppi stampare il file dei punteggi per gruppo:
+Input: NomeGruppo; Punteggio
+lso01InfoNa03;69,00
+lso01InfoNa08;70,00
+lso01InfoNa21;65,33
+lso01InfoNa15;63,56
+…………………………;…………
+23
+Output: Punteggio NomeGruppo
+70,00  lso01InfoNa08 
+69,00  lso01InfoNa03
+65,33  lso01InfoNa21
+63,56  lso01InfoNa15
+………………… …………
+
+---PAGE BREAK---
+Soluzione Esercizio
+24
+awk –F’;’ '{print $2 " " $1}' gruppiLSO.txt | sort  –nr
+69,00  lso01InfoNa03
+70,00  lso01InfoNa08
+65,33  lso01InfoNa21
+63,56  lso01InfoNa15
+input
+output
+output
+sort  -nr
+70,00  lso01InfoNa08 
+69,00  lso01InfoNa03
+65,33  lso01InfoNa21
+63,56  lso01InfoNa15
+Laboratorio di sistemi operativi 1 a.a. 2011/2012
+11/04/2012
+
+---PAGE BREAK---
+Esercizio
+Facendo uso del comando awk, elencare gli utenti diversi che usano 
+“bash” come shell di default presenti nel file /etc/passwd
+Esempio:
+root:x:0:0:root:/home/root:/bin/bash
+Soluzione
+cat /etc/passwd |  awk 'BEGIN {FS=":"} ($7==“/bin/bash”) {print $1}'
+
+---PAGE BREAK---
+Esercizio
+Facendo uso del comando awk, elencare tutti i pid e gli username dei
+processi con CPU% maggiore di 0.1. Stampare quindi l’utilizzo totale di
+CPU da parte di tali processi
+26
+Soluzione
+ps -eo pid,user,pcpu --no-headers | 
+awk '$3 > 0.1 { print $1, $2; sum += $3 } 
+END { print "Totale CPU%:", sum }'
+
+---PAGE BREAK---
+Esercizio
+Facendo uso del comando awk, elencare tutti i pid e ppid dei processi
+dell’attuale user. Stampare quindi il numero totale di processi
+27
+Soluzione
+ps -u $USER -o pid=,ppid= | awk‘{print $1,$2; 
+tot+=1} } END {print “totale:“ tot }’ 
+
+---PAGE BREAK---
+Operatori di confronto
+Risultato
+Esempio
+Significato
+Operatore
+vero se il primo campo è 
+esattamente "anna"
+$1 == "anna"
+Uguale a
+==
+vero se il secondo campo è 
+diverso da 0
+$2 != 0
+Diverso da
+!=
+vero se il secondo campo è 
+minore di 10
+$2 < 10
+Minore di
+<
+vero se il secondo campo è 
+maggiore di 100
+$2 > 100
+Maggiore di
+>
+vero se il terzo campo è ≤ 50
+$3 <= 50
+Minore o uguale a
+<=
+vero se il terzo campo è ≥ 20
+$3 >= 20
+Maggiore o uguale a
+>=
+vero se il primo campo inizia 
+con “a”
+$1 ~ /^a/
+Match con regex
+~
+vero se il primo campo non
+contiene “mar”
+$1 !~ /mar/
+Non match con regex
+!~
+
+---PAGE BREAK---
+Esempio
+awk ‘$1 ~ /^a/ { print $2 }’
+Stampa la seconda colonna delle righe la cui prima 
+colonna comincia per “a”
+Tilde ~
+Su tastiera italiana PC: AltGr + ì
+Su tastiera Mac con layout italiano: Alt (o Option) + 5
+awk ‘match($1, /^a/) { print $2 }'
+
+---PAGE BREAK---
+Esempio
+awk ‘$1 !~ /^a/ { print $2 }’
+Stampa la seconda colonna delle righe la cui prima 
+colonna non inizia per “a”
+Tilde ~
+Su tastiera italiana PC: AltGr + ì
+Su tastiera Mac con layout italiano: Alt (o Option) + 5
+awk ‘!match($1, /^a/) { print $2 }'
+
+---PAGE BREAK---
+Esercizio
+Stampa la terza colonna delle righe la cui seconda 
+colonna inizia e finisce con la prima lettera della prima 
+riga
+
+---PAGE BREAK---
+Funzioni utili in awk
+substr(stringa, inizio, [lunghezza])
+Estrae una sottostringa da un campo o variabile.
+Inizio: posizione da cui partire (1 = primo carattere).
+lunghezza (opzionale): quanti caratteri estrarre.
+Se lunghezza è omesso → prende fino alla fine della stringa.
+Esempi:
+substr("ciao",1,1) → c
+substr("ciao",2,2) → ia
+substr("ciao",3) → ao
+
+---PAGE BREAK---
+Funzioni utili in awk
+next
+•
+Termina l’elaborazione della riga corrente.
+•
+Passa subito alla riga successiva del file di input.
+Utile quando:
+•
+Vuoi saltare righe particolari (es. intestazioni).
+•
+Usi la prima riga solo per inizializzare variabili.
+•
+In breve:“ho finito con questa riga, passa oltre”.
+awk '/^$/ { next } $1 ~ /^a/ { print $2 }' file.txt
+awk '/^#/ { next } $1 ~ /^a/ { print $2 }' file.txt
+
+---PAGE BREAK---
+Esercizio
+Stampa la terza colonna delle righe la cui seconda 
+colonna inizia e finisce con la prima lettera della prima 
+riga
+awk 'NR==1 { chiave = substr($1,1,1); next } 
+match($2, "^"chiave".*"chiave"$") { print $3 }' file.txt
+
+---PAGE BREAK---
+Abbreviazioni
+Sequenza di regole:
+[pattern] [azione]
+●Azione senza pattern
+eseguita su tutte le righe
+●Pattern senza azione
+stampa il rigo
+●Pattern “/regexp/”
+abbrev. di “$0 ~ /regexp/”
+●Azione “print”
+abbrev. di “print $0”
+
+---PAGE BREAK---
+Esempio
+Tutti questi sono equivalenti:
+awk ‘{n++}  n>10 { print $0 }’
+awk ‘{n++}  n>10 { print }’
+awk ‘{n++}  n>10’
+awk ‘NR>10’
+Stampano tutto, a cominciare dalla riga 11
+
+---PAGE BREAK---
+Passare variabili di shell ad awk
+●Supponiamo a=7 (variabile bash)
+●Per ogni rigo, vogliamo stampare il valore di “a” e poi il 
+primo campo del rigo
+○
+awk “{ print $a $1 }” equivale a
+awk “{ print 7   }”
+○
+awk '{ print $a $1 }' equivale a
+awk '{ print $0 $1 }'
+Come si fa?
+awk -v mia_a=”$a” '{ print mia_a $1 }'
+
+---PAGE BREAK---
+Esercizio
+●Lanciare: ps -eo user,pid,pcpu,comm
+●Definire una variabile di shell soglia=1.0
+●Stampare solo i processi che usano più CPU della soglia
+mostrando utente, PID, %CPU 
+USER     PID %CPU COMMAND
+root       1  0.0 systemd
+anna    1234  1.5 firefox
+anna    2345  0.3 bash
+mario   3456  5.0 python
+
+---PAGE BREAK---
+Esercizio
+●Lanciare: ps -eo user,pid,pcpu,comm
+●Definire una variabile di shell soglia=1.0
+●Stampare solo i processi che usano più CPU della soglia
+mostrando utente, PID, %CPU 
+USER     PID %CPU COMMAND
+root       1  0.0 systemd
+anna    1234  1.5 firefox
+anna    2345  0.3 bash
+mario   3456  5.0 python
+ps -eo user,pid,pcpu --no-headers \
+| awk -v soglia="$soglia" '$3 > soglia { print $1, $2, $3 }'
+
+---PAGE BREAK---
+Pattern Speciali
+●BEGIN: esegue l'azione prima di leggere il primo rigo
+●END: esegue l'azione dopo aver letto l'ultimo rigo
+Esempio:
+awk
+'BEGIN { print “Inizio” } 
+{ print $1 } 
+END   { print “Fine” }'
+
+---PAGE BREAK---
+Esercizio
+Stampare la dimensione totale di tutti i file della directory 
+corrente con estensione .txt
+
+---PAGE BREAK---
+Esercizio
+Stampare la dimensione totale di tutti i file della directory 
+corrente con estensione .txt
+ls -l | awk ‘/.txt$/ { tot += $5 }
+END     { print tot }’
+
+---PAGE BREAK---
+Esercizi
+1. Stampare solo le righe dispari
+2. Stampare solo il numero di righe che contengono 
+almeno una ‘x’
+3. Stampare il nome del file più grande della directory 
+corrente
+
+---PAGE BREAK---
+Esercizi
+- Stampare solo le righe dispari
+awk 'NR % 2 == 1' file.txt
+- Stampare solo il numero di righe che contengono almeno una ‘x’
+awk '/x/ { count++ } END { print count }' file.txt
+- Stampare il nome del file più grande della directory corrente
+ls -l | awk 'NR>1 && $1 !~ /^d/ { if ($5 > max) { max=$5; file=$9 } } END { print file }'
+
+---PAGE BREAK---
+Esercizio
+Convertire in HTML l'elenco della directory corrente
+Esempio:
+Se la directory contiene i seguenti file:
+> ls
+a.txt b.txt prova.c
+l’output del programma awk potrebbe essere il seguente:
+> ls | awk -f convert-to-HTML.awk
+<HTML><BODY>
+<ul>
+<li>a.txt</li>
+<li>b.txt</li>
+<li>prova.c</li>
+</ul>
+</BODY></HTML>
+
+---PAGE BREAK---
+Esercizio
+Convertire in HTML l'elenco della directory corrente
+BEGIN {
+print "<HTML><BODY>"
+print "<ul>"
+}
+{
+print "<li>" $0 "</li>"
+}
+END {
+print "</ul>"
+print "</BODY></HTML>"
+}
+Uso:
+ls | awk -f convert-to-HTML.awk
+
+---PAGE BREAK---
+Array
+In awk gli array sono associativi: gli indici possono essere stringhe oltre 
+che numeri. La sintassi è simile a quella degli altri linguaggi di scripting.
+Dichiarazione e uso
+n["mario"] = 5
+n["anna"]  = 3
+print n["mario"]   # stampa 5
+Iterazione sugli array
+for (chiave in n) {
+print chiave, n[chiave]
+}
+Uso tipicoConteggio di occorrenze
+Somma di valori raggruppati
+Tabelle chiave → valore
+
+---PAGE BREAK---
+Esercizio
+Mostrare lo spazio usato per ogni directory di primo livello sotto la 
+directory corrente.
+Suggerimento:
+Usa du -sh * per avere la dimensione e il nome.
+Esempio di input:
+du -sh *
+4.0K  file1.txt
+8.0K  src
+16K   dati
+
+---PAGE BREAK---
+Esercizio
+Mostrare lo spazio usato per ogni directory di primo livello sotto la directory 
+corrente.
+du -sh * | awk '{
+size[$2] = $1  # chiave = nome dir/file, valore = spazio usato
+}
+END {
+for (x in size)
+print x, size[x]
+}'
+
+---PAGE BREAK---
+Esercizio
+Contare quante volte compare ogni utente nei processi in esecuzione.
+ps -eo user --no-headers
+
+---PAGE BREAK---
+Esercizio
+Contare quante volte compare ogni utente nei processi in esecuzione.
+ps -eo user --no-headers
+ps -eo user --no-headers \
+| awk '{ utenti[$1]++ } END { for (u in utenti) print u, 
+utenti[u] }'
+
+---PAGE BREAK---
+Esercizio
+Calcolare la percentuale totale di CPU usata da ciascun utente.
+ps -eo user,pcpu --no-headers
+
+---PAGE BREAK---
+Esercizio
+Calcolare la percentuale totale di CPU usata da ciascun utente.
+ps -eo user,pcpu --no-headers
+ps -eo user,pcpu --no-headers | awk '{ cpu[$1] += $2 } END 
+{ for (u in cpu) print u, cpu[u] }'
+
+---PAGE BREAK---
+Esercizio
+Per ogni utente, stampare:
+•
+quante volte compare (numero di processi)
+•
+la somma totale della CPU usata.
+ps -eo user,pcpu --no-headers
+
+---PAGE BREAK---
+Esercizio
+Per ogni utente, stampare:
+•
+quante volte compare (numero di processi)
+•
+la somma totale della CPU usata.
+ps -eo user,pcpu --no-headers
+ps -eo user,pcpu --no-headers \
+| awk '{ 
+count[$1]++         # conta i processi
+cpu[$1] += $2       # somma la CPU
+} 
+END { 
+for (u in count) 
+printf "%-10s processi:%2d   cpu_totale:%.1f\n", u, 
+count[u], cpu[u] 
+}'
+
+---PAGE BREAK---
+Funzioni awk
+Si definiscono fuori da BEGIN / END / regole, con la sintassi:
+function nome(arg1, arg2, ...) {
+# corpo
+return valore
+}
+• Possono essere usate dentro le azioni, come in altri linguaggi.
+• Supportano sia parametri che variabili locali.
+
+---PAGE BREAK---
+Funzioni awk
+Esempio: funzione per calcolare la media
+function media(somma, n) {
+return somma / n
+}
+{
+tot += $2
+count++
+}
+END {
+print "Media:", media(tot, count)
+}
+non è obbligatorio metterle sopra, ma è consigliato perché rende lo script più leggibile
+Lancio: 
+awk -f media.awk dati.txt
+File dati.txt
+anna 23
+mario 30
+luigi 27
+
+---PAGE BREAK---
+Funzioni awk
+Esempio: funzione per calcolare la media
+function media(somma, n) {
+return somma / n
+}
+{
+tot += $2
+count++
+}
+END {
+print "Media:", media(tot, count)
+}
+non è obbligatorio metterle sopra, ma è consigliato perché rende lo script più leggibile
+File dati.txt
+anna 23
+mario 30
+luigi 27
+
+---PAGE BREAK---
+Comandi Esterni in awk
+In awk si può lanciare un comando esterno usando una pipe:
+comando | getline variabile
+• Il risultato del comando viene letto e salvato in variabile.
+• Dopo aver usato il comando, è buona pratica chiudere la pipe:
+close(comando)
+•
+Esempio
+BEGIN {
+cmd = "date +%Y"
+cmd | getline anno
+close(cmd)
+print "Anno corrente:", anno
+}
+
+---PAGE BREAK---
+Comandi Esterni in awk
+Esempio:
+Scrivere una funzione awk che restituisca il numero di file contenuti in una directory, 
+usando comandi esterni.
+ls -d */ | awk ‘
+function conta_file(dir) {
+cmd = "ls -1 " dir " | wc -l"
+cmd | getline n
+close(cmd)
+return n
+}
+{
+print $0, "contiene", conta_file($0), "file"
+}'
+
+---PAGE BREAK---

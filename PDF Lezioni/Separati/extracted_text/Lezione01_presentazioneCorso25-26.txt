@@ -1,0 +1,136 @@
+Laboratorio di Sistemi Operativi
+Corso di Laurea in Informatica
+A.A. 2025-2026
+Alberto Finzi
+
+---PAGE BREAK---
+Informazioni Generali
+• Crediti: 8 CFU
+• Orario: 
+– Lunedì:
+14:00-16:00
+– Martedì: 
+13:00-15:00 
+– Giovedì: 
+13:30-15:30
+• Gruppo 2: 
+– Studenti aventi il cognome con iniziali tra H e Z
+• NON ammessi cambi di gruppo
+
+---PAGE BREAK---
+• Propedeuticità:
+– Sistemi Operativi I, Algebra
+Informazioni Generali
+
+---PAGE BREAK---
+Docente
+• Docente: Alberto Finzi
+• Studio: via Claudio 21, 80125 Napoli
+• Ricevimento: 
+– Su appuntamento via email
+• Email: alberto.finzi@unina.it
+– Specificare SEMPRE nel subject “LSO”
+• Team del Corso: 
+– LSO (Canale 2: Finzi) A.A. 2025-26
+– Team code v3546h5
+
+---PAGE BREAK---
+Obiettivi del Corso
+Strumenti e le metodologie per la gestione di sistema e lo 
+sviluppo di applicazioni:
+1. Gestione del sistema operativo: comandi e scripting;
+2. Programmazione avanzata in Unix: chiamate di 
+sistema; programmi multi-processo e/o multi-thread; 
+semplici applicazioni di rete, etc..
+3. Strumenti per la Virtualizzazione
+
+---PAGE BREAK---
+Modalità di Esame
+• Prova scritta su scripting e System Programming
+• Progetto Linux 
+(Architettura Client-Server)
+
+---PAGE BREAK---
+Modalità di Esame
+• Il “Progetto” consiste in:
+– Realizzazione di un software con allegata relazione
+– I progetti verranno assegnati verso la metà corso
+– Discussione sul software
+• Problematiche affrontate
+• Scelte implementative
+• Soluzioni particolari
+• ...
+
+---PAGE BREAK---
+Modalità di Esame
+• Il progetto viene assegnato a gruppi composti da al più 2 
+studenti.
+– Sono ammessi gruppi composti da un solo studente solo in 
+casi particolari (e.g., studenti lavoratori)
+• Tutti i membri del gruppo devono discutere il progetto
+– Non possono discutere il progetto separatemente dai suoi. 
+– Non siete obbligati a sostenere l'esame nello stesso appello
+
+---PAGE BREAK---
+Modalità di Esame
+• Il progetto deve essere consegnato prima della prova
+scritta
+– Con deroga per il primo appello (entro Marzo)
+• Il voto finale valuta l’esito dello scritto e dei progetti
+• Durante la discussione del progetto sono possibili
+altre domande
+
+---PAGE BREAK---
+Programma di Massima Unix
+• Comandi Linux
+– Gestione di file e directory, editing, gestione processi, 
+compilazione di programmi
+• Shell Programming
+– Variabili, strutture di controllo
+• Programmazione avanzata in C in Unix
+– Segnali, gestione processi, comunicazione tra processi, 
+network programming
+• Virtualizzazione
+– Macchine virtuali, Docker, etc.
+
+---PAGE BREAK---
+Libri di Testo
+- W.R. Stevens e S.A. Rago
+“Advanced Programming in the 
+UNIX Environment”, second edition Addison Wesley.
+- Siever, Spainhour, Figgins, ed Hekman “Linux, Guida di 
+Riferimento Apogeo”.
+- documenti segnalati a lezione e sul sito web.
+
+---PAGE BREAK---
+Installare Linux
+• Fondamentale disporre di Linux
+• Dual boot Windows Linux
+– Macchina dedicata www.ubuntu-it.org (vanno bene anche 
+altre distribuzioni Linux)
+• Macchina virtuale su windows:
+– WMware: https://www.vmware.com/products/fusion.html
+– Virtualbox: https://www.virtualbox.org/
+• Linux: 
+– Ubuntu 24.04 LTS (Long Term Support)
+• Download https://ubuntu.com/download/desktop
+• ISO diretta (amd64 desktop) https://releases.ubuntu.com/noble/ubuntu-
+24.04.3-desktop-amd64.iso
+– Qualunque altra distribuzione e versione è ok 
+
+---PAGE BREAK---
+Installare Linux
+• Macchina virtuale su windows:
+– WMware: https://www.vmware.com/products/fusion.html
+• VMware Workstation Player (Win) o VMware Fusion Player (macOS)
+– Ubuntu 24.04 LTS (Long Term Support)
+• ISO diretta (amd64 desktop) https://releases.ubuntu.com/noble/ubuntu-
+24.04.3-desktop-amd64.iso
+– Creare nuova VM in Vmware
+• Aprire VMware → Create a New Virtual Machine
+• Selezionare Installer disc image (ISO) → caricare l’ISO scaricata
+• Scegliere Typical
+– Configurazione
+• CPU 2 core, 4 GB RAM, Disco virtuale 20-30 GB, rete NAT
+
+---PAGE BREAK---

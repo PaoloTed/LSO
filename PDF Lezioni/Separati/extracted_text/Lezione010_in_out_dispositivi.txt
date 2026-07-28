@@ -1,0 +1,58 @@
+Input/Output
+Tutti i dispositivi I/O visti come file con accesso tramite
+chiamate read/write come i file ordinari
+Le operazioni di 
+I/O (open, read, 
+write, close, ecc.) 
+sono uniformi
+Accesso ai driver
+Cache: riduce gli 
+accessi diretti ai 
+dispositiv
+
+---PAGE BREAK---
+Input/Output
+• Linux divide i dispositivi in tre classi:
+– block device: random access a blocchi di dati
+– character device: non supportano le funzionalità dei blocchi
+– network device: interfacciati con il sottosistema di rete del kernel
+
+---PAGE BREAK---
+Input/Output
+•
+Dispositivi a blocchi:
+– Principale interfaccia ai dispositive a dispositive a disco (es. HDD, SSD)
+– Accesso random a blocchi di dati fissi (es. 512B, 4KB)
+– Le operazioni read/write vengono gestite da un request manager (I/O 
+scheduler),che organizza le richieste nel buffer e le inoltra al block device 
+driver
+– Il kernel può effettuare caching e riordino delle richieste per ottimizzare le 
+prestazioni
+– Es. dischi, SSD, chiavette USB, CD-ROM
+
+---PAGE BREAK---
+Input/Output
+•
+Dispositivi a carattere:
+– Accesso sequenziale ai dati (non random access)
+– Il kernel non effettua buffering complesso: passa direttamente i dati al 
+dispositivo
+– I terminali sono un tipo particolare di dispositivo a carattere che
+forniscono un’interfaccia interattiva tra utente e processo: 
+•
+tty_struct: gestisce buffering e controllo di flusso tra terminale e processo
+•
+Line discipline: livello intermedio che interpreta e gestisce i dati del terminale (es. echo, 
+editing di riga, segnali, conversion).
+•
+Disciplina tipica: tty
+– Fornisce lo stream standard stdin / stdout per i processi utente.
+– Permette l’editing interattivo (es. cancellazione caratteri, ritorni a capo, ecc.)
+– Mappa i caratteri speciali come \n e \r
+– Altri dispositivi a carattere (senza disciplina di linea) sono:
+•
+/dev/null, /dev/zero, /dev/random, /dev/input/event0
+•
+/dev/audio, /dev/dsp
+
+---PAGE BREAK---

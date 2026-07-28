@@ -1,0 +1,10 @@
+
+# File virtuali Google Drive
+*.gdoc
+*.gsheet
+*.gslides
+*.gdraw
+*.gform
+*.gmaps
+*.gsite
+

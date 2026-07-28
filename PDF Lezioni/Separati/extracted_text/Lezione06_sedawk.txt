@@ -1,0 +1,753 @@
+Sed & Awk
+
+---PAGE BREAK---
+Sed e A k
+Sed e Awk
+sed: editor non interattivo di file di testo (1974 nei Bell Labs 
+come evoluzione di grep, Lee E. McMahon)
+awk: linguaggio per l'elaborazione di modelli orientato ai
+awk: linguaggio per l'elaborazione di modelli orientato ai 
+campi (1977, Bell Labs Aho, Weinberger, Keringhan)
+Condividono una sintassi d'invocazione simile:
+- fanno uso delle Espressioni Regolari
+- leggono l'input, in modo predefinito, dallo stdin
+- inviano i risultati allo stdout
+le loro capacità combinate danno agli script di shell parte
+- le loro capacità combinate danno agli script di shell parte 
+della potenza di Perl
+
+---PAGE BREAK---
+Stream EDitor (sed)
+Stream EDitor (sed)
+• sed: editor di linea che non richiede 
+l'interazione con l'utente
+• sed può filtrare l'input che riceve da un 
+file o una pipe
+file o una pipe
+• La sintassi di sed NON definisce un 
+output: 
+– L'output viene inviato allo standard output e
+– L output viene inviato allo standard output e 
+puo' essere rediretto
+d NON
+difi
+l'i
+t
+3
+• sed NON modifica l'input
+
+---PAGE BREAK---
+sed
+sed
+
+---PAGE BREAK---
+Stream EDitor (sed)
+SYNOPSIS
+SYNOPSIS
+sed [-an] command [file ...]
+[-an] [-e command] [-f command_file] [file ...]
+• sed legge i file specificati, oppure lo standard 
+input se non specificati file;
+•
+modifica l’input come specificato da una lista 
+p
+p
+di commandi;  
+• L’input è quindi scritto sullo standard output.
+L input è quindi scritto sullo standard output.
+-n      di default ogni linea e’ replicata  sullo standard output dopo 
+l’applicazione dei comandi. Opzione -n elimina questo.
+
+---PAGE BREAK---
+Comandi sed
+Alcuni comandi:
+Alcuni comandi:
+• a\
+“Append” di testo al di sotto della riga 
+t
+corrente
+• c\
+Modifica il testo della riga corrente 
+• d
+Cancella testo
+• i\
+Inserisci testo al di sopra della riga
+i\
+Inserisci testo al di sopra della riga 
+corrente
+• p
+Stampa testo
+• p 
+Stampa testo
+• r 
+Legge un file
+6
+• s 
+Cerca e modifica testo
+
+---PAGE BREAK---
+Comandi sed
+Co
+a d sed
+
+---PAGE BREAK---
+Comandi sed
+Co
+a d sed
+
+---PAGE BREAK---
+Comandi Sed
+Comandi Sed
+La forma del comando sed e’ la seguente:
+La forma del comando sed e la seguente:
+[address[,address]]function[arguments]
+Sed è una macchina a registri:
+1
+copia ciclicamente una linea di input in un pattern space
+1.
+copia ciclicamente una linea di input in un  pattern space, 
+2.
+applica tutti i comandi con address selezionati dal pattern space, 
+3.
+copia il pattern space nell standard output, aggiungendo newline, 
+4.
+quindi cancella il pattern space.
+
+---PAGE BREAK---
+Indirizzo: [address[ address]]
+Indirizzo: [address[,address]]
+L’indirizzo non e’ richiesto ma se specificato deve essere:
+L indirizzo non e richiesto, ma se specificato deve essere:
+1.
+un numero (che conta linee di input nei file di input),
+(
+p
+p
+),
+2.
+un carattere ``$'’ per l’ultima line di  input 
+3.
+oppure un address di contesto (espressione regulare 
+d t
+it
+d
+d li
+it t
+)
+preceduta o seguita da un delimitatore).
+-
+Una linea di comando senza indirizzo seleziona ogni
+Una linea di comando senza indirizzo seleziona ogni 
+pattern space.
+-
+Una linea di comando con un indirizzo seleziona ogni 
+tt
+d t
+d ll’ dd
+pattern space dato dall’address. 
+-
+Una linea di comando con due indirizzo seleziona il 
+range inclusivo del primo pattern space tra i due primo 
+g
+p
+p
+p
+p
+indirizzi. 
+
+---PAGE BREAK---
+Indirizzo
+d
+o
+
+---PAGE BREAK---
+Sed
+Sed
+•
+Se non si specificano azioni, sed stampa sullo standard output 
+p
+p
+p
+le linee in input, lasciandole inalterate 
+S
+i
+ifi
+t
+i di i
+i t
+ll
+di
+•
+Se non viene specificato un indirizzo o un intervallo di 
+indirizzi di linea su cui eseguire l’azione, quest’ultima viene 
+applicata a tutte le linee in input. 
+pp
+p
+•
+Gli indirizzi di linea si possono specificare come numeri o 
+espressioni regolari.
+•
+Se vi è più di un’azione (comandi multipli), esse possono 
+essere specificate sulla riga di comando precedendo ognuna 
+con l’opzione -e, oppure possono essere lette da un file
+con l opzione e, oppure possono essere lette da un file 
+esterno specificato sulla linea di comando con l’opzione -f.
+
+---PAGE BREAK---
+sed: Esempi
+sed: Esempi
+lso:~> sed 'd' /etc/services
+Non visualizza nulla, ma cancella linea per linea il 
+contenuto del file
+lso:~> sed ‘1d' /etc/services | more
+|
+Cancella la prima riga il resto in stdio
+lso:~> sed ‘1,10d' /etc/services | more
+Righe tra 1 e 10 in stdio
+g
+lso:~> sed ‘/^#/d' /etc/services | more
+lso:
+ sed / #/d /etc/services | more
+Espressione regolare
+
+---PAGE BREAK---
+Esempio
+p
+lso:~>cat esempio
+1 Questo e' un esempio.
+2 Questa riga contiente un erore
+g
+3 Un altro erore in questa riga
+4 Questa riga e' corretta
+4 Questa riga e corretta
+5 Questa riga contiente un altro erore.
+lso:~>grep erore esempio
+2 Questa riga contiente un erore
+3 Un altro erore in questa riga
+14
+5 Questa riga contiente un altro erore.
+
+---PAGE BREAK---
+Comando stampa
+p
+lso:~>sed '/erore/p' esempio
+1 Questo e' un esempio.
+sed ‘/espressione/p’ file 
+p
+2 Questa riga contiente un erore
+2 Questa riga contiente un erore
+Stampa tutte le linee, quelle 
+che contengono la stringa si
+3 Un altro erore in questa riga
+3 Un altro erore in questa riga
+che contengono la stringa si 
+ripetono
+4 Questa riga e' corretta
+5 Questa riga contiente un altro erore.
+5 Questa riga contiente un altro erore
+5 Questa riga contiente un altro erore.
+lso:~>sed -n '/erore/p' esempio
+lso: >sed n /erore/p esempio
+2 Questa riga contiente un erore
+3 Un altro erore in questa riga
+Per stampare solo le linee 
+che contengono la stringa si 
+usa l’opzione -n
+15
+q
+g
+5 Questa riga contiente un altro erore.
+usa l opzione n
+
+---PAGE BREAK---
+Comando Stampa
+lso:~> sed -n -e '/BEGIN/,/END/p' /my/test/file | more
+lso:~> sed -n -e '/main[[:space:]]*(/,/^}/p' sourcefile.c 
+
+---PAGE BREAK---
+Comando Cancella
+lso:~>sed '/erore/d' esempio
+1 Q
+'
+i
+Il
+d
+d
+sed ‘/espressione/d’ file 
+1 Questo e' un esempio.
+4 Questa riga e' corretta
+Il comando d porta 
+ad escludere linee 
+dalla visualizzazione
+lso:~>sed -n '/^Questo *esempio $/d' example
+lso:~>sed -n / Questo. esempio.$/d example
+Escluse le linee che 
+iniziano con una stringa
+2 Questa riga contiente un erore
+3 Un altro erore in questa riga
+iniziano con una stringa 
+e terminano con un’altra
+4 Questa riga e' corretta
+5 Questa riga contiente un altro erore.
+17
+5 Questa riga contiente un altro erore.
+
+---PAGE BREAK---
+Comando Cancella
+lso:~> sed  /^$/d inputFileName
+lso:~>sed '/^ *$/d' inputFileName
+lso:~> sed ‘1,/^$/d’ inputFileName
+,
+p
+lso:~> sed 8d inputFileName
+lso:~> sed 8d inputFileName
+
+---PAGE BREAK---
+Selezione di un range di righe
+l
+d '2 4d'
+i
+(Cancella righe tra 
+sed ‘[add1,[add2]]com’ 
+lso:~>sed '2,4d' esempio
+1 Questo e' un esempio.
+2,4)
+5 Questa riga contiente un altro erore.
+lso:~>sed '3 $d' esempio
+lso:~>sed 3,$d esempio
+1 Questo e' un esempio.
+(Cancella righe 
+tra 3 e ultima $)
+2 Questa riga contiente un erore
+19
+
+---PAGE BREAK---
+Ricerca e Sostituzione
+lso:~>sed 's/erore/errore/g' esempio
+1 Questo e' un esempio.
+2 Questa riga contiente un errore
+3 Un altro errore in questa riga
+4 Questa riga e' corretta
+5 Questa riga contiente un altro errore.
+lso:~>sed 's/^/> /g' esempio
+'s/{old value}/{new value}/'
+Sostituzione
+S
+tit
+i
+l b l
+> 1 Questo e' un esempio.
+> 2 Questa riga contiente un erore
+'s/{old value}/{new value}/g'
+Sostituzione globale
+> 3 Un altro erore in questa riga
+> 4 Questa riga e' corretta
+20
+> 5 Questa riga contiente un altro erore
+
+---PAGE BREAK---
+Ricerca e Sostituzione
+lso:~>sed -e 's/erore/errore/g'
+lso: >sed e s/erore/errore/g 
+-e 's/^/> /g'  esempio
+Multiple Changes
+> 1 Questo e' un esempio.
+Multiple Changes
+> 2 Questa riga contiente un errore
+> 3 Un altro errore in questa riga
+> 3 Un altro errore in questa riga
+> 4 Questa riga e' corretta
+> 5 Questa riga contiente un altro errore.
+21
+
+---PAGE BREAK---
+Ricerca e Sostituzione
+ce ca e Sost tu o e
+lso:~> sed 's/yourword//g' yourfile
+y
+g y
+Cancella tutte le parole che contengono yourword
+lso:~> sed -e 's/firstword//g' -e 's/secondword//g' yourfile
+Cancella le parole firstword e secondword
+p
+lso:~> sed ‘s/ *$//’ yourfile
+lso:
+ sed  s/ $// yourfile
+l
+d ‘ /00*/0/ ’
+fil
+lso:~> sed  ‘s/00*/0/g’ yourfile
+l
+d ’ /^/
+/’ fil
+fil
+i d
+t
+lso:~> sed  ’s/^/   /’ file > file.indent
+
+---PAGE BREAK---
+Ricerca e sostituzione
+ce ca e sost tu o e
+sed '/^$/,/^END/s/hills/mountains/g' myfile3.txt
+Sostituzione da riga nulla a riga che inizia con END
+Sostituzione da riga nulla a riga che inizia con END
+sed e 's:/usr/local:/usr:g' mylist txt
+sed -e s:/usr/local:/usr:g mylist.txt
+Separatore : al posto di /
+sed -e 's/<.*>//g' myfile.html
+Cancella la parola più lunga che fa il match:
+Cancella la parola più lunga che fa il match:
+<b>This</b> is what <b>I</b> meant. 
+sed -e 's/<[^>]*>//g' myfile.html
+
+---PAGE BREAK---
+Ricerca e Sostituzione
+Ricerca e Sostituzione
+sed -e 's/.*/lui dice: &/' origmsg.txt
+Tutte le righe precedute da “lui dice:”. & ripete 
+l’ultimo match
+
+---PAGE BREAK---
+Ricerca e Sostituzione
+Ricerca e Sostituzione
+foo bar oni 
+aaa bbb ccc
+aaa bbb ccc 
+bla curly bho 
+Sostituire “eny me min” con “Sig aaa-bbb Da ccc 
+Serve un’espressione per 3 stringhe separate  '.* .* .*'
+S
+\( *\) \( *\) \( *\)‘
+Si usa '\(.*\) \(.*\) \(.*\)‘
+sed -e 's/\( *\) \( *\) \( *\)/Sig \1-\2 Da \3/' myfile txt
+sed -e s/\(. \) \(. \) \(. \)/Sig \1-\2 Da \3/ myfile.txt
+
+---PAGE BREAK---
+Centrare righe di un file
+Centrare righe di un file
+
+---PAGE BREAK---
+AWK - Aho, Kernighan and Weinberger
+
+---PAGE BREAK---
+Elementi di Awk
+Elementi di Awk
+• Funzione awk cerca su file linee o altre unità di testo 
+che contengono pattern;
+• Quando una linea corrisponde ad un pattern, azioni 
+speciali vengono eseguiti sulla linea.
+• In awk i programmi sono "data−driven”: descrivi cosa
+In awk i programmi sono data driven : descrivi cosa 
+cerchi, poi esegui;
+• Il programma e’ definito da un insieme di regole;
+• Ogni regola e’: azione da fare trovato il pattern. 
+
+---PAGE BREAK---
+Elementi di awk
+• awk suddivide ogni linea in una sequenza di 
+i d li
+it ti d
+t
+i
+campi delimitati da separatori
+– I separatori di default sono uno (o piu') spazi o 
+caratteri di tab la ione
+caratteri di tabulazione.
+• Le variabili $1, $2, ..., $n identificano i primi n 
+i i
+i ti d
+k
+campi riconosciuti da awk
+• La variabile $0 contiene la riga in esame
+• Sintassi:
+Sintassi:
+– awk '<programma>' <input-file1> <input-file2>...
+– awk -f <file-script> <input-file> <input-file2>
+29
+– awk -f <file-script> <input-file> <input-file2>...
+
+---PAGE BREAK---
+Struttura di un programma awk
+Struttura di un programma awk
+
+---PAGE BREAK---
+Esempio
+p
+lso:~>df
+Filesystem
+1K-blocks
+Used Available Use% Mounted on
+display free disk space
+Filesystem           1K blocks      Used Available Use% Mounted on
+/dev/hda5             16682168   9932136   5902608  63% /
+none                    256840         0    256840   0% /dev/shm
+lso:~>df | awk '{ print $1,$2, $3}'
+Le variabili $1, $2, $3, ..., $N contengono il 
+Filesystem 1K-blocks Used
+/dev/hda5 16682168 9932556
+$ , $ , $ ,
+, $
+g
+primo, secondo, terzo … ultimo campo di una 
+linea di input. La variabile $0 (zero) contiene 
+la linea intera. 
+none 256840 0
+l
+df |
+Fil
+t
+|
+k '{
+i t "L
+ti i
+"$1 "\t
+’
+t
+l "$5}'
+Selezione di non-matching lines
+lso:~>df | grep -v Filesystem | awk '{ print "La partizione :"$1 "\t e’ usata al "$5}'
+La partizione :/dev/hda5         e’ usata al 63%
+La partizione :none
+e’ usata al 0%
+31
+La partizione :none      e usata al 0%
+
+---PAGE BREAK---
+awk ed Espressioni Regolari
+p
+g
+• E' possibile combinare espressioni regolari e programmi awk 
+tili
+d
+l
+t
+i t
+i
+utilizzando la seguente sintassi:
+awk '<espressione>{<programma>}' <file>
+– awk '<espressione>{<programma>}' <file>
+• Esempio:
+• Esempio:
+lso:~>df  | awk '/dev\/hd/ { print "La partizione :"$1 "\t e usata al "$5}'
+La partizione :/dev/hda5
+e usata al 63%
+La partizione :/dev/hda5         e usata al 63%
+• Il programma viene eseguito solo sulle righe che corrispondono
+• Il programma viene eseguito solo sulle righe che corrispondono 
+al pattern dell'espressione regolare
+32
+
+---PAGE BREAK---
+awk: BEGIN ed END
+awk: BEGIN ed END
+Gli t t
+t BEGIN
+d END
+t
+i
+i
+i
+Gli statement BEGIN ed END consentono eseguire operazioni 
+prima e dopo il corpo del comando
+lso:~>df  | awk 'BEGIN {print "Elenco partizioni"} /dev\/hd/ { print 
+"La partizione :"$1 "\t e’ usata al "$5} END {print “Fine
+"La partizione :"$1 "\t e’ usata al "$5} END {print “Fine 
+Report\n”}'
+Elenco partizioni
+La partizione :/dev/hda5         e’ usata al 63%
+Fine Report
+33
+
+---PAGE BREAK---
+Esempi awk
+p
+
+---PAGE BREAK---
+awk: Operatori e Predicati
+
+---PAGE BREAK---
+awk scripts
+p
+• E' possibile definire script awk 
+p
+p
+– L'esempio precedente
+lso:~>df  | awk 'BEGIN {print "Elenco partizioni"} /dev\/hd/ { print "La 
+partizione :"$1 "\t e usata al "$5} END {print “Fine Report\n”}
+– Diventa:
+BEGIN {print "Elenco partizioni"}
+/dev\/hd/ { print "La partizione :"$1 "\t e usata al "$5}
+END {
+i t “Fi
+R
+t\ ”}
+END {print “Fine Report\n”}
+• Se il nome dello script e' report.awk
+lso:~>df |awk -f report.awk
+Elenco partizioni
+36
+La partizione :/dev/hda5         e usata al 63%
+Fine Report
+
+---PAGE BREAK---
+awk: le variabili 
+S (
+S
+)
+f
+awk usa molte variabili, alcune editabili, altre read-only.
+• La variabile FS (Field Separator) identifica il 
+separatore di input
+D f
+lt
+i
+t b
+– Default spazi o tab
+• La variable OFS (Output Field Separator) identifica il 
+separatore di output
+separatore di output
+– Default spazio
+• La variabile ORS (Output Record Separator)
+• La variabile ORS (Output Record Separator) 
+identifica il separatore di “record”
+– Detault \n
+– Detault \n
+• E' possibile modificare il valore di queste variabili
+BEGIN { FS=”;” ; OFS=”---”; ORS=”->\n<-”}
+37
+– BEGIN { FS= ; ; OFS= --- ; ORS= ->\n<- }
+
+---PAGE BREAK---
+awk: le variabili
+awk: le variabili
+•
+La variabile NR contiene il numero di record processati
+– Viene incrementata automaticamente
+•
+Ogni riferimento ad una variabile non definita comporta la 
+creazione della stessa e la sua inizializzazione a “”
+– I riferimenti successivi utilizzeranno il valore corrente 
+della stessa
+della stessa
+38
+
+---PAGE BREAK---
+awk: le variabili
+awk: le variabili
+
+---PAGE BREAK---
+Esempio
+lso:~>cat somma.awk
+BEGIN { 
+FS=":";
+print "Calcolo Subtotali e Totale"}
+{
+subtotale=$1*$2;
+print "Subtotale per " $3 "="subtotale;
+t t l
+t t l
+bt t l
+totale = totale+subtotale;
+}
+END {
+print "Totale
+"totale
+print "Totale ="totale
+}
+lso:~>cat dati txt
+lso:~>cat dati.txt
+100:2:Cliente 1
+200:8:Cliente 2
+500 2 Cli
+t
+3
+40
+500:2:Cliente 3
+
+---PAGE BREAK---
+Esempio
+Esempio
+lso:~>cat dati.txt
+100:2:Cliente 1
+200:8:Cliente 2
+500:2:Cliente 3
+lso:~>awk -f somma.awk dati.txt
+Calcolo Subtotali e Totale introiti
+Calcolo Subtotali e Totale introiti
+Subtotale per Cliente 1=200
+Subtotale per Cliente 2=1600
+Subtotale per Cliente 2 1600
+Subtotale per Cliente 3=1000
+Totale =2800
+41
+Totale =2800
+
+---PAGE BREAK---
+Output formattato
+Output formattato
+• awk consente di formattare l'output utilizzando la 
+funzione printf (invece della funzione print)
+• Sintassi: printf formato, item1, item2,...
+p
+• Esempio:
+• Esempio:
+lso:~>awk 'BEGIN {w=5; p=3; s="abc"; printf "%d %4.3f %s\n",w,p,s}'                    
+5 3.000 abc
+• Il “formato” include %d, %f, %c, %o, %x...
+• Nota: Lo statement BEGIN consente di eseguire 
+programmi awk SENZA specificare un input (file
+42
+programmi awk SENZA specificare un input (file 
+o redirezione)
+
+---PAGE BREAK---
+Redirezione in awk
+• E' possibile utilizzare gli operatori di redirezione in 
+p
+g
+p
+script awk. 
+• print items > nomefile
+awk '{ print $2
+"phone list"; print $1
+"name list"
+– awk '{ print $2 > "phone-list"; print $1 > "name-list" 
+}' nomefile
+• print items >> nomefile
+E'
+ibil
+tili
+h
+l'
+t
+“ ”
+• E' possibile utilizzare anche l'operatore “<”
+43
+
+---PAGE BREAK---
+Redirezione in awk
+• Esecuzione di comandi
+lso:~>awk ’{ 
+print $1 > "names.unsorted"; 
+p
+;
+command = "sort -r > names.sorted"; 
+print $1 | command 
+p
+|
+}’ file
+44
+
+---PAGE BREAK---
+awk: array
+awk: array
+
+---PAGE BREAK---
+Riferimenti
+• Capitolo 4,5 e 6 di [Bash Guide for 
+Beginners]
+• Effective Awk Programming
+Effective Awk Programming
+46
+
+---PAGE BREAK---

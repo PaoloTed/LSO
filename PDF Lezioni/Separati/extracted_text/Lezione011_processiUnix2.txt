@@ -1,0 +1,742 @@
+Processi: Exit, Wait, Exec
+Contiene lucidi tratti da: 2005-07 Giuseppe Schmid (Univ. Federico II), 2005-
+2007 Francesco Pedullà, Massimo Verola (Uniroma2), 2001-2005 Renzo Davoli
+(Università di Bologna), Alberto Montresor (Università di Bologna)
+
+---PAGE BREAK---
+Ciclo di vita del processo
+
+---PAGE BREAK---
+• Esistono tre modi per terminare in modo NORMALE:
+•
+eseguire un return da main (è equivalente a chiamare
+exit )
+•
+chiamare la funzione exit:
+• void exit(int status);
+– invoca di tutti gli exit handlers che sono stati registrati
+– chiude di tutti gli I/O stream standard
+– è specificata in ANSI C
+•
+chiamare la system call _exit:
+• void _exit(int status);
+– ritorna al kernel immediatamente
+– è chiamata come ultima operazione da exit
+– è specificata nello standard POSIX.1
+Terminazione di processi (I)
+
+---PAGE BREAK---
+Terminazione di processi (I)
+
+---PAGE BREAK---
+Terminazione di processi (II)
+C runtime
+
+---PAGE BREAK---
+•
+Esistono due modi per terminare in modo ANORMALE:
+•
+Quando un processo riceve certi segnali
+- generati dal processo stesso
+- generati da altri processi
+- generati dal kernel
+•
+Chiamando abort:
+- void abort();
+- La chiamata ad abort costituisce un caso speciale del
+primo caso dei tre sopra elencati, in quanto genera il
+segnale SIGABRT
+NOTA: per informazioni sui segnali usa man 7 signal
+Terminazione di processi (III)
+
+---PAGE BREAK---
+• Sia nel caso di terminazione normale che in
+quella anormale le azioni attuate dal kernel
+sono le stesse:
+• rimozione della memoria utilizzata dal processo
+• chiusura dei descrittori aperti
+Azioni del kernel a terminazione di processo
+
+---PAGE BREAK---
+• Exit status:
+•
+Valore che viene passato ad exit (e _exit) e che
+notifica il padre su come è terminato il processo (successo,
+con errore)
+• Termination status:
+•
+Valore che viene generato dal kernel nel caso di una
+terminazione normale/anormale
+•
+Nel caso si parli di terminazione anormale, si specifica la
+ragione per questa terminazione anormale
+•
+L’exit status e’ convertito dal kernel in termination status
+quando alla fine viene chiamata _exit
+• Come ottenere questi valori?
+•
+Tramite le funzioni wait e waitpid (descritte in seguito)
+Valori di ritorno a terminazione del processo
+
+---PAGE BREAK---
+• Cosa succede se il padre termina prima del figlio?
+•
+il processo figlio viene "adottato" dal processo init
+(PID=1), in quanto il kernel vuole evitare che un processo
+divenga "orfano" (cioè senza un PPID)
+•
+quando un processo termina, il kernel esamina la tabella
+dei processi per vedere se aveva figli; in tal caso, il PPID di
+ogni figlio viene posto uguale a 1
+• Cosa succede se il figlio termina prima del padre?
+•
+generalmente il padre aspetta mediante la funzione wait
+che il figlio finisca ed ottiene le varie informazioni sull'exit
+status
+•
+se il figlio termina senza che il padre lo “aspetti”, il padre
+non avrebbe più modo di ottenere informazioni sull'exit
+status del figlio
+•
+per questo motivo, alcune informazioni sul figlio vengono
+mantenute in memoria e il processo diventa uno zombie
+Processi zombie
+
+---PAGE BREAK---
+Quando un processo entra nello stato di zombie, il kernel
+mantiene le informazioni che potrebbero essere richieste dal
+processo padre tramite wait e waitpid
+• process ID
+• termination status
+• accounting information (tempo impiegato dal processo)
+Il processo resterà uno zombie fino a quando il padre non
+eseguirà una delle system call wait o waitpid
+Per quanto riguarda i figli del processo init:
+•
+non possono diventare zombie
+•
+tutte le volte che un figlio di init termina, init esegue
+una chiamata wait e raccoglie eventuali informazioni:
+questo è il modo in cui gli zombie vengono eliminati dal
+sistema
+Lo stato di zombie
+
+---PAGE BREAK---
+pid_t wait(int *status);
+pid_t waitpid(pid_t pid, int *status, int options);
+•
+La wait e waitpid sono utilizzate per ottenere informazioni sulla
+terminazione dei processi figli
+•
+Quando un processo chiama wait o waitpid:
+•
+può bloccarsi, se tutti i suoi figli sono ancora in esecuzione
+•
+può ritornare immediatamente con il termination status di un
+figlio, se un figlio ha terminato ed il suo termination status è in
+attesa di essere raccolto
+•
+può ritornare immediatamente con un errore, se il processo
+non ha alcun figlio
+•
+Nota:
+•
+se eseguiamo una system call wait quando abbiamo già
+ricevuto SIGCHLD, essa termina immediatamente, altrimenti si
+blocca
+System call wait e waitpid
+
+---PAGE BREAK---
+• Significato degli argomenti:
+•
+status è un puntatore ad un intero; se diverso da NULL, il
+termination status viene messo in questa locazione
+•
+Il valore di ritorno è il process id del figlio che ha terminato
+• Differenza tra wait e waitpid:
+•
+wait blocca il chiamante fino a quando un qualsiasi figlio
+non sia terminato
+•
+waitpid ha delle opzioni per evitare di bloccarsi
+•
+waitpid può mettersi in attesa di uno specifico processo
+• Il contenuto del termination status dipende
+dall'implementazione:
+•
+bit per la terminazione normale, bit per l'exit status, etc.
+System call wait e waitpid
+
+---PAGE BREAK---
+Status wait waitpid
+
+---PAGE BREAK---
+pid_t waitpid(pid_t pid, int *status, int options);
+• Argomento pid:
+• pid == -1
+si comporta come wait
+• pid > 0 attende la terminazione del figlio con process
+id uguale a pid
+• pid == 0
+attende la terminazione di qualsiasi figlio con
+process group ID uguale a quello del chiamante
+• pid < -1
+attende la terminazione di qualsiasi figlio con
+process group ID uguale a –pid
+– Opzioni (parametro options):
+WNOHANG
+non si blocca se il child non ha terminato
+System call waitpid
+
+---PAGE BREAK---
+Opzioni waitpid
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+• Quando un processo termina (normalmente o no),
+il padre viene informato dalla ricezione di un
+segnale SIGCHLD
+• La notifica è asincrona
+• Il padre ha la possibilità di:
+• ignorare il segnale (default)
+• predisporre una funzione speciale, detta signal handler, che
+viene invocata automaticamente quando il segnale viene
+ricevuto
+Notifica della terminazione di un figlio
+
+---PAGE BREAK---
+Esecuzione di Programmi
+
+---PAGE BREAK---
+•
+Se fork fosse l’unica primitiva per creare nuovi processi, la
+programmazione in ambiente Unix sarebbe ostica, dato che si
+potrebbero creare soltanto copie dello stesso processo.
+•
+La famiglia di primitive exec può essere utilizzata per superare tale
+limite in quanto le varie system call exec permettono di iniziare
+l’esecuzione di un altro programma sovrascrivendo la memoria del
+processo chiamante.
+La famiglia di system call exec
+
+In realtà tutte le funzioni chiamano in ultima analisi execve che è l’unica
+vera system call della famiglia. Le differenze tra le varianti stanno nel
+modo in cui vengono passati i parametri.
+execl
+execle
+execlp
+execv
+execvp
+execve
+
+---PAGE BREAK---
+La famiglia di system call exec
+
+---PAGE BREAK---
+#include <stdio.h>
+#include <unistd.h>
+main()
+{
+printf("Esecuzione di ls\n");
+execl("/bin/ls", "ls", "-l", (char *)0);
+perror("La chiamata di execl ha generato un
+errore\n");
+exit(1);
+}
+•
+Si noti che execl elimina il programma originale sovrascrivendolo
+con quello passato come parametro.
+•
+Quindi le istruzioni che seguono una chiamata a execl verranno
+eseguite soltanto in caso si verifichi un errore durante l’esecuzione
+di quest’ultima ed il controllo ritorni al chiamante.
+Esempio di utilizzo di execl
+
+---PAGE BREAK---
+Esempio di utilizzo di execl
+
+---PAGE BREAK---
+Esecuzione di Programmi
+Process Control Block
+Process Control Block
+
+---PAGE BREAK---
+•
+Quando un processo chiama una delle system call exec:
+•
+il processo viene rimpiazzato completamente da un nuovo
+programma (text, data, heap, stack vengono sostituiti)
+•
+il nuovo programma inizia a partire dalla sua funzione main
+•
+il process ID non cambia
+•
+Esistono sei versioni di exec:
+•
+con/senza gestione della variabile di ambiente PATH
+• se viene gestita la variabile d'ambiente, un comando
+corrispondente ad un singolo filename verrà cercato nel
+PATH
+•
+con variabili di ambiente ereditate / con variabili di ambiente
+specificate
+•
+con array di argomenti / con argomenti nella chiamata (null
+terminated)
+Chiamata alla system call exec
+
+---PAGE BREAK---
+int execl(char *pathname, char *arg0, … );
+int execv(char *pathname, char *argv[]);
+int execle(char *pathname, char *arg0, …, char* envp[]);
+int execve(char *pathname, char *argv[], char* envp[]);
+int execlp(char *filename, char *arg0, … );
+int execvp(char *filename, char *argv[]);
+Famiglia system call exec
+
+---PAGE BREAK---
+e
+v
+l
+p
+lettere del
+suffisso
+•
+•
+•
+execve
+•
+•
+•
+execvp
+•
+•
+•
+execv
+•
+•
+•
+execle
+•
+•
+•
+execlp
+•
+•
+•
+execl
+envp[ ]
+environ
+argv[ ]
+arg list
+filename
+pathname
+Funzione
+Suffisso e parametri di exec
+
+---PAGE BREAK---
+Eseguire Programmi
+
+---PAGE BREAK---
+Eseguire Programmi
+
+---PAGE BREAK---
+Eseguire Programmi
+
+---PAGE BREAK---
+#include <stdio.h>
+#include <unistd.h>
+main()
+{
+printf("Esecuzione di ls\n");
+execlp("ls", "ls", "-l", (char *)0);
+perror("La chiamata di execl ha generato un
+errore\n");
+exit(1);
+}
+•
+Le istruzioni che seguono una chiamata a execlp verranno eseguite
+soltanto in caso si verifichi un errore durante l’esecuzione di quest’ultima
+ed il controllo ritorni al chiamante.
+•
+Rispetto ad   execl   viene specificato il nome del file (non path) come
+nelle applicazioni lanciate da shell
+Esempio di utilizzo di execlp
+
+---PAGE BREAK---
+• Cosa viene ereditato da exec?
+•
+process ID e parent process ID
+•
+real uid e real gid
+•
+supplementary gid
+•
+process group ID
+•
+session ID
+•
+terminale di controllo
+•
+current working directory
+•
+root directory
+•
+maschera creazione file (umask)
+•
+file locks
+•
+maschera dei segnali
+•
+segnali in attesa
+Proprietà ereditate da exec 
+
+---PAGE BREAK---
+• Cosa NON viene ereditato da exec?
+• effective user ID e effective group ID, in
+quanto vengono settati in base ai valori dei bit
+di protezione
+• Cosa succede ai file aperti?
+• Dipende dal flag close-on-exec che è
+associato ad ogni descrittore
+• Se close-on-exec è true, vengono chiusi
+• Altrimenti, vengono lasciati aperti (comportamento
+di default)
+Proprietà NON ereditate con exec 
+
+---PAGE BREAK---
+Eseguire Programmi
+
+---PAGE BREAK---
+Famiglia Exec
+
+---PAGE BREAK---
+Famiglia Exec
+
+---PAGE BREAK---
+L’utilizzo combinato di fork per creare un nuovo processo e di exec
+per eseguire nel processo figlio un nuovo programma costituisce
+un potente strumento di programmazione in ambiente Linux
+Esempio:
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+void fatal(char *s)
+{
+perror(s);
+exit(1);
+}
+/* continua ... */
+Utilizzo combinato di fork e exec
+
+---PAGE BREAK---
+main()
+{
+pid_t pid;
+switch(pid = fork()) {
+case -1:
+fatal("fork failed");
+break;
+case 0:
+execl("/bin/ls", "ls", "-l", (char *)0);
+fatal("exec failed");
+break;
+default:
+wait((int *)0);
+printf("ls completed\n");
+exit(0);
+}
+}
+Utilizzo combinato di fork e exec
+
+---PAGE BREAK---
+Utilizzo combinato di fork e exec
+
+---PAGE BREAK---
+Scrivere un programma che manda in
+esecuzione un eseguibile il cui filename e’
+inserito come argomento sulla linea
+comando e ne aspetta la terminazione.
+Aggiungere 
+al 
+programma 
+precedente 
+la
+capacità di lanciare eseguibili residenti in
+qualsiasi 
+directory 
+memorizzata 
+nella
+variabile di ambiente $PATH.
+Esercizio 1
+
+---PAGE BREAK---
+Esercizio (A)
+(estrae il filename)
+
+---PAGE BREAK---
+Esercizio1 (A)
+
+---PAGE BREAK---
+Esercizio 1 (B)
+
+---PAGE BREAK---
+Esercizio2
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+•
+L’ambiente di un processo è un insieme di stringhe (terminate da \0).
+•
+Un ambiente è rappresentato da un vettore di puntatori a caratteri
+terminato da un puntatore nullo.
+•
+Ogni puntatore (che non sia quello nullo) punta ad una stringa della
+forma: identificatore = valore
+•
+Per accedere all’ambiente da un programma C, è sufficiente
+aggiungere il parametro envp a quelli del main:
+/* showmyenv */
+#include <stdio.h>
+main(int argc, char **argv, char **envp)
+{
+while(*envp)
+printf("%s\n",*envp++);
+}
+•
+oppure usare la variabile globale seguente:
+extern char **environ;
+Ambiente di un processo
+
+---PAGE BREAK---
+•
+L’ambiente di default di un processo coincide con quello
+del processo padre.
+•
+Per specificare un nuovo ambiente è necessario usare una
+delle due varianti seguenti della famiglia exec,
+memorizzando in envp l’ambiente desiderato:
+execle(path, arg0, arg1, ..., argn, (char *)0, envp);
+execve(path, argv, envp);
+L'ambiente di un processo
+
+---PAGE BREAK---
+/* setmyenv */
+#include <unistd.h>
+#include <stdio.h>
+main()
+{ char *argv[2], *envp[3];
+argv[0] = "setmyenv";
+argv[1] = (char *)0;
+envp[0] = "var1=valore1";
+envp[1] = "var2=valore2";
+envp[2] = (char *)0;
+execve("./showmyenv", argv, envp);
+perror("execve fallita");
+}
+•
+Eseguendo il programma precedente si ottiene quanto
+segue:
+$ ./setmyenv
+var1=valore1
+var2=valore2
+L'ambiente di un processo
+
+---PAGE BREAK---
+•
+Esiste una funzione della libreria standard che consente di cercare in
+environ il valore corrispondente ad una specifica variabile
+d’ambiente:
+#include <stdlib.h>
+char *getenv(const char *name);
+•
+getenv prende come argomento il nome della variabile da cercare e
+restituisce il puntatore al valore (ciò che sta a destra del simbolo =) o
+NULL se non lo trova:
+#include <stdio.h>
+#include <stdlib.h>
+main()
+{
+printf("PATH=%s\n", getenv("PATH"));
+}
+•
+Dualmente, putenv consente di modificare o estendere l’ambiente:
+putenv("variabile=valore");
+L'ambiente di un processo
+
+---PAGE BREAK---
+•
+Ad ogni processo è associata una current working directory
+che viene ereditata dal processo padre.
+•
+La chiamata di sistema seguente consente di cambiarla:
+#include <unistd.h>
+int chdir(const char *path);
+•
+Ad ogni processo inoltre è associata una root directory che
+specifica il punto di inizio del file system visibile dal processo
+stesso.
+•
+Per cambiare la root directory si può usare la chiamata di
+sistema seguente:
+#include <unistd.h>
+int chroot(const char *path);
+Current working directory e root directory
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+Race Condition
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+Funzione vfork()
+#include <unistd.h>
+pid_t vfork(void);
+Crea nuovo processo come fork, ma non copia spazio
+inirizzamento, eseguito nello spazio del genitore finche’
+figlio non esegue exec o exit.
+Finche’ non eseguito exec o exit, figlio eseguito per primo
+vfork utilizzato con exec per l’esecuzione di un programma
+
+---PAGE BREAK---
+Esempio
+#include <systype.h>
+#include “ourhdir.h” /* tutti header necessari*/
+int glob = 6;
+int main(void) {
+ int var; pid_t pid;
+ var = 88;
+ printf(“before vfork\n”);
+ if ((pid =vfork())) perrror(“vfork”), exit(0);
+ else if (pid==0) {
+ glob++; var++; /* cambia variabili del padre */
+   _exit(0);}
+printf(“pid = %d glob = %d var = %d”,getpid(), glob,var);
+exit(0);
+}
+
+---PAGE BREAK---
+Esempio
+Eseguendo:
+$./a.out
+before vfork
+pid = 2624, glob = 7, var = 89
+Cioe’, l’incremento della var del figlio cambia il
+valore nel genitore.
+
+---PAGE BREAK---
+File di Interprete
+
+---PAGE BREAK---
+int system(char* command);
+•
+Esegue un comando, aspettando la sua terminazione
+•
+E' una funzione della libreria standard definita in ANSI C (quindi
+non è una system call, anche se svolge una funzione analoga
+alla fork+exec)
+•
+Il suo modo di operare è fortemente dipendente dal sistema; in
+genere chiama /bin/sh -c command
+•
+Non è definita in POSIX.1, perché non è un'interfaccia al
+sistema operativo, ma è definita in POSIX.2
+La funzione system
+
+---PAGE BREAK---
+Funzione system
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+Esercizio
+• Programma che genera due processi, il
+primo scrive una stringa su di un file, il
+secondo la legge.
+
+---PAGE BREAK---
+Esercizio
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
+#define BUFFSIZE 4096 /* max. num. di caratteri in buf */
+int main(int argc, char* argv[]){
+ pid_t pid;  int status;  int fd;  int n;
+ char buffer[BUFFSIZE];  /* controlla i parametri input */
+ if (argc != 3)
+    printf("usage: trasfile <file> <stringa>"), exit(1);
+/* genera il processo figlio */
+ if ( (pid = fork()) < 0)
+ perror("fork"), exit(1);
+
+---PAGE BREAK---
+/* errore di fork */
+ else if (pid == 0) { /* figlio */
+ /* apre il file da scrivere */
+ if ((fd = open(argv[1], O_WRONLY|O_CREAT|O_TRUNC, S_IRWXU))<0)
+ perror("create file error"), exit(1);
+ /* scrive la stringa */
+ if ((n = write(fd, argv[2], strlen(argv[2]))) < 0)
+ printf("write error"),exit(1);
+ /* chiude il file */
+ close(fd);
+ } else { /* padre */
+ /* attende la terminazione del figlio */
+ if ( (pid = waitpid(pid, &status, 0)) < 0)
+ perror("waitpid error"), exit(1);
+ /* apre il file */
+ if ((fd = open(argv[1], O_RDONLY, S_IRWXU)) < 0)
+ perror("open file error"), exit(1);
+ /* legge la stringa */
+ if ((n = read(fd, buffer, BUFFSIZE)) < 0)
+ printf("read error"),exit(1);
+    /* stampa la stringa */
+printf("trovato: %s", buffer);
+ /* chiude il file */
+   close(fd);
+ } exit(0);}
+
+---PAGE BREAK---
+Esercizio
+• Trasformare il precedente programma
+utilizzando exec.
+
+---PAGE BREAK---
+Esercizio
+
+---PAGE BREAK---
+Esercizio
+
+---PAGE BREAK---
+Esercizio
+
+---PAGE BREAK---

@@ -1,0 +1,674 @@
+Input-Output di basso livello
+
+---PAGE BREAK---
+File in UNIX
+Il kernel di UNIX vede tutti i file come flussi non formattati di byte;  il
+compito di interpretare ogni struttura logica interna ad un file è
+lasciato alle applicazioni.
+I file UNIX sono strutture composte dai tre seguenti elementi:
+Il sistema assegna a ciascun file un identificatore numerico, detto i-
+
+---PAGE BREAK---
+Inodo
+Le informazioni contenute all'interno di ogni i-nodo residente
+in  un file system sono le seguenti:
+
+---PAGE BREAK---
+Accesso/creazione di File
+
+---PAGE BREAK---
+5
+I/O di basso livello
+La maggior parte delle operazioni sui file ordinari in ambiente
+UNIX si possono eseguire utilizzando solo le cinque chiamate
+di sistema open, read, write, lseek, close.
+Il kernel associa un file descriptor ad ogni file aperto
+−Il file descriptor è un intero
+−Quando un file viene aperto con open, la funzione open
+restituisce il file descriptor associato al file
+Le costanti simboliche STDIN_FILENO (0), STDOUT_FILENO
+(1) e STDERR_FILENO (2) sono definite in unistd.h
+
+---PAGE BREAK---
+Descrittori di file
+Alla richiesta di aprire un file esistente o di creare un nuovo
+file, il kernel ritorna un descrittore di file al processo
+chiamante
+Quando si vuole leggere o scrivere su un file si passa come
+argomento a read e write il descrittore ritornato da open
+Per convenzione il descrittore 0 viene associato allo
+standard input,  1 allo standard output e 2 allo standard
+error
+I numeri 0, 1 e 2 possono essere sostituiti dalle costanti
+STDIN_FILENO STDOUT_FILENO STDERR_FILENO
+definite nell’header <unistd.h>
+
+---PAGE BREAK---
+7
+La funzione open
+#include <sys/types.h>  /*data types*/
+#include <sys/stat.h>   /*  data returned by stat()*/
+#include <fcntl.h>       /*  file control options */
+int open(const char *pathname, int oflag, ... /* mode_t mode */ );
+
+Restituisce il descrittore del file, -1 in caso di errore;
+
+Permette sia di aprire un file già esistente che di creare il file nel caso in cui
+questo non esista;
+
+pathname è il pathname (assoluto o relativo) del file;
+
+oflag permette di specificare le opzioni, mediante costanti definite in
+<fcntl.h>, combinate con “|” (or bit-a-bit);
+
+mode è il modo del file ed è un parametro opzionale, utilizzato solo nel caso
+di creazione del file (“…” modo ISO C per dire variabile).
+
+---PAGE BREAK---
+Chiamata di sistema open
+oflag può assumere diversi valori (definiti nell’header <fcntl.h>):
+O_RDONLY apri solo in lettura
+O_WRONLY apri solo in scrittura
+O_RDWR apri in lettura e scrittura
+Solo una delle precedenti costanti può̀ essere specificata,  con una
+combinazione OR di:
+
+ O_APPEND esegue un appen dalla fine del file per ciascuna write
+
+O_CREAT crea il file se non esiste
+
+O_EXCL se utilizzato insieme a O_CREAT, ritorna un errore  se il file
+esiste
+O TRUNC se file esiste e aperto con successo write only/read write
+
+---PAGE BREAK---
+9
+I flag di open
+
+---PAGE BREAK---
+10
+I permessi per open
+
+---PAGE BREAK---
+11
+Esempi di open
+open(“prova.txt”, O_RDONLY)
+open(“prova.txt”, O_RDONLY | O_CREAT, S_IRWXU)
+open(“prova.txt”, O_RDWR | O_CREAT | O_EXCL, S_IRWXU)
+
+---PAGE BREAK---
+creat
+Un nuovo file può essere creato anche con:
+#include <fcnl.h>
+int creat(const char *pathname, mode_t mode)
+Equivalente a:
+open(pathname, O_WRONLY| O_CREAT | O_TRUNC, mode);
+Il nuovo file è aperto solo per scrittura
+
+---PAGE BREAK---
+13
+Implementazione nel kernel
+Il kernel usa due strutture dati indipendenti per
+gestire i file aperti
+−Ogni processo mantiene la lista dei propri file descriptor
+(chiave astratta per accedere ai file, in POSIX, intero)
+−Ogni file descriptor punta ad un elemento della file table
+−La file table specifica per ogni file aperto:
+la modalità di apertura del file (lettura, scrittura o
+entrambe)
+le opzioni come O_APPEND, etc.
+l'offset corrente
+l'inode corrispondente
+
+---PAGE BREAK---
+14
+Un processo con 3 descrittori aperti
+v-node table
+
+---PAGE BREAK---
+15
+Due processi che accedono allo stesso file
+
+---PAGE BREAK---
+16
+Trattare gli errori
+Molte system call restituiscono -1 in caso di errore
+Per avere piu' informazioni, si usa la variabile globale
+errno (error number)
+La funzione perror(const char *) stampa la stringa
+passata come parametro, e poi un messaggio in base al
+valore corrente di errno
+Esempi:
+int fd = open(“prova.txt”, O_RDNLY);
+if (fd<0) perror(“errore di open”);
+int fd;
+if ( (fd=open(“prova.txt”, O_RDNLY)) < 0)
+perror(“errore di open”);
+
+---PAGE BREAK---
+17
+close
+#include <unistd.h>
+int close(int filedes)
+
+Chiude il file identificato da filedes e precedentemente aperto con
+open
+
+Restituisce 0 in caso di successo o -1 in caso di errore
+
+---PAGE BREAK---
+18
+L'offset
+Ad ogni file aperto e' associato un intero, detto offset, che
+rappresenta la posizione (espressa in numero di byte
+dall'inizio del file) in cui verra' effettuata la prossima
+operazione di I/O
+L'offset e' inizializzato a zero da open
+−a meno che non sia specificato O_APPEND
+Le operazioni di read e write incrementano il valore
+dell'offset di un numero di byte pari al numero di byte
+letti/scritti
+
+---PAGE BREAK---
+19
+lseek
+#include <sys/types.h>
+#include <unistd.h>
+off_t lseek (int filedes, off_t offset, int whence);
+Modifica l'offset corrente del file
+Restituisce il nuovo valore dell'offset, o -1 in caso di errore
+
+---PAGE BREAK---
+20
+lseek
+Il valore del parametro offset e' interpretato in base al parametro whence:
+−SEEK_SET: L'offset corrente e' posto a offset byte dall'inizio del file.
+−SEEK_CUR: L'offset corrente e' incrementato di offset byte.
+Il valore del parametro offset puo' essere sia positivo che negativo
+−SEK_END: L'offset e' posto a offset byte dalla fine del file.
+Il valore del parametro offset puo' essere sia positivo che negativo
+Per conoscere l'offset corrente, e' sufficente eseguire:
+off_t currpos;
+currpos = lseek(filedes, 0, SEEK_CUR);
+
+---PAGE BREAK---
+Esempi
+#include <sys/types.h>
+int main(void) {
+ if (lseek(STDIN_FILENO, 0, SEEK_CUR) == -1)
+printf("cannot seek\n");
+ else
+   printf("seek OK\n");
+exit(0);
+}
+Testa lo stdio per vedere se può fare seeking
+$./a.out
+seek OK
+$./a.out < /etc/passwd
+seek OK
+
+---PAGE BREAK---
+22
+read
+#include <unistd.h>
+ssize_t read(int filedes, void *buf, size_t nbytes);
+Restituisce:
+−il numero di byte effettivamente letti
+−0 se ci troviamo alla fine del file
+−-1 in caso di errore
+L'operazione di lettura avviene partendo dall'offset
+corrente del file
+−L'offset viene incrementato opportunamente
+
+---PAGE BREAK---
+23
+read
+Il numero di byte letti può essere diverso dal paramentro
+nbytes quando:
+Il numero di byte ancora presenti nel file è inferiore ad
+nbytes.
+La lettura avviene da un terminale (si legge una riga alla
+volta).
+La lettura avviene da un buffer di rete (nbyte superiore)
+La lettura avviene da una pipe o una FIFO
+L'operazione e' interrotta da un segnale.
+
+---PAGE BREAK---
+24
+write
+#include <unistd.h>
+ssize_t write(int filedes, void *buff, size_t nbytes);
+Restituisce:
+−il numero di byte effettivamente scritti
+−-1 in caso di errore
+L'operazione di scrittura avviene partendo dall'offset
+corrente del file
+−L'offset viene incrementato opportunamente
+
+---PAGE BREAK---
+25
+Esempio 9
+#include <stdio.h>     /* perror */
+#include <errno.h>     /* perror */
+#include <unistd.h>    /* write, lseek, close, exit */
+#include <sys/types.h> /* open, lseek */
+#include <sys/stat.h>  /* open */
+#include <fcntl.h>     /* open */
+char    buf1[] = "abcdefghij";
+char    buf2[] = "ABCDEFGHIJ";
+int main(void)
+{
+        int fd;
+
+---PAGE BREAK---
+26
+Esempio 9
+   if ((fd = open("file.hole", O_RDWR|O_CREAT, S_IRWXU)) < 0)
+   perror("open error");
+   if (write(fd, buf1, 10) != 10)
+       perror("buf1 write error");
+   /* L'offset ora e' 10 */
+   if (lseek(fd, 20, SEEK_SET) == -1)
+       perror("lseek error");
+   /* L'offset ora e' 20 */
+   if (write(fd, buf2, 10) != 10)
+      perror("buf2 write error");
+   /* L'offset ora e' 30 */
+   close(fd);
+   return 0;
+}
+Apre un file;
+Scrive il buf1;
+Sposta l’offest (buco);
+Scrive il buf2.
+
+---PAGE BREAK---
+27
+Esempio 10
+#include <stdio.h>     /* perror */
+#include <errno.h>     /* perror */
+#include <unistd.h>
+/* read, write */
+#define BUFFSIZE 4096
+int main(void) {
+ int n;
+ char buf[BUFFSIZE];
+ while ((n = read(STDIN_FILENO, buf, BUFFSIZE)) > 0)
+if (write(STDOUT_FILENO, buf, n) != n)
+perror("write error");
+ if (n < 0)
+perror("read error");
+ return 0;
+}
+
+---PAGE BREAK---
+28
+Esercizi
+Scrivere un programma che mostra il contenuto di un
+file a byte alterni (un carattere si e uno no)
+Scrivere un programma che mostra il contenuto di un
+file alla rovescia, cioe' a partire dall'ultimo carattere
+fino ad arrivare al primo
+
+---PAGE BREAK---
+Condivisione di file
+Il kernel utilizza tre strutture dati per la gestione dell’ I/O:
+1.
+Ciascun processo ha un elemento nella tabella dei  processi.
+Tale elemento è un "vettore" di descrittori di file aperti,  ciascuno
+con: un puntatore ad un elemento della tabella dei  file
+2. Il kernel possiede una tabella per ciascun file aperto con i flag di
+stato del file (lettura, scrittura, append,...),  l'offset corrente ed un
+puntatore ad un elemento della  tabella dei v-node
+3. Ciascun file aperto (o device) ha una struttura v-node. Il v-node
+contiene informazioni sul tipo di file e sulle funzioni che  operano
+su di esso (informazione in i-node).
+
+---PAGE BREAK---
+Condivisione di File
+stdin (fd o) e stdout (fd 1) associati ad un processo
+
+---PAGE BREAK---
+Condivisione di File
+Due processi condividono lo stesso
+file: stesso v-node, diversa enty sulla
+file table (e.g. offset)
+
+---PAGE BREAK---
+Accesso ad un file
+Cosa accade quando un processo cerca di accedere ad
+un file?
+Quando un processo accede ad un file mediante una
+write,  l'elemento della tabella dei file relativo all'offset
+viene  aggiornato e, se necessario (modificato size),
+viene aggiornato l‘i-node
+Se il file è̀ aperto con O_APPEND, un flag corrispondente
+è  messo nella tabella dei file (ogni write alla fine del file)
+Una chiamata ad lseek modifica solo l'offset corrente del
+file  e non viene eseguita nessuna operazione di I/O.
+Se si chiede di posizionarsi alla fine del file, il valore
+corrente  dell'offset nella tabella dei file viene preso dal
+campo della  tavola di i-node che descrive la dimensione
+
+---PAGE BREAK---
+Programma A
+ strcpy(string,"aaaaaaaaa\n");
+ fd=open("testfile",O_RDWR|O_CREAT|O_APPEND,
+S_IRUSR|S_IWUSR);
+ if (fd<0){ perror("Errore in apertura"); exit(1); }
+ do {
+    if (write(STDOUT_FILENO,"Comando:",8)<8)
+               perror("write error");
+    input=getchar();
+    __fpurge(stdin);
+    string[0]=input;
+    write(fd,string,10);
+    lseek(fd,(off_t)3,SEEK_SET); // sposta l'offset ad “INIZIO” file
+    if (write(STDOUT_FILENO,"Eseguito\n",9)<9)
+                perror("write error");
+ } while (input!='f');
+ close(fd);
+
+---PAGE BREAK---
+Programma B
+ strcpy(string,"bbbbbbbbb\n");
+ fd=open("testfile",O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
+ lseek(fd,0,SEEK_END); // sposta l'offset a FINE file
+ do {
+    if (write(STDOUT_FILENO,"Comando:",8)<8)
+               perror("write error su stdout");
+    input=getchar();
+    __fpurge(stdin);
+    string[0]=input;
+    if (write(fd,string,10)<10)
+                perror("write error");
+     if (write(STDOUT_FILENO,"Eseguito\n",9)<9)
+                perror("write error su stdout");
+ } while (input!='f');
+ close(fd);
+
+---PAGE BREAK---
+Esempio
+Esenguendo i due
+programmi nel seguente
+ordine:
+−Esegui A
+−Esegui B
+−A scrive 5 stringhe
+Otterrete il seguente
+output:
+qaaaaaaaa
+waaaaaaaa
+eaaaaaaaa
+raaaaaaaa
+taaaaaaaa
+
+---PAGE BREAK---
+Esempio
+Esenguendo i due
+programmi nel seguente
+ordine:
+−Esegui A
+−Esegui B
+−A scrive 5 stringhe
+−B scrive 7 stringhe
+Otterrete il seguente
+output:
+1bbbbbbbb
+2bbbbbbbb
+3bbbbbbbb
+4bbbbbbbb
+5bbbbbbbb
+6bbbbbbbb
+7bbbbbbbb
+
+---PAGE BREAK---
+Esempio
+Esenguendo i due
+programmi nel seguente
+ordine:
+−Esegui A
+−Esegui B
+−A scrive 5 stringhe
+−B scrive 7 stringhe
+−A scrive 5 stringhe
+−B scrive 5 stringhe
+Otterrete il seguente
+output:
+1bbbbbbbb
+2bbbbbbbb
+3bbbbbbbb
+4bbbbbbbb
+5bbbbbbbb
+6bbbbbbbb
+7bbbbbbbb
+8bbbbbbbb
+9bbbbbbbb
+0bbbbbbbb
+1bbbbbbbb
+2bbbbbbbb
+
+---PAGE BREAK---
+Esempio
+Esenguendo i due
+programmi nel seguente
+ordine:
+−Esegui A
+−Esegui B
+−A scrive 5 stringhe
+−B scrive 7 stringhe
+−A scrive 5 stringhe
+Otterrete il seguente
+output:
+1bbbbbbbb
+2bbbbbbbb
+3bbbbbbbb
+4bbbbbbbb
+5bbbbbbbb
+6bbbbbbbb
+7bbbbbbbb
+qaaaaaaaa
+waaaaaaaa
+eaaaaaaaa
+raaaaaaaa
+taaaaaaaa
+
+---PAGE BREAK---
+Esempio
+Esenguendo i due
+programmi nel seguente
+ordine:
+−Esegui A
+−Esegui B
+−A scrive 5 stringhe
+−B scrive 7 stringhe
+−A scrive 5 stringhe
+−B scrive 5 stringhe
+−Termina B
+−Termina A
+Otterrete il seguente
+output:
+1bbbbbbbb
+2bbbbbbbb
+3bbbbbbbb
+4bbbbbbbb
+5bbbbbbbb
+6bbbbbbbb
+7bbbbbbbb
+8bbbbbbbb
+9bbbbbbbb
+0bbbbbbbb
+1bbbbbbbb
+2bbbbbbbb
+fbbbbbbbb
+faaaaaaaa
+Ed invertendo l'ordine in cui A e B scrivono nel file ?
+
+---PAGE BREAK---
+Esempio
+Esenguendo i due
+programmi nel seguente
+ordine:
+−Esegui A
+−Esegui B
+−B scrive 2 stringhe
+−A scrive 2 stringhe
+−B scrive 2 stringhe
+−A scrive 2 stringhe
+−Termina B
+−Termina A
+1bbbbbbbb
+2bbbbbbbb
+3bbbbbbbb
+4bbbbbbbb
+fbbbbbbbb
+yaaaaaaaa
+faaaaaaaa
+
+---PAGE BREAK---
+Duplicazione di File descriptor
+Un file descriptor puo' essere duplicato utilizzando:
+#include <unistd.h>
+int dup (int filedes);
+int dup2(int filedes, int filedes2);
+dup ritorna un file descriptor che punta allo stesso file
+indirizzato da filedes.
+−Il valore ritornato da dup e' il minimo file descriptor non
+utilizzato
+dup2 prende in input filedes2, il file descriptor da usare nella
+duplicazone.
+−Se filedes2 e' aperto, dup2 chiude il file prima di duplicare il
+descrittore filedes, se filedes = filedes2 ritorna fildes e non
+chiude
+−dup2 e' una operazione atomica
+
+---PAGE BREAK---
+Open e Dup
+
+---PAGE BREAK---
+Open e Dup
+
+---PAGE BREAK---
+Programma A'
+ strcpy(string,"aaaaaaaaa\n");
+ fd=open("testfile",O_RDWR|O_CREAT|O_APPEND,
+S_IRUSR|S_IWUSR);
+ if (fd<0){ perror("Errore in apertura"); exit(1); }
+ dup2(fd, STDOUT_FILENO); // redirige stdout su fd
+ do {
+    if (write(STDOUT_FILENO,"Comando:",8)<8)
+               perror("write error");
+    input=getchar();
+    __fpurge(stdin);
+    string[0]=input;
+    write(fd,string,10);
+    lseek(fd,(off_t)3,SEEK_SET); // sposta l'offset ad “INIZIO” file
+    if (write(STDOUT_FILENO,"Eseguito\n",9)<9)
+                perror("write error");
+ } while (input!='f');
+close(fd);
+
+---PAGE BREAK---
+Esecuzione di A'
+Il file “testfile” contiene quanto segue:
+Comando:aaaaaaaaa
+Eseguito
+Comando:aaaaaaaaa
+Eseguito
+Comando:aaaaaaaaa
+Eseguito
+Comando:aaaaaaaaa
+Eseguito
+Comando:aaaaaaaaa
+Eseguito
+Comando:faaaaaaaa
+Eseguito
+
+---PAGE BREAK---
+Ottenere info su File
+(info su link simbolico,
+non su file linkato)
+
+---PAGE BREAK---
+La struttura stat
+struct stat {
+mode_t        st_mode;     /* file type & mode (persmissions) */
+uid_t         st_uid;      /* user ID of owner */
+gid_t         st_gid;      /* group ID of owner */
+ino_t         st_ino;      /* inode number */
+dev_t         st_dev;      /* device number (file system) */
+dev_t         st_rdev;     /* device type (if inode device) */
+nlink_t       st_nlink;    /* number of links */
+off_t         st_size;     /* total size, in bytes */
+time_t        st_atime;    /* time of last access */
+time_t        st_mtime;    /* time of last modification */
+time_t        st_ctime;    /* time of last change */
+blksize_t     st_blksize;  /* blocksize for filesystem I/O */
+blkcnt_t      st_blocks;   /* number of blocks allocated */
+};
+
+---PAGE BREAK---
+La struttura stat
+struct stat {
+mode_t        st_mode;     /* file type & mode (persmissions) */
+uid_t         st_uid;      /* user ID of owner */
+gid_t         st_gid;      /* group ID of owner */
+ino_t         st_ino;      /* inode number */
+dev_t         st_dev;      /* device number (file system) */
+dev_t         st_rdev;     /* device type (if inode device) */
+nlink_t       st_nlink;    /* number of links */
+off_t         st_size;     /* total size, in bytes */
+time_t        st_atime;    /* time of last access */
+time_t        st_mtime;    /* time of last modification */
+time_t        st_ctime;    /* time of last change */
+blksize_t     st_blksize;  /* blocksize for filesystem I/O */
+blkcnt_t      st_blocks;   /* number of blocks allocated */
+};
+
+---PAGE BREAK---
+Tipo di File
+
+---PAGE BREAK---
+Tipo di File
+
+---PAGE BREAK---
+Tipo di File
+
+---PAGE BREAK---
+Esempio
+
+---PAGE BREAK---
+Struttura Stat
+
+---PAGE BREAK---
+User e Group ID
+
+---PAGE BREAK---
+Accesso ai File
+
+---PAGE BREAK---
+Accesso ai File
+
+---PAGE BREAK---
+Funzione access
+
+---PAGE BREAK---
+Esempio
+
+---PAGE BREAK---
+Esempio
+
+---PAGE BREAK---
+chmod fchmod
+Set used id exe, group id exe, saved text
+owner
+group
+others
+
+---PAGE BREAK---
+Esempio
+
+---PAGE BREAK---
+chown
+
+---PAGE BREAK---

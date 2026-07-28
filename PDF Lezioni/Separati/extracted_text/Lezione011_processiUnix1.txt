@@ -1,0 +1,154 @@
+Processi  UNIX
+(Contiene lucidi tratti dal corso del Prof. Giovanni Schmid)
+
+---PAGE BREAK---
+Funzione Main
+
+---PAGE BREAK---
+Lista di Ambiente
+
+---PAGE BREAK---
+Lista di Ambiente
+
+---PAGE BREAK---
+Variabili di Ambiente
+
+---PAGE BREAK---
+Layout in memoria di un Prog.
+Block Started 
+by Symbol
+
+---PAGE BREAK---
+Esecuzione di un Prog.
+
+---PAGE BREAK---
+Esecuzione del Prog.
+• Quando il prog. viene eseguito (una
+funzione exec), una routine start-up
+prende i command-line args e l’env
+prima del lancio della funzione main
+• La fine dell’esecuzione avviene in
+diversi modi: return, exit, _exit,
+pthread_exit, abort, segnale, etc.
+
+---PAGE BREAK---
+Controllo processi
+Per il controllo dei processi occorrono
+primitive per gestire:
+• Creazione di Processi
+• Esecuzione di Programmi
+• Terminazione di Processi
+• Identificazione e proprietà dei processi
+
+---PAGE BREAK---
+Controllo di Processi
+
+---PAGE BREAK---
+Identificazione di Processi
+unico PID, pero’ reciclato quando termina;
+PID=0 scheduler, PID=1 init, PID = 2 pagedaemon
+
+---PAGE BREAK---
+Identificazione dei Processi
+set user id
+
+---PAGE BREAK---
+Identificazione di Processi
+
+---PAGE BREAK---
+Ottenere pid e ppid
+Restituiscono pid e ppid, rispettivamente
+Non possono fallire
+Di solito pid_t e' sinonimo di int pid_t
+pid_t getpid(void);
+pid_t getppid(void);
+
+---PAGE BREAK---
+Identificazione di Processi
+PID
+PPID
+RUID
+EUID
+RGID
+EGID
+
+---PAGE BREAK---
+Creazioni di Processi
+(vfork da usare con exec, lavora nello
+spazio del genitore e aspetta il figlio)
+
+---PAGE BREAK---
+Creazione di Processo
+
+---PAGE BREAK---
+Padri e Figli
+
+---PAGE BREAK---
+Creazione di Processi-fork
+
+---PAGE BREAK---
+Fork e File
+
+---PAGE BREAK---
+Fork e File
+
+---PAGE BREAK---
+Fork e File
+
+---PAGE BREAK---
+Esercizio
+
+---PAGE BREAK---
+Esempio
+
+---PAGE BREAK---
+Esempio
+$./a.out
+padre 0
+padre 1
+figlio! 0
+padre 1
+figlio! 1
+figlio! 1
+ padre 0 
+ figlio! 0
+padre1   figlio! 1 
+padre1   figlio! 1
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+Quando un processo termina
+• viene inviato il segnale SIGCHLD al
+padre
+• il processo diventa uno “zombie” finchè
+il padre  non chiama una wait/waitpid
+
+---PAGE BREAK---
+Ciclo di vita del processo
+
+---PAGE BREAK---
+Terminazione Processo
+
+---PAGE BREAK---
+Terminazione Processo
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+Aspettare un figlio
+
+---PAGE BREAK---
+Stato di uscita del Figlio
+
+---PAGE BREAK---
+Stato del figlio
+
+---PAGE BREAK---
+Aspettare un figlio
+
+---PAGE BREAK---

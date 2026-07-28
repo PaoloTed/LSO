@@ -1,0 +1,248 @@
+Shell Bash
+
+---PAGE BREAK---
+Shell
+•
+Programma che interpreta il linguaggio a linea di comando attraverso il 
+quale l'utente utilizza le risorse del sistema. 
+•
+Permette la gestione di variabili e dispone di costrutti per il 
+controllo del flusso delle operazioni.
+•
+https://tldp.org/LDP/Bash-Beginners-Guide/html
+•
+Viene generalmente eseguito in modalità interattiva, all'atto del login, 
+restando attivo per tutta la durata della sessione di lavoro ed 
+effettuando le seguenti operazioni:
+–
+Gestione del “main command loop”;
+–
+Analisi sintattica;
+–
+Esecuzione di comandi (“built-in”, file eseguibili) e programmi in linguaggio di shell 
+(script);
+–
+Gestione dello standard I/O e dello standard error;
+–
+Gestione dei processi da terminale.
+
+---PAGE BREAK---
+Ciclo Esecuzione Shell
+
+---PAGE BREAK---
+Shell
+• Shell interattiva
+– interattiva, non login → legge ~/.bashrc
+– interattiva, login 
+→ legge uno tra
+• /etc/profile
+• ~/.bash_profile
+• ~/.bash_login
+• ~/.profile
+• Es., bash –login (exit per tornare interattivi) 
+
+---PAGE BREAK---
+Variabili di Shell
+•
+Esistono delle variabili di shell predefinite (variabili di ambiente), che 
+permettono di caratterizzare il comportamento della shell.
+•
+Per convenzione, il nome di tali variabili è in caratteri tutti maiuscoli:
+–
+HOME: argomento di default per il comando cd, inizializzato da login con il path
+della home directory, letto dal file /etc/passwd;
+–
+PATH: il path di ricerca degli eseguibili;
+–
+PS1: stringa del prompt, di default $ per l'utente normale e # per il super-user;
+–
+HOSTNAME: nome del computer
+–
+SHELL: la shell corrente
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+Shell Interattiva
+• Comunicazione tra utente e shell avviene
+tramite comandi o script:
+• Nome comando bult-in
+oppure
+• Nome di un file eseguibile
+oppure
+• Nome di Script, cioè file ASCII presente nel
+sistema dotato del premesso di esecuzione.
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+Listing di Processi
+
+---PAGE BREAK---
+Listing di Processi
+Albero dei processi (Process Tree)
+• pstree
+→ mostra padre/figli
+• ps --forest
+→ albero con ps
+
+---PAGE BREAK---
+Listing di Processi
+top – visualizza in tempo reale i processi e l’uso delle risorse 
+(CPU, RAM, tempo). Versione dinamica di ps, con possibilità 
+di interazione.
+•PR → priority: priorità del processo (gestita dal kernel).
+•NI → nice value: valore “nice” impostato dall’utente (influenza PR).
+•VIRT → virtual memory: memoria virtuale totale usata dal processo (RAM + swap + lib).
+•RES → resident memory: memoria realmente occupata in RAM.
+•SHR → shared memory: memoria condivisa con altri processi (es. librerie).
+•S → state: stato del processo (R=running, S=sleeping, T=stopped, Z=zombie).
+•%CPU → percentuale di CPU usata.
+•%MEM → percentuale di RAM usata.
+•TIME+ → tempo totale di CPU consumato.
+•COMMAND → nome/programma eseguito.
+us = processi utente
+sy = kernel
+ni = processi “nice”
+id = inattiva
+wa = attesa I/O
+hi/si = interrupt HW/SW
+st = tempo rubato (VM)
+htop
+modalità interattiva
+
+---PAGE BREAK---
+Variabili 
+• Scrittura/definizione: a=3 (senza spazi)
+• Lettura: ${a} o semplicemente $a
+
+---PAGE BREAK---
+Comando echo
+echo $SHELL
+echo $PATH
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+File Standard
+
+---PAGE BREAK---
+Redirezione std I/O
+• I programmi dispongono di 3 canali di 
+comunicazione:
+– Standard input (codice 0), per input
+– Standard output (1), per output
+– Standard error (2), per errore
+Normalmente: 
+Standard input = tastiera
+Standard output= schermo
+
+---PAGE BREAK---
+Redirezione File Standard
+La shell può variare queste associazioni di
+default redirigendo i files standard su qualsiasi
+file nel sistema
+
+---PAGE BREAK---
+Ridirezione Stn Output
+~>ls -a > listaFile.txt
+~>echo $PATH >> listaFile.txt
+
+---PAGE BREAK---
+Ridirezione Stn Input
+
+---PAGE BREAK---
+Comando cat
+
+---PAGE BREAK---
+Comando cat
+<<delim
+xxxx
+yyyy
+delim
+Here-document <<
+
+---PAGE BREAK---
+Ridirezione Stn Error
+Esempio:
+
+---PAGE BREAK---
+Ridirezione
+
+---PAGE BREAK---
+Ridirezione
+
+---PAGE BREAK---
+Esempio
+
+---PAGE BREAK---
+Esempio
+# sort senza < (argomento file)
+sort dati.txt
+# a
+# b
+# c
+# sort con < (stdin da file)
+sort < dati.txt
+# a
+# b
+# c
+#word counter
+wc 0< dati.txt
+# 3 3 6
+
+---PAGE BREAK---
+Pipe (tubo)
+Esempi di comandi concatenabili: cat, sort, wc
+~> cat file | sort
+~> ls | less
+
+---PAGE BREAK---
+Esercizi
+• Creare un file che si chiami come l'utente corrente
+• Creare un file che si chiami come l'host corrente, e 
+che contenga il nome dell'host corrente
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+Metacaratteri
+•
+La shell riconosce alcuni caratteri speciali, chiamati 
+metacaratteri, che possono comparire nei comandi.
+•
+Quando l’utente invia un commando, la shell lo scandisce alla 
+ricerca di metacratteri che processa in modo speciale
+•
+Esempio:
+Il  metacarattere * nel pathname è un’abbreviazione per un nome di file. Il 
+pathname *.java viene espando dalla shell con tutti I nome di file che 
+terminano con .java. Il commando ls fronisce la lista di tutti i file con tale 
+estensione  
+
+---PAGE BREAK---
+Abbreviazione pathname
+•
+I seguenti metacaratteri, detti wildcard sono usati per abbreviare
+il nome di un file in un path name:
+
+---PAGE BREAK---
+Abbreviazione pathname
+•
+I seguenti metacaratteri, detti wildcard sono usati per abbreviare
+il nome di un file in un path name:
+
+---PAGE BREAK---
+Quoting
+
+---PAGE BREAK---
+Metacaratteri di Shell
+
+---PAGE BREAK---
+Metacaratteri di Shell
+
+---PAGE BREAK---

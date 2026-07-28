@@ -1,0 +1,496 @@
+Pthread_detach
+
+---PAGE BREAK---
+Attributi di un thread
+
+---PAGE BREAK---
+Gestione Attributi
+
+---PAGE BREAK---
+Gestione Attributi
+
+---PAGE BREAK---
+Thread-Specific Data
+
+Thread-local storage (TLS) o Thread-specific Data (TSD)
+•
+Nei thread var globali condivise, var locali no
+•
+Ogni thread può mantenere una sua copia dei dati
+•
+Utile quando non si controlla direttamente la creazione dei thread 
+(i.e., usando i thread pool)
+
+Differenza rispetto a variabili locali 
+•
+Variabili locali visibili solo per una singola invocazione di  funzione
+•
+TSD visibile per più invocazioni di funzione
+
+Simile ai dati static (ma senza race condition)
+•
+TSD unico per ogni thread
+
+---PAGE BREAK---
+Thread-Specific Data (Posix)
+
+---PAGE BREAK---
+Thread-Specific Data (Posix)
+
+---PAGE BREAK---
+Thread-Specific Data (Posix)
+
+---PAGE BREAK---
+Thread-Specific Data (Posix)
+
+---PAGE BREAK---
+Thread-Specific Data (Posix)
+
+---PAGE BREAK---
+Thread-Specific Data (Posix)
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+/* Chiave globale per i dati specifici del thread */
+pthread_key_t chiave;
+/* Funzione eseguita da ogni thread */
+void *worker(void *arg) {
+    int *id = (int *)arg;   // id passato dal main
+    int *val = malloc(sizeof(int));
+    *val = *id * 10;        // calcolo un valore solo per 
+questo thread
+    /* associo il valore alla chiave (specifico per thread) 
+*/
+    pthread_setspecific(chiave, val);
+    /* recupero il valore dalla chiave e lo stampo */
+    int *mio_val = pthread_getspecific(chiave);
+    printf("[thread %d] valore specifico = %d\n", *id, 
+*mio_val);
+    free(val);  // libero la memoria
+    return NULL;
+}
+int main(void) {
+pthread_t t1, t2;
+int id1 = 1, id2 = 2;
+/* creo la chiave globale */
+pthread_key_create(&chiave, NULL);
+/* creo due thread, ciascuno con un proprio id */
+pthread_create(&t1, NULL, worker, &id1);
+pthread_create(&t2, NULL, worker, &id2);
+/* attendo la fine dei thread */
+pthread_join(t1, NULL);
+pthread_join(t2, NULL);
+/* elimino la chiave */
+pthread_key_delete(chiave);
+return 0;
+}
+
+---PAGE BREAK---
+Thread-Specific Data (Posix)
+
+---PAGE BREAK---
+Thread-Specific Data (Posix)
+
+---PAGE BREAK---
+Thread-Specific Data (Posix)
+
+---PAGE BREAK---
+Task in Linux
+
+Linux si riferisce a tasks piuttosto che a threads
+•
+Unificando la gestione di processi e thread 
+
+Thread creation è gestita dalla chiamata di sistema clone()
+•
+Usata per implementare pthread_create
+
+clone() permette ad un child task di condividere l’address space del 
+parent task (processo)
+•
+Flag di controllo:
+
+Se tutte settate allora clone come thread, se tutte non settate come fork
+
+struct task_struct punta alle strutture dati del processo 
+(condivise o uniche) - gestione uniforme
+Viene comunque
+usata la chiamata a 
+fork():
+do_fork()
+
+---PAGE BREAK---
+Thread Linux
+int thread_func(void *arg) {
+printf("Hello from the new thread! Arg: %s\n", (char *)arg);
+return 0;
+}
+int main() {
+char *child_stack = malloc(1024 * 1024); // Allocazione dello stack
+if (child_stack == NULL) {
+perror("malloc");
+exit(1);
+}
+// Creazione del nuovo thread con clone()
+pid_t pid = clone(thread_func, child_stack + 1024 * 1024, CLONE_VM | CLONE_FS | CLONE_FILES | 
+CLONE_SIGHAND | CLONE_THREAD, "Thread Arg");
+if (pid == -1) {
+perror("clone");
+exit(1);
+}
+printf("Thread created with pid: %d\n", pid);
+sleep(1); // Aspetta che il thread finisca
+free(child_stack); // Libera lo stack
+return 0;
+}
+
+Esempio di uso del clone()
+
+---PAGE BREAK---
+Thread Linux
+
+Comandi per vedere i Kernel thread: lightweight Processes (LWP)
+ps –Lf <PID>
+ps –T –p <PID>
+ls /proc/<PID>/task 
+Differenza tra tid da libreria (pthread_self()) e tid LWP
+pthread_t tipo opaco
+SPID intero come il PID   
+
+---PAGE BREAK---
+Thread Linux
+int main(void) {
+    pthread_t t1, t2;
+int id1 = 1, id2 = 2;
+    printf("[main] PID (Thread Group ID) = %d\n", getpid());
+    pthread_create(&t1, NULL, worker, (void *)&id1);
+    pthread_create(&t2, NULL, worker, (void *)&id2);
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+    return 0;
+}
+
+---PAGE BREAK---
+Thread Linux
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/syscall.h>   // per SYS_gettid
+#include <stdint.h>
+void *worker(void *arg) {
+    int id = *(int *)arg;         
+char c;
+    pthread_t self = pthread_self();      // ID POSIX 
+    pid_t tid = syscall(SYS_gettid);      
+   // ID del kernel (TID reale)
+    printf("[thread %d] pthread_self() = %lu, gettid() = %d, 
+PID (TGID) = %d\n",
+           id, (unsigned long)self, tid, getpid());
+    /* blocco per osservare i thread con ps */
+    read(STDIN_FILENO, &c, 1);
+    return NULL;
+}
+
+---PAGE BREAK---
+Riferimenti
+
+---PAGE BREAK---
+Sincronizzazione
+
+---PAGE BREAK---
+Sincronizzazione
+
+---PAGE BREAK---
+Sincronizzazione
+
+---PAGE BREAK---
+Sincronizzazione
+
+---PAGE BREAK---
+Corsa Critica
+
+Operazioni non atomiche
+
+Se i due processi eseguono counter++ e counter-- insieme
+
+counter++ può essere implementato come
+register1 = counter
+register1 = register1 + 1
+counter = register1
+
+counter-- può essere implementato come
+register2 = counter
+register2 = register2 - 1
+counter = register2
+
+Interfogliate le due esecuzioni, inizialmente “count = 5”:
+S0: producer register1 = counter
+{register1 = 5}
+S1: producer register1 = register1 + 1   {register1 = 6} 
+S2: consumer  register2 = counter
+{register2 = 5} 
+S3: consumer  register2 = register2 – 1  {register2 = 4} 
+S4: producer  counter = register1         {counter = 6 } 
+S5: consumer counter = register2        {counter = 4}
+
+---PAGE BREAK---
+Istruzioni atomiche
+
+Macchine moderne forniscono hardware per istruzioni atomiche
+•
+Atomiche = non-interrompibili
+•
+Eseguibili sequenzialmente
+
+Esempi:
+•
+Test memory (word) and set (value)
+•
+Swap contents of two memory words
+
+---PAGE BREAK---
+compare_and_swap
+Definizione:
+int compare_and_swap(int *value, int expected, int new_value) { 
+int temp = *value; 
+if (*value == expected) 
+*value = new_value; 
+return temp; 
+} 
+1. Eseguite atomicamente
+2. Restituisce il valore originale del parametro in “value”
+3. Setta  la variabile “value”  al valore di “new_value” ma solo se “value” 
+==“expected”. Cioè lo swap avviene solo con questa condizione.
+Su architetture Intel x86 istruzione per CAS con lock del bus
+Comparazione tra acc e dest, se uguale dest = src, altrimenti acc = dest
+
+---PAGE BREAK---
+Corsa Critica
+
+Il problema della corsa critica è pervasivo
+
+In particolare in sistemi multicore dove multithreading è molto enfatizzato
+
+Occorrono meccanismi di sincronizzazione e coordinazione dei processi 
+
+---PAGE BREAK---
+Esempio
+
+---PAGE BREAK---
+Esempio: race
+
+---PAGE BREAK---
+Esempio: race
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+int myglobal;
+void *thread_function(void *arg) {
+int i, j;
+for (i = 0; i < 20; i++) {
+j = myglobal;
+j = j + 1;
+printf(".");
+fflush(stdout);
+sleep(1);
+myglobal = j;
+}
+return NULL;
+}
+int main(void) {
+pthread_t mythread;
+int i;
+if (pthread_create(&mythread, NULL, thread_function, NULL)) {
+printf("Error creating thread\n");
+abort();
+}
+for (i = 0; i < 20; i++) {
+myglobal = myglobal + 1;
+printf("o");
+fflush(stdout);
+sleep(1);
+}
+if (pthread_join(mythread, NULL)) {
+printf("Error joining thread\n");
+abort();
+}
+printf("\nmyglobal equals %d\n", myglobal);
+return 0;
+}
+
+---PAGE BREAK---
+Esempio: race
+
+---PAGE BREAK---
+Problema della Sezione Critica
+
+Considera un sistema di  n processi {p0, p1, … pn-1}
+
+Ogni processo ha un segmento di sezione critica nel codice
+•
+Processi potrebbero cambiare variabli comuni, aggiornare tabelle 
+condivise, scrivere file, etc.
+•
+Quando un processo entra in sezione critica gli altri processi non 
+dovrebbero andare nella loro sezione critica
+
+Problema della sezione critica richiede un protocollo di 
+interazione per risolverlo
+•
+Ogni processo deve chiedere il permesso per entrare nella 
+sezione critica. 
+•
+Il codice che implemente la richiesta è la entry section
+•
+ Dopo la sezione ci sarà una exit section
+•
+Il codice rimanente che segue è la remainder section
+
+---PAGE BREAK---
+Critical Section
+
+Struttura generale di un processo con sezione critica Pi  
+
+---PAGE BREAK---
+Problema della Sezione Critica
+1.   Mutua Esclusione - se il processo Pi esegue la sua sezione critica 
+nessun altro processo può eseguire la sua sezione critica
+2.   Progresso - Se nessun processo è in esecuzione nella sua sezione 
+critica ed esistono alcuni processi che desiderano entrare nella loro 
+sezione critica, solo i processi non in remainder section decideranno la 
+selezione dei processi che entreranno successivamente nella sezione 
+critica, che non può essere posticipata indefinitamente
+3.  Bounded Waiting - Deve esistere un limite al numero di volte in cui altri 
+processi possono entrare nelle loro sezioni critiche dopo che un 
+processo ha fatto una richiesta di entrare nella sua sezione critica prima 
+che tale richiesta sia concessa
+
+Assunto che ogni processo esegue a velocità nonzero 
+
+Senza assunzioni sulla velocità relativa degli n processi
+
+---PAGE BREAK---
+Corse Critiche nel Kernel
+
+I processi P0 e P1 creano processi figlio utilizzando fork()
+
+Corse critiche su tabella di file aperti nel sistema
+
+Corse critiche sulla variabile kernel che rappresenta il prossimo 
+identificatore di processo disponibile (pid), next_available_pid
+•
+Senza mutua esclusione, lo stesso pid potrebbe essere assegnato a due 
+processi diversi
+
+---PAGE BREAK---
+Mutex Posix
+
+---PAGE BREAK---
+Mutex Posix
+
+---PAGE BREAK---
+Mutex Posix
+
+---PAGE BREAK---
+Usare i Mutex
+
+---PAGE BREAK---
+Esempio
+
+---PAGE BREAK---
+Esempio
+
+---PAGE BREAK---
+Esempio
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+int myglobal = 0;
+pthread_mutex_t mymutex = PTHREAD_MUTEX_INITIALIZER;
+void *thread_function(void *arg) {
+int i;
+for (i = 0; i < 20; i++) {
+pthread_mutex_lock(&mymutex);
+myglobal = myglobal + 1;
+pthread_mutex_unlock(&mymutex);
+printf(".");
+fflush(stdout);
+sleep(1);
+}
+return NULL;
+}
+
+---PAGE BREAK---
+Esempio
+int main(void) {
+    pthread_t mythread;
+    int i;
+    if (pthread_create(&mythread, NULL, thread_function, NULL)) {
+        printf("Errore nella creazione del thread\n");
+        exit(1);
+    }
+    for (i = 0; i < 20; i++) {
+        pthread_mutex_lock(&mymutex);
+        myglobal = myglobal + 1;
+        pthread_mutex_unlock(&mymutex);
+        printf("o");
+        fflush(stdout);
+        sleep(1);
+    }
+    if (pthread_join(mythread, NULL)) {
+        printf("Errore nel join del thread\n");
+        exit(2);
+    }
+    printf("\nmyglobal è uguale a %d\n", myglobal);
+    return 0;
+}
+
+---PAGE BREAK---
+Sincronizzazione
+
+---PAGE BREAK---
+Sincronizzazione
+
+---PAGE BREAK---
+Esempio
+
+---PAGE BREAK---
+Esempio
+
+---PAGE BREAK---
+Esempio
+
+---PAGE BREAK---
+Esempio
+
+---PAGE BREAK---
+Attributi di un Mutex
+
+---PAGE BREAK---
+Tipologie Mutex
+
+---PAGE BREAK---
+Tipologie Mutex
+
+---PAGE BREAK---
+Tipologie Mutex
+
+---PAGE BREAK---
+Lock per Tipologia
+
+---PAGE BREAK---
+Unlock per Tipologia
+
+---PAGE BREAK---
+Attributi di un Mutex
+
+---PAGE BREAK---
+Unlock per Tipologia
+
+---PAGE BREAK---
+Deadlock
+
+---PAGE BREAK---

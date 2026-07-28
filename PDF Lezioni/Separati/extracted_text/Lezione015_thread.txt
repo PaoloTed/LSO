@@ -1,0 +1,509 @@
+Threads & Concorrenza 
+
+---PAGE BREAK---
+Obiettivi
+
+Introdurre la nozione di thread
+
+Multithreaded programming
+
+Supporti per threads in Windows e Linux
+
+---PAGE BREAK---
+Motivazioni
+
+Ad un generico processo, sono associati i seguenti dati e le 
+seguenti informazioni:
+•
+codice del programma in esecuzione
+•
+un’area di memoria contenente le strutture dati dichiarate 
+nel programma in esecuzione
+•
+fileaperti
+•
+stack(per le chiamate di procedure e funzioni)
+•
+contenuto dei registridella CPU
+
+---PAGE BREAK---
+Motivazioni
+
+Consideriamo due processi che devono lavorare sugli stessi 
+dati.
+
+Come possono fare, se ogni processo ha la propria area dati 
+(ossia, gli spazi di indirizzamento sono separati)?
+•
+i dati possono essere scambiati mediante messaggi (pipe, 
+FIFO) o tenuti in memoria condivisa
+•
+i dati possono essere tenuti in un file che viene acceduto a 
+turno dai due processi.
+
+Non sarebbe comodo poter avere processi che possano 
+automaticamente lavorare sugli stessi dati, senza usare 
+meccanismi espliciti di condivisione/comunicazione?
+
+---PAGE BREAK---
+Motivazioni
+
+Il context switch tra processi richiede molto lavoro al SO: oltre 
+a cambiare il valore dei vari registri, deve spostarsi dalle aree 
+dati e di codice del processo uscente, a quelle del processo 
+entrante.
+
+Se dati e codice di quest’ultimo erano stati swappati in 
+memoria secondaria, occorre prima riportarli in memoria 
+primaria.
+
+Se due (o più) processi potessero condividere dati e codice, il 
+context switch fra di loro sarebbe molto più veloce
+
+Per soddisfare questo tipo di esigenza è nato il concetto di 
+thread
+
+---PAGE BREAK---
+Motivazioni
+
+Le applicazioni sono generalmente multithreaded
+
+Task multipli in applicazioni implementati da thread separati
+•
+Update del display
+•
+Fetch data
+•
+Spell checking
+•
+Risposta in rete 
+
+La creazione di processo è pesante, il thread è leggero
+
+Il kernel è generalmente multithreaded
+
+---PAGE BREAK---
+Processi Single e Multithreaded
+ 
+Unità base di utilizzo di CPU
+ 
+Caratterizzati da Thread ID, PC, Registri e Stack
+ 
+Minima identità di task
+
+---PAGE BREAK---
+Processi Single e Multithreaded
+Unità base di utilizzo di CPU
+•
+Caratterizzati da Thread ID, PC, Registri e Stack
+•
+Minima identità di task
+Ad ogni thread è associato in modo esclusivo il suo stato della 
+computazione, fatto da:
+•
+valore del program counter e degli altri registri della CPU
+•
+uno stack
+Ma un thread condivide con i suoi peer thread:
+•
+il codice in esecuzione
+•
+i dati
+•
+i file aperti
+
+---PAGE BREAK---
+Processi Single e Multithreaded
+
+---PAGE BREAK---
+Architettura di Server Multithread
+ 
+Molto utilizzate nelle architetture client-server
+ 
+Per ogni client si genera un thread che gestisce il client
+ 
+Per ogni richiesta di un client un thread
+ 
+Server può gestire tante richieste eseguendo molti task leggeri
+
+---PAGE BREAK---
+Benefici
+
+Risposta
+•
+Esecuzione continua se una parte del processo è bloccata 
+(importante per le interfacce utente)
+
+Risorse
+•
+Thread condividono le risorse di un processo, più semplice di shared 
+memory o message passing
+
+Economia
+•
+Più leggero di una creazione di processo, il thread switching ha 
+minore overhead del context switching
+
+Scalabilità
+•
+I processi possono avvantaggiarsi delle architetture multiprocessore
+
+---PAGE BREAK---
+Benefici
+
+I context switch avviene anche tra ognuno dei peer thread che formano 
+task, in modo che tutti possano portare avanti la computazione
+•
+Ma il context switch fra peer thread richiede il salvataggio e il 
+ripristino solo dei registri della CPU e dello stack (che sono diversi 
+per ogni thread)
+•
+Codice, dati e file aperti sono gli stessi per tutti, e non devono essere 
+cambiati: IL CONTEXT SWITCH TRA PEER THREAD E’ MOLTO 
+PIU’ VELOCE
+
+---PAGE BREAK---
+Multicore Programming
+
+Sistemi mutitread forniscono meccanismi utili per sistemi multicore
+
+Sistemi Multicore o multiprocessori pongono diversi problemi:
+•
+Come dividere le attività sui core
+•
+Computazioni parallelizzabili su più core
+•
+Come bilanciare i calcolo sui core
+•
+Come splittare i dati
+•
+Come gestire le dipendenze dei dati sui core
+•
+Dipendenze possono richiedere sincronizzazioni
+•
+Come fare test e debugging
+•
+Più tracce di esecuzioni da testare
+
+Parallelismo
+•
+Più di un task simultaneamente distribuiti su più unità di calcolo
+
+Concorrenza
+•
+Consente il progresso contemporaneo di più di un task
+•
+Se processore/core singolo, concorrenza data dallo scheduler che intrallaccia 
+le esecuzioni
+
+---PAGE BREAK---
+Concorrenza vs. Parallelismo
+ 
+Esecuzione concorrente su sistema single-core:
+ 
+Parallelismo su sistema multi-core:
+
+---PAGE BREAK---
+User Thread e Kernel Thread
+
+User thread – gestita da librerie di thread di livello utente
+
+In UNIX:
+•
+POSIX Pthreads
+
+Kernel thread - supportati dal Kernel
+
+Esempi – tutti gli SO general purpose inclusi:
+•
+Windows 
+•
+Solaris
+•
+Linux
+•
+Tru64 UNIX
+•
+Mac OS 
+
+---PAGE BREAK---
+Modelli di Multithreading
+
+Diversi modi di gestire la relazione tra User e Kernel thread
+•
+Many-to-One
+•
+One-to-One
+•
+Many-to-Many
+
+---PAGE BREAK---
+Many-to-One
+
+Tanti thread user mappati su un singolo 
+kernel thread
+
+Però un thread bloccante (es. durante una 
+system call) può bloccare tutto
+
+Problemi di parallelismo con sistemi 
+multicore perché uno solo alla volta è in 
+esecuzione nel Kernel
+
+Pochi sistemi utilizzano questo approccio:
+•
+Solaris Green Threads library
+•
+GNU Portable Threads library
+
+---PAGE BREAK---
+Many-to-One
+
+Tanti thread user mappati su un singolo kernel thread
+•
+Lato kernel un solo PCB per gestire i thread di un processo
+Fig. tratta dal corso 
+SO di UniMore
+
+---PAGE BREAK---
+One-to-One
+
+Ogni thread user-level mappato su kernel thread
+•
+La creazione di thread user-level crea un kernel thread
+•
+Maggiore concorrenza di many-to-one
+•
+Il numero di thread per processo può essere limitato per evitare 
+overhead
+•
+Esempi:
+•
+Windows
+•
+Linux
+•
+Solaris 9 e successivi
+•
+Utente deve controllare il
+numero dei thread 
+
+---PAGE BREAK---
+One-to-One
+
+Ogni thread user-level mappato su kernel thread
+•
+La creazione di thread user-level crea un kernel thread
+Fig. tratta dal corso 
+SO di UniMore
+
+---PAGE BREAK---
+Many-to-Many
+
+Molti thread user-level sono mappati su molti thread del kernel
+
+Il SO può creare un numero sufficiente di thread del kernel
+•
+Però può gestirne il numero e il grado di parallelismo
+
+Il numero può dipendere dalla macchina e 
+dall’applicazione
+
+L’utente può lanciare più thread, poi
+controlla il Sistema quanti thread kernel
+
+---PAGE BREAK---
+Many-to-Many
+
+Molti thread user-level sono mappati su molti thread del kernel
+
+Il SO può creare un numero sufficiente di thread del kernel
+•
+Però può gestirne il numero e il grado di parallelismo
+Fig. tratta dal corso 
+SO di UniMore
+
+---PAGE BREAK---
+Two-level Model
+
+Variante del Many-to-Many che permette ad un user-thread di essere 
+legato (bound) ad un kernel thread
+
+Esempi:
+•
+IRIX
+•
+HP-UX
+•
+Tru64 UNIX
+•
+Solaris 8 e precedenti
+
+---PAGE BREAK---
+Librerie per Thread
+
+Librerie per i thread (Thread library) 
+•
+API per creare e gestire i thread
+
+Due modi principali di implementarle
+•
+Libreria interamente nello user space
+•
+I thread sono implementati al livello utente (gestiti con 
+chiamate di funzione utente)
+•
+Libreria al livello Kernel supportata dal SO
+•
+I thread sono gestiti con chiamate di Sistema (gestiti con 
+chiamata di sistema)
+
+---PAGE BREAK---
+Librerie per Thread
+
+Librerie per i thread (Thread library) 
+•
+API per creare e gestire i thread
+
+Due modi principali di implementarle
+•
+Libreria interamente nello user space
+•
+Libreria al livello Kernel supportata dall’SO
+
+---PAGE BREAK---
+Pthreads
+
+Estensione di POSIX standard (IEEE 1003.1c) fornisce le API 
+per la creazione e sincronizzazione dei thread
+
+Esiste sia in versione user-level sia kernel-level
+
+Specifica, non implementazione
+
+API specifica il comportamento delle funzioni di libreria, 
+implementazione lasciata allo sviluppatore
+
+Tipiche in UNIX (Solaris, Linux, Mac OS)
+
+---PAGE BREAK---
+Identificare i Thread
+
+---PAGE BREAK---
+Creazione Thread
+
+---PAGE BREAK---
+Creazione Thread
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Esempio Pthreads
+ 
+Esempio somma dei primi N numeri
+  Per sempio per N = 5, Sum = 1 + 2 + 3 + 4 + 5 = 15
+  Si può delegare il calcolo ad uno o più thread
+  Abbiamo thread sincroni e asincroni
+Nel caso sincrono il genitore aspetta i figli
+Nel caso asincrono il genitore continua subito
+
+---PAGE BREAK---
+Esempio Pthreads
+
+---PAGE BREAK---
+Esempio Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Passaggio di Parametri
+
+---PAGE BREAK---
+Similitutini thread-processi
+
+---PAGE BREAK---
+Condivisione di Memoria
+
+---PAGE BREAK---
+Condivisione di Memoria
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Problematiche Threading
+
+Semantica delle chiamate fork() ed exec()
+
+Signal handling
+•
+Sincrono e asincrono
+
+Cancellazione thread
+•
+Asincrono o deferred
+
+Thread-local storage
+
+Attivazione Scheduler
+
+---PAGE BREAK---
+Semantica di fork() ed exec()
+
+fork()duplica solo il thread chiamante o tutti i thread del processo?
+•
+Per alcune versioni di UNIX due versioni di fork
+•
+Spesso duplica solo il thread chiamante
+
+exec() funziona nomalmente – sovrascrive il processo in esecuzione 
+inclusi i thread
+
+---PAGE BREAK---
+Segnali
+
+---PAGE BREAK---
+Segnali
+
+---PAGE BREAK---

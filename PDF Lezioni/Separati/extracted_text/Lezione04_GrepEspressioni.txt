@@ -1,0 +1,257 @@
+Grep e le Espressioni Regolari
+
+---PAGE BREAK---
+grep [opzioni] pattern [nomefile]
+●Stampa le righe del file che corrispondono al pattern
+●Il pattern è una espressione regolare
+●Nel caso più semplice, il pattern può essere una stringa senza 
+caratteri speciali:
+grep a pippo.txt
+stampa le righe di pippo.txt che contengono una a
+
+---PAGE BREAK---
+grep [opzioni] pattern [nomefile]
+●Se nomefile non è specificato, legge da standard input
+●Questo consente la concatenazione in pipe
+ls -l | grep 2006
+elenca i file che sono stati modificati l'ultima
+volta nel 2006 (ma non solo ...)
+ls -l | grep rwx
+elenca i file per cui almeno una categoria di 
+utenti ha tutti i permessi (ma non solo ...)
+●Con opzione “-v”, stampa le righe che non corrispondono al 
+pattern
+ls -l | grep -v doc
+elenca i file che non contengono “doc” nel nome
+●Con “-c”, visualizza solo il numero di occorrenze della stringa
+nel file; “-i” case-Insensitive; “-n” numero di riga
+
+---PAGE BREAK---
+grep [opzioni] pattern [nomefile]
+
+---PAGE BREAK---
+grep [opzioni] pattern [nomefile]
+
+---PAGE BREAK---
+Basic Regular Expressions
+
+---PAGE BREAK---
+Basic Regular Expressions
+. (un punto)
+qualunque carattere
+(1)
+exp*
+zero o più occorrenze di exp 
+(2)
+^exp
+exp all'inizio del rigo
+(1)
+exp$
+exp alla fine del rigo
+(1)
+[a-z]
+un carattere nell'intervallo specificato
+[^a-z]
+un carattere fuori dall'intervallo
+Note: (1) è un carattere normale per Bash
+(2) ha un significato diverso per Bash
+
+---PAGE BREAK---
+Basic Regular Expressions
+\<exp
+exp all'inizio di una parola
+(1)
+exp\>
+exp alla fine di una parola
+(1)
+exp{N}
+exp compare N volte
+(1)
+exp{N,}
+exp compare almeno N volte
+(1)
+exp{N,M}
+exp almeno N volte e al più M
+(1)
+[[:CLASS:]] un carattere in CLASS
+(1)
+Note: (1) è un carattere normale per Bash
+(2) ha un significato diverso per Bash
+• In GNU grep (default su Linux), la definizione di word è:
+• caratteri alfanumerici ([A-Za-z0-9_])
+• più l’underscore _
+• Tutto il resto (spazi, punteggiatura, simboli, ecc.) è considerato separatore.
+
+---PAGE BREAK---
+Basic Regular Expressions
+Le classi di caratteri POSIX:
+[[:alpha:]]
+I caratteri alfabetici
+[[:alnum:]]
+I caratteri alfanumerici
+[[:digit:]]
+Le cifre
+[[:upper:]]
+I caratteri alfabetici maiuscoli
+[[:lower:]]
+I caratteri alfabetici minuscoli
+
+---PAGE BREAK---
+Esempi
+a*b
+zero o più “a” seguite da una “b”
+a.*b
+una “a” prima di una “b”
+\<[[:upper:]] 
+una parola che inizia con lettera maiuscola
+^d
+la lettera “d” all'inizio del rigo
+^a*$
+un rigo vuoto o composto solo di “a”
+^a.*b$
+un rigo che inizia con “a” e finisce con “b”
+\<.-
+una parola con un trattino al secondo posto
+
+---PAGE BREAK---
+Esempi
+a*b
+zero o più “a” seguite da una “b”
+a.*b
+una “a” prima di una “b”
+\<[[:upper:]] 
+una parola che inizia con lettera maiuscola
+^d
+la lettera “d” all'inizio del rigo
+^a*$
+un rigo vuoto o composto solo di “a”
+^a.*b$
+un rigo che inizia con “a” e finisce con “b”
+\<.-
+una parola con un trattino al secondo posto
+
+---PAGE BREAK---
+Basic Regular Expressions
+
+---PAGE BREAK---
+Basic Regular Expressions
+
+---PAGE BREAK---
+Extended Regular Expressions
+exp+
+una o più occorrenze di exp 
+(1)
+exp?
+zero o una occorrenza di exp
+(2)
+exp1 | exp2
+exp1 oppure exp2
+(2)
+( exp )
+equivalente a exp, 
+serve a stabilire l'ordine di valutazione
+In grep, questi simboli vanno preceduti da “\” (backslash)
+In egrep (extended grep), si usano direttamente
+Note: (1) è un carattere normale per Bash
+(2) ha un significato diverso per Bash
+
+---PAGE BREAK---
+Esempi per grep
+[[:digit:]]\+
+una sequenza non vuota di cifre
+^a\|b
+un rigo che inizia con a oppure
+contiene b (precedenza)
+^\(a\|b\)
+un rigo che inizia con a oppure con b
+\(\(\.txt\)\|\(\.doc\)\)\>
+una parola che termina con .txt o con .doc
+(in egrep, “((\.txt)|(\.doc))\>” )
+
+---PAGE BREAK---
+Esempi per grep
+
+---PAGE BREAK---
+Esercizi
+1. Elencare i file con permesso di esecuzione per il 
+proprietario
+2. Elencare le directory il cui nome inizia per maiuscola
+3. Elencare i file con permesso di esecuzione oppure di 
+scrittura per il gruppo di appartenenza
+
+---PAGE BREAK---
+Esercizi
+1. Elencare i file con permesso di esecuzione per il 
+proprietario
+ls -l | grep ‘^-..x’ 
+2. Elencare le directory il cui nome inizia per maiuscola
+ls –d */ | grep ‘^[[:upper:]]’ 
+3. Elencare i file con permesso di esecuzione oppure di 
+scrittura per il gruppo di appartenenza
+ls –l  | grep ‘^…..w.\|^……x ’
+
+---PAGE BREAK---
+Esercizio
+•
+Scrivere un comando Unix che visualizza tutti gli utenti diversi
+contenuti nel file /etc/passwd,
+che usano bash come shell di
+default
+19
+
+---PAGE BREAK---
+/etc/passwd
+•
+Il file /etc/passwd è il database degli utenti su ogni sistema Unix. 
+•
+Ad ogni user è dedicata una riga che definisce quali sono i suoi 
+principali attributi:
+20
+riga file passwd: 
+Username:Password:UserID:GroupID:Info:HomeDirectory:Shell
+Esempio:
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+[...]
+diego:x:501:503:/home/diego:/bin/bash
+
+---PAGE BREAK---
+/etc/passwd
+•
+Username: Nome dell‘ user, la login con cui può accedere al sistema;
+•
+Password: Campo riservato alla password dell'utente. Può essere 
+scritta direttamente in forma criptata o esserci semplicemente una x (la 
+password c'è ma è scritta altrove). Se c'è un * (asterisco) significa che 
+l'utente o non ha una password o la password non è valida (in questo 
+caso non gli è permesso di login);
+•
+UserID: ID dell‘ user;
+•
+GroupID: ID del gruppo di appartenenza;
+•
+Info: Contiene informazioni sull'utente non necessarie al sistema (nome 
+esteso, numero di telefono, mail ecc...);
+•
+HomeDirectory: Indica la directory della home dell'utente;
+•
+Shell: Indica la shell di default per quell'utente.
+21
+
+---PAGE BREAK---
+Esercizio
+•
+Scrivere un comando Unix che visualizza tutti gli utenti diversi
+contenuti nel file /etc/passwd,
+che usano bash come shell di
+default
+22
+Sintassi
+grep [opzioni] "stringa" nome_file ...
+Soluzione
+grep "bash$" /etc/passwd
+stringa che si vuole cercare all’interno del file
+nome del file in cui cercare la stringa
+visualizza tutti gli utenti in /etc/passwd che hanno come shell di default bash.
+
+---PAGE BREAK---

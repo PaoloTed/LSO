@@ -1,0 +1,466 @@
+File System Unix
+Generalità
+
+---PAGE BREAK---
+File System: Caratteristiche
+• Struttura gerarchica
+• Files senza struttura (byte streams)
+• Protezione da accessi non autorizzati
+• Semplicità di struttura
+"On a UNIX system, everything is a file; if something is 
+not a file, it is a process."
+
+---PAGE BREAK---
+File Unix
+I tipi principali di File sono:
+• File ordinari
+• Directory 
+• File Speciali
+Il sistema assegna biunivocamente a ciascun 
+file un identificatore numerico, detto 
+i-number ("index-number"), che gli permette di 
+rintracciarlo nel file system.
+
+---PAGE BREAK---
+File Unix
+i-number ("index-number") è l’identificatore interno del i-node che 
+contiene i metadati che descrivono il file
+Per ogni file si ha i-node (file descriptor)
+• File ordinari
+• Directory 
+• File Speciali
+
+---PAGE BREAK---
+File Ordinari
+• Sono sequenze di byte (byte streams)
+• Possono contenere informazioni 
+qualsiasi (dati, programmi sorgente, 
+programmi oggetto,...) 
+• Il sistema non impone alcuna struttura 
+
+---PAGE BREAK---
+Organizzazione dei File
+Per consentire all’utente di 
+rintracciare facilmente i 
+propri files, Unix permette di
+raggrupparli in cartelle,dette 
+Directories, organizzate
+in una (unica) struttura 
+gerarchica:
+
+---PAGE BREAK---
+Directories in Unix
+• Sono sequenze di bytes come i file ordinari;
+• Differiscono dai file ordinari solo perché non possono 
+essere scritte da programmi ordinari
+• Il loro contenuto è una serie di directory entries:
+associazione fra gli i-number (usati dal sistema) e i 
+filename mnemonici (usati dall'utente):
+
+---PAGE BREAK---
+Directories in Unix
+Directory entries: associazione fra gli i-
+number (usati dal sistema) e i filename 
+mnemonici (usati dall'utente):
+
+---PAGE BREAK---
+Esempio
+Almeno due entry: la directory stessa “.”, la 
+directory padre “..”
+
+---PAGE BREAK---
+Files Sinonimi
+Un file può avere 
+più filename 
+(ma sempre un 
+solo i-number)
+Il file 107 ha 3 links
+
+---PAGE BREAK---
+Pathnames
+Ogni file viene identificato univocamente specificando 
+il suo pathname, che individua il cammino dalla 
+root-directory al file:
+
+---PAGE BREAK---
+Tipiche Directories
+• /bin 
+comandi eseguibili
+• /dev 
+file speciali (I/O devices)
+• /etc 
+file per l’amministrazione del
+sistema, ad esempio:
+/etc/passwd
+• /lib 
+librerie di programmi
+• /tmp 
+area temporanea usata dal sistema
+• /home 
+home directories
+• /usr
+Programmi, librerie, doc. etc. per i 
+programmi user-related.
+
+---PAGE BREAK---
+Home Directory
+• Ad ogni utente viene assegnata dal system administrator 
+una directory proprietà (home directory) che ha come 
+nome lo username del proprietario;
+• Ad essa, l'utente potrà appendere files (o subdir):
+Per denotare la propria 
+home directory si può usare 
+l'abbreviazione "~"
+home
+
+---PAGE BREAK---
+Working Directory
+• Ogni utente opera, ad ogni istante, su una
+directory corrente, o working directory
+• Subito dopo il login, la working directory  la
+home directory dell'utente
+• L'utente può cambiare la working directory 
+con il comando (cd change directory)
+
+---PAGE BREAK---
+Pathnames Relativi
+Ogni file può essere identificato univocamente specificando 
+solamente il suo pathname relativo alla working directory
+
+---PAGE BREAK---
+Files Speciali
+• Ogni device di I/O viene visto, a tutti gli effetti, 
+come un file (file speciale)
+• Richieste di lettura/scrittura da/a files speciali 
+causano operazioni di input/output dai/ai devices 
+associati
+
+---PAGE BREAK---
+Files Speciali: vantaggi
+• Trattamento uniforme di files e devices
+• In Unix i programmi non sanno se operano su un file o 
+su un device
+
+---PAGE BREAK---
+Implementazione File
+
+---PAGE BREAK---
+Implementazione File
+
+---PAGE BREAK---
+Implementazione File
+
+---PAGE BREAK---
+Implementazione File
+
+---PAGE BREAK---
+Implementazione File
+
+---PAGE BREAK---
+Attributi di un File
+Per ogni file (ordinario, directory, speciale) Unix 
+mantiene le seguenti informazioni nel descrittore 
+del file:
+
+---PAGE BREAK---
+File System Montabile
+Come un file deve essere aperto per poter essere usato, un file system deve 
+essere montato perché sia disponibile per i processi
+La struttura delle directory può essere costituita da più FS che devono essere 
+montati per conividere il name-space
+Montati da un punto di montaggio (directory vuota solitamente)
+
+---PAGE BREAK---
+File System Montabile
+Un file system Unix è sempre unico, ma può avere parti residenti su device 
+rimuovibili:
+• "montate" prima di potervi accedere (mount)
+• "smontate" prima di rimuovere il supporto (umount)
+Tabella di montaggio: 
+Informazioni relative ai volumi attualmente 
+montati
+
+---PAGE BREAK---
+Gestione delle Directories
+• pwd 
+print working directory
+• cd 
+change directory
+• ls 
+list directory
+• du 
+disk usage
+• mkdir make directory
+• rmdir 
+remove directory
+• ln 
+link
+
+---PAGE BREAK---
+• Stampa pathname directory corrente
+pwd (print working directory)
+
+---PAGE BREAK---
+cd change directory
+• La directory specificata diviene la working 
+directory
+• se nessuna directory specificata, si
+"ritorna" alla home directory
+
+---PAGE BREAK---
+Il comando ls
+ls [options][directory...] 
+"list directory"
+• lista (in ordine alfabetico) il contenuto della o delle 
+directories indicate
+•
+se nessuna directory indicata, lista il contenuto 
+della working directory
+• possiede numerose opzioni
+
+---PAGE BREAK---
+Alcune Opzioni
+• -s fornisce la dimensione in blocchi (size)
+• -t lista nell’ordine di modifica (prima il file
+modificato per ultimo) (time)
+• -1 un nome per ogni riga
+• -F aggiunge / al nome delle directory e *
+al nome dei files eseguibili
+• -R si chiama ricorsivamente su ogni
+• sottodirectory
+• -i fornisce l’i-number del file
+• •••• e molte altre
+
+---PAGE BREAK---
+ls Esempi
+% ls
+dir1 file1
+% ls -s
+total 4 2 dir1 2 file1
+% ls -t
+file1 dir1
+% ls -1
+dir1
+file1
+% ls -F
+dir1/ file1
+% ls -R
+dir1 file1
+./dir1:
+file1 file2 file3 file4
+% ls -i
+199742 dir1 51204 file1
+%
+
+---PAGE BREAK---
+File Nascosti (dotfiles)
+• I files il cui nome inizia con "." vengono listati
+• solo specificando l’opzione -a ("all")
+• Esempio:
+% ls -a
+. .cshrc .mailrc dir1
+.. .login .sh_history file1
+%
+
+---PAGE BREAK---
+ls – campi del formato esteso
+lso:~>ls -l
+total 12
+-rw-rw-r--
+1 lso      lso         10 Mar  4 13:29 a
+-rw-rw-r--
+1 lso      lso         10 Mar  4 14:12 b
+drwxrwxr-x    2 lso      lso       4096 Mar  4 14:29 c
+Totale dimensione occupata (in blocchi)
+Riferimenti al file
+Dimensione (byte)
+Nome
+Proprietario
+Gruppo primario
+Data ultima modifica
+Tipo
+Permessi
+(d)irectory, (l)ink, (c)haracter special file, (b)lock special file, (-) ordinary file
+(r)ead, (w)rite, e(x)ecute
+
+---PAGE BREAK---
+stat
+Informazioni dettagliate di un file (metadati presi dall’inode).
+•Size: dimensione logica in byte
+•Blocks: spazio su disco in blocchi da 512 B (standard POSIX)
+•IO Block: dimensione del blocco di I/O del filesystem (es. 4096 B)
+•Type: tipo di file (regular, directory, symlink…)
+•Device / Inode: identificatori interni
+•Links: numero di hard link
+•Access (permessi): modalità numerica e simbolica
+•Uid / Gid: proprietario (utente e gruppo, numerico + nome)
+•Timestamps:
+•Access: ultima lettura
+•Modify: ultima modifica al contenuto
+•Change: ultima modifica ai metadati
+•Birth: creazione (se disponibile)
+File: hello.txt
+Size: 5          Blocks: 8          IO Block: 4096 
+regular file
+Access: (0644/-rw-r--r--)  Uid: (1000/user)  Gid: 
+(1000/user)
+Access: 2025-09-16 12:34:56
+Modify: 2025-09-16 12:34:56
+Change: 2025-09-16 12:34:56
+
+---PAGE BREAK---
+Protezioni di un File
+A ciascun file (normale, speciale, directory) sono
+associati alcuni attributi:
+• Proprietario (owner): l'utente che ha creato il file
+• Gruppo (group): il gruppo a cui il proprietario appartiene
+• Permessi (permissions) Il tipo di operazioni che il 
+proprietario, i membri del suo gruppo o gli altri utenti 
+possono compiere sul file
+Proprietario, gruppo e permessi iniziali sono
+assegnati dal sistema al file al momento della sua creazione. 
+Il proprietario può successivamente modificare tali attributi con 
+appositi comandi (chown,chgrp, chmod)
+
+---PAGE BREAK---
+Identificazione Utenti
+• Ogni utente viene identificato da uno 
+user name assegnato 
+dall'amministratore del sistema. Ad 
+esso corrisponde biunivocamente uno 
+userid numerico, assegnato dal 
+sistema
+• User name e user-id sono pubblici
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+Permessi
+
+---PAGE BREAK---
+Permessi iniziali
+• Alla creazione di un file, Unix assegna i 
+seguenti permessi:
+• Per i files ordinari non eseguibili:
+rw-rw-rw 
+110 110 110
+6     6     6
+• Per i files ordinari eseguibili e per directories:
+rwx rwx rwx 
+111 111 111
+7     7      7
+
+---PAGE BREAK---
+Comando chmod
+chmod permissions filename...
+"change mode"
+• attribuisce le permissions a filename
+(solo da parte del proprietario del file!)
+• permissions può essere espresso in
+forma ottale o simbolica
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+chown (change owner)
+chown [options] [user][:[group]] 
+file...
+Cambia proprietario e/o gruppo primario per uno o più 
+file.
+Se dopo “:” non segue il nome del gruppo, viene 
+attribuito il gruppo principale cui appartiene user.
+Se prima di :group non viene indicato il nome dell'utente, 
+viene cambiato solo il gruppo primario (chgrp)
+
+---PAGE BREAK---
+
+---PAGE BREAK---
+mkdir e rmdir
+• mkdir directory … : Crea la/le directory 
+• rmdir directory … : rimuove la/le directory 
+(deve essere vuota)
+
+---PAGE BREAK---
+Il comando “link”: ln
+ln name1 name2
+"link"
+associa il nuovo nome (link) name2 al file (esistente) name1, che 
+non può essere una directory
+
+---PAGE BREAK---
+Il comando “link”: ln
+ln name1 name2
+"link"
+Se name2 è una directory, il nuovo nome è 
+name2/name1
+
+---PAGE BREAK---
+Numero links
+• Numero links e’ un attributo gestito dal 
+sistema
+Per vedere:
+ls -l
+
+---PAGE BREAK---
+Esempio
+Crea file
+Crea link a file da nuovo
+
+---PAGE BREAK---
+Esempio
+link a file da directory
+
+---PAGE BREAK---
+Il comando “link”: ln
+• Tutti i link allo stesso file hanno identico
+status e caratteristiche
+• Non è possibile distinguere la entry originaria 
+dai nuovi link
+• I link di questo tipo non possono essere fatti
+con file che stanno su file system diversi
+
+---PAGE BREAK---
+Link Simbolici
+• ln -s name1 name2 
+• Permette di creare link a directory;
+• Permette di creare link fra file o  directory che 
+stanno su file system diversi;
+• Viene creato un file name2 che contiene il link 
+simbolico (i.e. il path di name1) 
+
+---PAGE BREAK---
+C’e’ una directory …
+… contenuto della directory…
+…link simbolico a dir da nuovadir
+…dir con 2 rif. nuovadir con 1 rif.
+
+---PAGE BREAK---
+Comando mv
+• mv [options] name...target
+1. muove il file o directory name sotto la directory target;
+2. se name e target non sono directories, il contenuto di 
+target viene sostituito dal contenuto di name
+
+---PAGE BREAK---
+• Caso1:
+• Caso2:
+
+---PAGE BREAK---
+• Caso3:
+
+---PAGE BREAK---
+Comando cp
+• cp [options][name...] target
+• come mv, ma name viene copiato
+
+---PAGE BREAK---
+Comando rm
+• rm [-r] name…
+• rimuove i files indicati
+• se un file indicato è una directory: messaggio 
+di errore, a meno che non sia specificata 
+l'opzione -r
+… nel qual caso, rimuove ricorsivamente il
+contenuto della direttrice
+
+---PAGE BREAK---

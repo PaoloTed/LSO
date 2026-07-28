@@ -1,0 +1,460 @@
+1
+Classi di Comandi
+
+reperire informazioni su comandi, programmi, file....
+
+gestire filesystem
+
+operare su file e directory
+
+elaborare testi
+
+sviluppare software
+
+operare in remoto
+
+....(comandi “di utilità” vari)
+
+amministrare il sistema
+utenti e gruppi
+dispositivi
+software
+
+---PAGE BREAK---
+Listing di Processi
+ps = process status 
+→ mostra i processi attivi.
+Senza opzioni, elenca solo i processi collegati al terminale corrente e all’utente 
+attivo (effective user).
+Permette di osservare:
+-
+PID (Process ID) 
+→ identificativo univoco del processo
+-
+TTY
+→ identificativo del terminale
+-
+TIME
+→ indica il tempo (hh:mm:ss) cumulato di utilizzo CPU 
+-
+CMD 
+→ comando che ha generato il processo
+ps -f  
+full information (comando Unix style)
+UID, PID, PPID, C, STIME, TTY, TIME, CMD
+(C sta per percentuale di utilizzo CPU)
+ps -e (oppure -A)
+info su tutti i processi indipendentemente dal terminale
+ps -ef
+info su tutti processi con dettagli
+ps a
+tutti i processi con terminale, non demoni (BSD style)
+STAT indica lo stato (Running, Sleeping, Zombi, etc.)
+ps aux
+x senza terminale, u in formato utente
+
+---PAGE BREAK---
+File System di UNIX
+/
+/usr
+/etc
+/home
+/mnt
+/tmp
+/usr/bin
+/usr/lib
+/home/user1
+/home/lso
+/home/lso/lezione1
+/home/lso/esame
+
+---PAGE BREAK---
+4
+mkdir
+Crea una directory
+rmdir
+Elimina una directory vuota
+pwd
+Emette il percorso della directory corrente
+ls
+Elenca il contenuto di una o più directory
+du
+Calcola lo spazio utilizzato da una serie di directory e
+subdirectory
+
+---PAGE BREAK---
+5
+mkdir (make directory)
+mkdir [options] directory
+Crea una directory secondo le opzioni 
+Alcune opzioni:
+-m mode Indica le protezioni per la directory da creare
+-p
+Crea, se assente, l'intero percorso indicato
+Esempi:
+mkdir -m 600 tracce_esami
+mkdir -p lso/11-12/lezione1/
+
+---PAGE BREAK---
+6
+rmdir (remove directory)
+rmdir [options] directory
+Rimuove la directory indicata. 
+Le directory possono essere rimosse se 
+(a) sono vuote e 
+(b) possibile scrivere nella directory padre.
+Opzioni: 
+-p
+Rimuove l'intero percorso indicato
+Esempi:
+Crea la directory lezione1 nella directory corrente
+rmdir lezione1
+Rimuove, dalla directory corrente, il path indicato
+rmdir -p lso/11-12/lezione1/
+
+---PAGE BREAK---
+7
+pwd (print working directory)
+pwd "printworking directory" 
+stampa il path della directory corrente 
+Esempio:
+
+---PAGE BREAK---
+8
+cd (change directory)
+cd [directory]
+Cambia la directory corrente a quella indicata.
+Se non viene passato nessun argomento, la directory corrente 
+diventa la home directory.
+Esempio:
+lso:~>cd 
+lso:~>pwd
+/home/lso
+lso:~>cd esempio/esempiocd
+lso:~>pwd
+/home/lso/esempio/esempiocd
+
+---PAGE BREAK---
+9
+ls (list)
+ls [options] [directory]
+Elenca i file contenuti nella directory specificata.
+Se la directory non e' indicata, viene elencato il contenuto della directory corrente.
+Alcune opzioni:
+-a Elenca anche i file nascosti 
+-l Formato esteso con informazioni su modo, proprietario, dimensione, etc dei file
+-s fornisce la dimensione in blocchi dei file
+-t lista i file nell’ordine di modifica (prima il file modificato per ultimo)
+-1 elenca i file in una singola colonna
+-F aggiunge / al nome delle directory e * al nome dei file eseguibili
+-R si chiama ricorsivamente su ogni subdirectory
+
+---PAGE BREAK---
+10
+ls – campi del formato esteso
+lso:~>ls -l
+total 12
+-rw-rw-r--
+1 lso      lso        10 
+Mar 4 13:29 a
+-rw-rw-r--
+1 lso      lso        10 
+Mar 4 14:12 b
+drwxrwxr-x
+2 lso      lso      4096
+Mar 4 14:29 c
+Totale dimensione occupata (in blocchi)
+Riferimenti al file
+Dimensione (byte)
+Nome
+Proprietario Gruppo primario
+Data ultima modifica
+Tipo
+Permessi
+(d)irectory, (l)ink, (c)haracter special file, (b)lock special file, (-) ordinary file
+(r)ead, (w)rite, e(x)ecute, (s)et uid bit
+
+---PAGE BREAK---
+11
+du
+Info su file
+cp 
+Copia un file in un altro
+ln 
+Crea un collegamento
+mv 
+Rinomina/sposta un file
+rm 
+Cancella un file
+chown
+Cambia proprietario e gruppo primario di un file
+chmod
+Cambia i permessi di un file
+touch 
+Cambia il tempo di ultimo accesso ad un file
+file 
+Determina il tipo di file
+find 
+Ricerca file in base ad opportuni criteri, permettendo di
+eseguirvi (opzionalmente) delle operazioni
+tar 
+archivia un file
+gzip
+Comprime (Decomprime) un filef
+
+---PAGE BREAK---
+12
+du (disk usage)
+du [options] file ...
+visualizza informazioni sull'utilizzo dello spazio (blocchi) da parte 
+del/i file in esame. Il file puo' essere ordinario o un directory.
+Se il file e' una directory, viene visualizzato, ricorsivamente, lo spazio 
+utilizzato dalle sotto-directory
+Alcune opzioni:
+-s Visualizza lo spazio complessivamente occupato dal file in esame.
+-k 
+Visualizza lo spazio utilizzato espresso in Kb.
+
+---PAGE BREAK---
+13
+cp (copy)
+cp [options] source... target
+copia un file in un altro file oppure uno o più file in una directory
+Se vengono specificati solo i nomi di due file, il primo viene copiato sul secondo
+Se vengono specificati solo due nomi, e se il secondo nome indicato è una directory, source 
+viene copiato con lo stesso nome nella directory target. Se source è una directory, la 
+copia avviene solo con opzioni particolari.
+Se vengono indicati più di due nomi, il file target deve essere una directory e vengono 
+generate le copie dei source in target. In mancanza di opzioni particolari, le directory 
+non vengono copiate.
+Alcune opzioni
+-r se source e target sono directory, copia ricorsivamente source, i suoi file e le sue 
+subdirectory in target
+-i opera in modo interattivo, chiedendo una conferma se la copia comporta la cancellazione 
+di un target preesistente
+
+---PAGE BREAK---
+14
+Esempi
+Copia il file pippo nella directory corrente nel file 
+/tmp/pippo.back
+cp pippo /tmp/pippo.back
+Copia il file /tmp/pippo.back e la directory dir nella directory 
+nuovadir
+cp -r /tmp/pippo.back dir nuovadir
+Copia il file pippo nel file pippo2
+cp pippo pippo2
+
+---PAGE BREAK---
+15
+mv (move)
+mv [options] source... destination
+rinomina (sposta) file o directory.
+Se vengono specificati solo i nomi di due elementi, source viene rinominato in destination, 
+oppure in destination/source, a seconda che destination indichi un file o una directory. 
+Qualora destination denoti un file preesistente, questo non sarà più accessibile come 
+tale, e non sarà più accessibile in alcun modo se destination era il suo unico nome.
+Se vengono indicati più di due elementi, destination deve essere una directory, e 
+source_1...source_n vengono rinominati come 
+destination/source_1...destination/source_n.
+Nel caso che source e destination appartengono a due diversi file system, il comando 
+effettua un vero e proprio spostamento dati tra i due file system. In tal caso vengono 
+spostati solo i file ordinari, quindi: né collegamenti, né directory.
+Alcune opzioni:
+-i il comando chiede conferma all'utente qualora destination è un file preesistente
+
+---PAGE BREAK---
+16
+rm [options] file...
+elimina i file o le directory indicati come argomento.
+Alcune opzioni:
+-i chiede conferma prima di rimuovere ogni file
+-R rimuove ricorsivamente i file e le sottodirectory 
+Esempi d' uso
+Elimina i file pippo nella directory corrente e /tmp/pippo.back
+rm pippo /tmp/pippo.back
+Elimina la directory nuovadir e tutto il suo contenuto
+rm -R nuovadiru
+Elimina tutti i file nella directory corrente
+rm *
+rm (remove)
+
+---PAGE BREAK---
+17
+touch [options] file...
+Cambia sia il tempo di ultimo accesso che di ultimo aggiornamento dei file. Per 
+default, il tempo viene aggiornato alla data/ora di sistema al momento 
+dell'invocazione del comando.
+Se si specificano file che non esistono, questi vengono creati vuoti.
+Alcune opzioni:
+-a cambia solo il tempo di ultimo accesso
+-c se file non esiste non viene creato
+-m cambia solo il tempo di ultima modifica
+touch
+
+---PAGE BREAK---
+18
+file [options] file...
+analizza i file indicati come argomento e cerca di determinarne
+il tipo
+Esempi
+lso:> file test.tar
+test.tar: GNU tar archive
+lso:> file *gif
+logo1.gif: GIF image data, version 89a, 200 x 200
+logo2.gif: GIF image data, version 89a, 241 x 243
+file
+
+---PAGE BREAK---
+19
+find
+find [pathname...] [expression]
+discende ricorsivamente le directory specificate (pathname…), cercando tutti i file 
+che rendono vera expression.
+Molto flessibile:
+
+ricerca file di specificati attributi (nome, tipo, permessi, proprietario, gruppo, 
+numero di link, dimensione, data di ultima modifica/accesso …)
+
+and, or, not di attributi
+
+può eseguire automaticamente, o previa conferma, uno o più comandi sui file 
+individuati
+
+le espressioni si ottengono combinando flag, parametri e gli operatori booleani;
+
+le espressioni costituite solo da un flag e da un parametro (opzionale) si dicono
+espressioni elementari;
+
+---PAGE BREAK---
+20
+Esempi
+Ricerca in /home/lso di file la cui dimensione è maggiore di 100 
+blocchi
+find /home/lso -size +100
+Ricerca dalla working dir (ricorsivamente) dei file con nome “pattern” 
+find . -type f -name “pattern“
+Es.
+find . -type f -name "*.txt"
+find . -maxdepth 1 -type f -name "*.txt"
+
+---PAGE BREAK---
+Comandi di utilità
+cat
+Concatena file
+wc
+Conta caratteri, parole e linee in un file
+cut
+Taglia delle colonne opportune da un file di testo
+paste
+Compone più file di testo
+sort
+Ordina le linee di un file
+diff
+Mostra le differenze di contenuto tra due file
+grep
+Cerca espressioni regolari all'interno di un file
+
+---PAGE BREAK---
+cat (concatenate)
+cat [options] [file...]
+concatena i file indicati come argomento, visualizzandoli attraverso lo standard
+output
+Alcune opzioni:
+-n
+fa precedere ogni linea di ouput dal numero progressivo che
+identifica la
+posizione della linea nel file concatenato
+-b
+come l'opzione precedente, ma omette la numerazione delle linee
+bianche
+-v
+mostra anche i caratteri non stampabili, ad eccezione dei caratteri
+di
+tabulazione, nuova linea e ritorno a capo
+
+---PAGE BREAK---
+wc (word count)
+wc [options] [file...] 
+fornisce il numero dei codici di interruzione di riga (in pratica il numero delle 
+righe), delle parole o dei caratteri contenuti in file. Senza opzioni fornisce, 
+nell'ordine suddetto, ciascuna delle precedenti informazioni. 
+Alcune opzioni: 
+-c
+emette solo il numero complessivo di caratteri di file.
+-w
+emette solo il numero complessivo di parole in file.
+-l
+emette solo il numero di righe in file.
+Esempi di esecuzione
+gio$ wc which_manpage
+132
+239
+2083 which_manpage
+gio$ wc -c which_manpage
+2083 which_manpage
+gio$
+
+---PAGE BREAK---
+cut
+cut [options] [file...]
+estrae delle colonne specifiche dalle linee di testo che compongono file.
+Alcune opzioni:
+-c char_list
+definisce gli intervalli da estrarre espressi in caratteri.
+-f field_list
+definisce gli intervalli da estrarre espressi in campi. 
+I campi sono distinti in base a un certo carattere usato 
+come delimitatore. Quello predefinito è il carattere di 
+tabulazione.
+-d delimiter 
+definisce un delimitatore alternativo al carattere di
+tabulazione.
+Esempi d'uso
+Estrae la prima e la quinta colonna del file  /etc/passwd
+cut -d: -f1,5 /etc/passwd
+Estrae i primi dieci caratteri da ogni riga del file  /etc/passwd
+cut -c1-10 /etc/passwd
+
+---PAGE BREAK---
+sort
+sort [options] [file...]
+permette di (ri)ordinare o fondere insieme il contenuto dei file passati come
+parametri, oppure di (ri)ordinare le linee passategli in input. L'ordinamento è
+la modalita predefinita, ed è effettuato tenendo conto delle opzioni inserite
+dall'utente. Il comando tratta ogni linea come un insieme ordinato di campi,
+separati da opportuni caratteri (di default i caratteri di separazione sono la
+tabulazione e lo spazio). In assenza di opzioni che definiscano diversi criteri di
+ordinamento, quest'ultimo avviene in base al primo campo ed è alfabetico.
+Alcune opzioni:
+-f
+ignora le differenze tra lettere minuscole e maiuscole
+-n
+considera
+numerica
+anzichè
+testuale
+la
+chiave
+di
+ordinamento
+-r
+ordina in senso decrescente anzichè crescente
+-o fileout invia l'output a fileout anzichè sull'output standard
+-t s
+usa s come separatore di campo
+-k s1,s2
+usa i campi da s1 a s2-1 come chiavi di ordinamento
+
+---PAGE BREAK---
+sort – Esempi d'uso
+Ordina le linee del file /etc/passwd in base al valore del terzo campo (UID)
+sort -t: -k3,4 /etc/passwd 
+Come prima, solo che ora l'ordinamento è numerico anzichè alfabetico
+sort -t: -n -k3,4 /etc/passwd
+Come prima, ma seguendo l'ordinamento inverso (prima l'UID maggiore)
+sort -t: -n -k3,4 -r /etc/passwd
+Come prima, ma ora l'output è memorizzato in passwd_reordered
+sort -t: -n -k3,4 -r /etc/passwd -o passwd_reordered
+
+---PAGE BREAK---

@@ -1,0 +1,750 @@
+Threads & Concorrenza 
+
+---PAGE BREAK---
+Obiettivi
+
+Introdurre la nozione di thread
+
+Multithreaded programming
+
+Supporti per threads in Windows e Linux
+
+---PAGE BREAK---
+Motivazioni
+
+Ad un generico processo, sono associati i seguenti dati e le 
+seguenti informazioni:
+•
+codice del programma in esecuzione
+•
+un’area di memoria contenente le strutture dati dichiarate 
+nel programma in esecuzione
+•
+fileaperti
+•
+stack(per le chiamate di procedure e funzioni)
+•
+contenuto dei registridella CPU
+
+---PAGE BREAK---
+Motivazioni
+
+Consideriamo due processi che devono lavorare sugli stessi 
+dati.
+
+Come possono fare, se ogni processo ha la propria area dati 
+(ossia, gli spazi di indirizzamento sono separati)?
+•
+i dati possono essere scambiati mediante messaggi (pipe, 
+FIFO) o tenuti in memoria condivisa
+•
+i dati possono essere tenuti in un file che viene acceduto a 
+turno dai due processi.
+
+Non sarebbe comodo poter avere processi che possano 
+automaticamente lavorare sugli stessi dati, senza usare 
+meccanismi espliciti di condivisione/comunicazione?
+
+---PAGE BREAK---
+Motivazioni
+
+Il context switch tra processi richiede molto lavoro al SO: oltre 
+a cambiare il valore dei vari registri, deve spostarsi dalle aree 
+dati e di codice del processo uscente, a quelle del processo 
+entrante.
+
+Se dati e codice di quest’ultimo erano stati swappati in 
+memoria secondaria, occorre prima riportarli in memoria 
+primaria.
+
+Se due (o più) processi potessero condividere dati e codice, il 
+context switch fra di loro sarebbe molto più veloce
+
+Per soddisfare questo tipo di esigenza è nato il concetto di 
+thread
+
+---PAGE BREAK---
+Motivazioni
+
+Le applicazioni sono generalmente multithreaded
+
+Task multipli in applicazioni implementati da thread separati
+•
+Update del display
+•
+Fetch data
+•
+Spell checking
+•
+Risposta in rete 
+
+La creazione di processo è pesante, il thread è leggero
+
+Il kernel è generalmente multithreaded
+
+---PAGE BREAK---
+Processi Single e Multithreaded
+
+Unità base di utilizzo di CPU
+
+Caratterizzati da Thread ID, PC, Registri e Stack
+
+Minima identità di task
+
+---PAGE BREAK---
+Processi Single e Multithreaded
+Unità base di utilizzo di CPU
+•
+Caratterizzati da Thread ID, PC, Registri e Stack
+•
+Minima identità di task
+Ad ogni thread è associato in modo esclusivo il suo stato della 
+computazione, fatto da:
+•
+valore del program counter e degli altri registri della CPU
+•
+uno stack
+Ma un thread condivide con i suoi peer thread:
+•
+il codice in esecuzione
+•
+i dati
+•
+i file aperti
+
+---PAGE BREAK---
+Processi Single e Multithreaded
+
+---PAGE BREAK---
+Architettura di Server Multithread
+
+Molto utilizzate nelle architetture client-server
+
+Per ogni client si genera un thread che gestisce il client
+
+Per ogni richiesta di un client un thread
+
+Server può gestire tante richieste eseguendo molti task leggeri
+
+---PAGE BREAK---
+Benefici
+
+Risposta
+•
+Esecuzione continua se una parte del processo è bloccata 
+(importante per le interfacce utente)
+
+Risorse
+•
+Thread condividono le risorse di un processo, più semplice di shared 
+memory o message passing
+
+Economia
+•
+Più leggero di una creazione di processo, il thread switching ha 
+minore overhead del context switching
+
+Scalabilità
+•
+I processi possono avvantaggiarsi delle architetture multiprocessore
+
+---PAGE BREAK---
+Benefici
+
+I context switch avviene anche tra ognuno dei peer thread che formano 
+task, in modo che tutti possano portare avanti la computazione
+•
+Ma il context switch fra peer thread richiede il salvataggio e il 
+ripristino solo dei registri della CPU e dello stack (che sono diversi 
+per ogni thread)
+•
+Codice, dati e file aperti sono gli stessi per tutti, e non devono essere 
+cambiati: IL CONTEXT SWITCH TRA PEER THREAD E’ MOLTO 
+PIU’ VELOCE
+
+---PAGE BREAK---
+Multicore Programming
+
+Sistemi mutitread forniscono meccanismi utili per sistemi multicore
+
+Sistemi Multicore o multiprocessori pongono diversi problemi:
+•
+Come dividere le attività sui core
+•
+Computazioni parallelizzabili su più core
+•
+Come bilanciare i calcolo sui core
+•
+Come splittare i dati
+•
+Come gestire le dipendenze dei dati sui core
+•
+Dipendenze possono richiedere sincronizzazioni
+•
+Come fare test e debugging
+•
+Più tracce di esecuzioni da testare
+
+Parallelismo 
+•
+Più di un task simultaneamente distribuiti su più unità di calcolo
+
+Concorrenza 
+•
+Consente il progresso contemporaneo di più di un task
+•
+Se processore/core singolo, concorrenza data dallo scheduler che intrallaccia 
+le esecuzioni
+
+---PAGE BREAK---
+Concorrenza vs. Parallelismo
+
+Esecuzione concorrente su sistema single-core:
+
+Parallelismo su sistema multi-core:
+
+---PAGE BREAK---
+User Thread e Kernel Thread
+
+User thread – gestita da librerie di thread di livello utente
+
+In UNIX:
+•
+POSIX Pthreads
+
+Kernel thread - supportati dal Kernel
+
+Esempi – tutti gli SO general purpose inclusi:
+•
+Windows 
+•
+Solaris
+•
+Linux
+•
+Tru64 UNIX
+•
+Mac OS 
+
+---PAGE BREAK---
+Modelli di Multithreading
+
+Diversi modi di gestire la relazione tra User e Kernel thread
+•
+Many-to-One
+•
+One-to-One
+•
+Many-to-Many
+
+---PAGE BREAK---
+Many-to-One
+
+Tanti thread user mappati su un singolo 
+kernel thread
+
+Però un thread bloccante (es. durante una 
+system call) può bloccare tutto
+
+Problemi di parallelismo con sistemi 
+multicore perché uno solo alla volta è in 
+esecuzione nel Kernel
+
+Pochi sistemi utilizzano questo approccio:
+•
+Solaris Green Threads library
+•
+GNU Portable Threads library
+
+---PAGE BREAK---
+Many-to-One
+
+Tanti thread user mappati su un singolo kernel thread
+•
+Lato kernel un solo PCB per gestire i thread di un processo
+Fig. tratta dal corso 
+SO di UniMore
+
+---PAGE BREAK---
+One-to-One
+
+Ogni thread user-level mappato su kernel thread
+•
+La creazione di thread user-level crea un kernel thread
+•
+Maggiore concorrenza di many-to-one
+•
+Il numero di thread per processo può essere limitato per evitare 
+overhead
+•
+Esempi:
+•
+Windows
+•
+Linux
+•
+Solaris 9 e successivi
+•
+Utente deve controllare il
+numero dei thread 
+
+---PAGE BREAK---
+One-to-One
+
+Ogni thread user-level mappato su kernel thread
+•
+La creazione di thread user-level crea un kernel thread
+Fig. tratta dal corso 
+SO di UniMore
+
+---PAGE BREAK---
+Many-to-Many
+
+Molti thread user-level sono mappati su molti thread del kernel
+
+Il SO può creare un numero sufficiente di thread del kernel
+•
+Però può gestirne il numero e il grado di parallelismo
+
+Il numero può dipendere dalla macchina e 
+dall’applicazione
+
+L’utente può lanciare più thread, poi
+controlla il Sistema quanti thread kernel
+
+---PAGE BREAK---
+Many-to-Many
+
+Molti thread user-level sono mappati su molti thread del kernel
+
+Il SO può creare un numero sufficiente di thread del kernel
+•
+Però può gestirne il numero e il grado di parallelismo
+Fig. tratta dal corso 
+SO di UniMore
+
+---PAGE BREAK---
+Two-level Model
+
+Variante del Many-to-Many che permette ad un user-thread di essere 
+legato (bound) ad un kernel thread
+
+Esempi:
+•
+IRIX
+•
+HP-UX
+•
+Tru64 UNIX
+•
+Solaris 8 e precedenti
+
+---PAGE BREAK---
+Librerie per Thread
+
+Librerie per i thread (Thread library) 
+•
+API per creare e gestire i thread
+
+Due modi principali di implementarle
+•
+Libreria interamente nello user space
+•
+I thread sono implementati al livello utente (gestiti con 
+chiamate di funzione utente)
+•
+Libreria al livello Kernel supportata dal SO
+•
+I thread sono gestiti con chiamate di Sistema (gestiti con 
+chiamata di sistema)
+
+---PAGE BREAK---
+Librerie per Thread
+
+Librerie per i thread (Thread library) 
+•
+API per creare e gestire i thread
+
+Due modi principali di implementarle
+•
+Libreria interamente nello user space
+•
+Libreria al livello Kernel supportata dall’SO
+
+---PAGE BREAK---
+Pthreads
+
+Estensione di POSIX standard (IEEE 1003.1c) fornisce le API 
+per la creazione e sincronizzazione dei thread
+
+Esiste sia in versione user-level sia kernel-level
+
+Specifica, non implementazione
+
+API specifica il comportamento delle funzioni di libreria, 
+implementazione lasciata allo sviluppatore
+
+Tipiche in UNIX (Solaris, Linux, Mac OS)
+
+---PAGE BREAK---
+Identificare i Thread
+
+---PAGE BREAK---
+Creazione Thread
+
+---PAGE BREAK---
+Creazione Thread
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Esempio Pthreads
+
+Esempio somma dei primi N numeri
+Per sempio per N = 5, Sum = 1 + 2 + 3 + 4 + 5 = 15
+Si può delegare il calcolo ad uno o più thread
+Abbiamo thread sincroni e asincroni
+Nel caso sincrono il genitore aspetta i figli
+Nel caso asincrono il genitore continua subito
+
+---PAGE BREAK---
+Esempio Pthreads
+
+---PAGE BREAK---
+Esempio Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Passaggio di Parametri
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+/* funzione di avvio del thread */
+void *tbody(void *arg)
+{
+int *pi = (int *)arg;    /* arg passato nel create */
+printf(“Ciao, sono il thread appena creato\n");
+*pi = 10;                /* scrivo nel dato del main */
+sleep(2);                /* faccio finta di lavorare */
+/* preparo un valore di ritorno */
+int *ret = malloc(sizeof(int));
+*ret = 50;
+/* termino il thread restituendo un puntatore a int */
+pthread_exit((void *)ret);
+/* (equivalente) return (void *)ret; */
+}
+int main(int argc, char **argv)
+{
+pthread_t mythread;
+int i = 0;
+void *result;            /* valore di ritorno del thread */
+printf("Sono il main: ora creo un thread\n");
+/* passo l'indirizzo di i al thread */
+pthread_create(&mythread, NULL, tbody, (void *)&i);
+printf("Main: ora aspetto che il thread termini\n");
+/* &result perché pthread_join scrive dentro result */
+pthread_join(mythread, &result);
+printf("Main: il thread ha assegnato %d a i\n", i);
+/* result è un void*, lo casto a int* per leggerlo */
+printf("Main: thread restituito %d\n", *(int *)result);
+/* libero la memoria allocata dal thread */
+free(result);
+return 0;
+}
+
+---PAGE BREAK---
+Esercizio
+• Scrivere un programma C contaCaratteri.c che prende in 
+ingresso un pathname nomefile, un carattere c e due interi 
+from, to e conta quante volte compare il carattere c nel file 
+nomefile nella porzione indicata dai due interi: a partire da 
+frombyte fino a to
+• Usare una thread con funzione void* conta(void*) per contare i 
+caratteri
+
+---PAGE BREAK---
+Esercizio
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+struct param {
+const char *filename;
+char c;
+off_t from;
+off_t to;
+};
+int main(int argc, char *argv[]) {
+    if (argc != 5) {
+        fprintf(stderr, "Uso: %s <file> <carattere> <from> 
+<to>\n", argv[0]);
+        return 1;
+    }
+    struct param p;
+    pthread_t tid;
+    long result;
+    p.filename = argv[1];
+    p.c = argv[2][0];
+    p.from = atoll(argv[3]);
+    p.to   = atoll(argv[4]);
+    pthread_create(&tid, NULL, conta, &p);
+    pthread_join(tid, (void **)&result);
+    printf("Il carattere '%c' compare %ld volte tra i byte %ld e 
+%ld di %s\n",
+           p.c, result, (long)p.from, (long)p.to, p.filename);
+    return 0;
+}
+
+---PAGE BREAK---
+Esercizio
+void *conta(void *arg) {
+struct param *p = (struct param *)arg;
+int fd;
+off_t nbytes;
+char *buffer;
+off_t count = 0;
+fd = open(p->filename, O_RDONLY);
+if (fd < 0) {
+perror("open");
+return (void *)0;
+}
+if (lseek(fd, p->from, SEEK_SET) < 0) {
+perror("lseek");
+close(fd);
+return (void *)0;
+}
+nbytes = p->to - p->from + 1;
+buffer = malloc(nbytes);
+if (!buffer) {
+perror("malloc");
+close(fd);
+return (void *)0;
+}
+ssize_t nread = read(fd, buffer, nbytes);
+if (nread < 0) {
+perror("read");
+free(buffer);
+close(fd);
+return (void *)0;
+}
+for (off_t i = 0; i < nread; i++) {
+if (buffer[i] == p->c)
+count++;
+}
+free(buffer);
+close(fd);
+return (void *) count;
+}
+
+---PAGE BREAK---
+Similitutini thread-processi
+
+---PAGE BREAK---
+Condivisione di Memoria
+
+---PAGE BREAK---
+Condivisione di Memoria
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Pthreads
+
+---PAGE BREAK---
+Problematiche Threading
+
+Semantica delle chiamate fork() ed exec()
+
+Signal handling
+•
+Sincrono e asincrono
+
+Cancellazione thread
+•
+Asincrono o deferred
+
+Thread-local storage
+
+Attivazione Scheduler
+
+---PAGE BREAK---
+Semantica di fork() ed exec()
+
+ fork()duplica solo il thread chiamante o tutti i thread del processo?
+•
+Per alcune versioni di UNIX due versioni di fork
+•
+Spesso duplica solo il thread chiamante
+
+exec() funziona nomalmente – sovrascrive il processo in esecuzione 
+inclusi i thread
+
+---PAGE BREAK---
+Segnali
+
+---PAGE BREAK---
+Segnali
+
+---PAGE BREAK---
+Signal Handling
+int sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
+int pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset);
+Dove le maschere dei segnali sono sia al livello di processi che thread:
+
+---PAGE BREAK---
+Signal Handling
+
+---PAGE BREAK---
+Cancellazione Thread (Posix)
+
+---PAGE BREAK---
+Cancellazione Thread (Posix)
+
+---PAGE BREAK---
+Cancellazione Thread
+
+Terminare un thread prima che sia finito
+
+Il thread da cancellare è il target thread
+
+Due approcci:
+•
+Asynchronous cancellation termina il target thread subito
+•
+Deferred cancellation permette al target thread di controllare 
+periodicamente se deve essere cancellato
+
+Codice Pthread per creare e cancellare un thread:
+
+---PAGE BREAK---
+Cancellazione Thread
+
+Terminare un thread prima che sia finito
+
+Il thread da cancellare è il target thread
+
+Due approcci:
+•
+Asynchronous cancellation termina il target thread subito
+•
+Deferred cancellation permette al target thread di controllare 
+periodicamente se deve essere cancellato
+
+Codice Pthread per creare e cancellare un thread:
+
+---PAGE BREAK---
+Cancellazione Thread
+
+La cancellazione effettiva depende dallo stato del thread
+
+Se il thread ha la cancellazione disabilitata questa rimane pending 
+finché il thread non la consente
+
+Il default è deferred:
+•
+Cancellazione avviene solo quando il thread raggiuge un cancellation point
+•
+Allora cleanup handler è invocato
+
+Su Linux la cancellazione dei thread gestita con segnali
+
+---PAGE BREAK---
+Cancellazione Thread (Posix)
+
+---PAGE BREAK---
+Cancellazione Thread (Posix)
+#include <pthread.h>
+#include <stdio.h>
+#include <unistd.h>
+/* Thread worker */
+void *worker(void *arg) {
+    int oldstate;
+    /* disabilito la cancellazione */
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, 
+&oldstate);
+    printf("[thread] cancellazione disabilitata\n");
+    printf("[thread] premere INVIO per permettere la 
+cancellazione...\n");
+    getchar();  // attende input da tastiera
+    /* riabilito la cancellazione */
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 
+&oldstate);
+    printf("[thread] cancellazione abilitata, ora posso 
+essere terminato\n");
+    /* loop infinito con punto di cancellazione */
+    while (1) {
+        printf("[thread] lavoro...\n");
+        sleep(1);
+        pthread_testcancel();  // punto di cancellazione
+    }
+    return NULL;
+}
+int main(void) {
+    pthread_t tid;
+    pthread_create(&tid, NULL, worker, NULL);
+    /* prova a cancellare periodicamente il thread */
+    while (1) {
+        sleep(2);
+        printf("[main] provo a cancellare il thread...\n");
+        if (pthread_cancel(tid) == 0) {
+            printf("[main] richiesta di cancellazione 
+inviata\n");
+            if (pthread_join(tid, NULL) == 0) {
+                printf("[main] il thread è stato 
+cancellato\n");
+                break;
+            }
+        } else {
+            printf("[main] thread ancora attivo\n");
+        }
+    }
+    return 0;
+}
+
+---PAGE BREAK---
+Pthread_detach
+
+---PAGE BREAK---
