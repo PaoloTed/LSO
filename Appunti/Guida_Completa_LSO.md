@@ -25,6 +25,15 @@
 15. [Sincronizzazione: Mutex, Condition Variable, Semafori](#15-sincronizzazione-mutex-condition-variable-semafori)
 16. [Problemi Classici di Sincronizzazione](#16-problemi-classici-di-sincronizzazione)
 17. [Socket — Comunicazione di Rete](#17-socket--comunicazione-di-rete)
+18. [I/O Multiplexing - `select()`](#18-io-multiplexing---select)
+19. [Gestione Avanzata dei Segnali - `sigaction()` e SIGPIPE](#19-gestione-avanzata-dei-segnali---sigaction-e-sigpipe)
+20. [Broadcast e Multicast UDP](#20-broadcast-e-multicast-udp)
+21. [Comandi di Rete e Risoluzione DNS](#21-comandi-di-rete-e-risoluzione-dns)
+22. [Virtualizzazione](#22-virtualizzazione)
+23. [Container: Namespace, Cgroups e OverlayFS](#23-container-namespace-cgroups-e-overlayfs)
+24. [Docker](#24-docker)
+25. [Soluzioni Esercizi d'Esame](#25-soluzioni-esercizi-desame)
+26. [Guida Rapida alle Parole Chiave](#26-guida-rapida-alle-parole-chiave)
 
 ---
 
@@ -3144,6 +3153,8 @@ docker compose down -v              # ferma e rimuove anche i volumi dichiarati
 
 ---
 
+---
+
 ## 25. Soluzioni Esercizi d'Esame
 
 Di seguito sono riportate le soluzioni agli esercizi d'esame mostrati nelle immagini, utili per verificare la propria preparazione e ripassare i concetti.
@@ -3231,3 +3242,65 @@ Il processo bash deterrà senza dubbio il **PID 1**. Ogni contenimento su _Docke
 Visualizzerà la stringa **nodo2**. Passando flag `--hostname` si invoca il distaccamento del **UTS Namespace** del container, il cui obiettivo è slegare i dati nominali del domain dall'effettivo server.
 (c) **Saranno presenti la directory e il file `/lavoro/info.txt` creati in precedenza nel `contenitore1`?**
 **No**, assolutamente assenti. Ciò deriva dalla specificità intrinseca degli **Overlay File System**. I due sub-sistemi sono originati dall'identica `ubuntu` *Read-Only* ma appositamente instradati ciascuno nel proprio *layer* virtuale indipendente detto **upperdir** (leggibile e scrivibile separato ed effimero). Qualsiasi directory forgiata in uno sfocia in un suo file d'overlay e decade appena cancellato.
+
+---
+
+## 26. Guida Rapida alle Parole Chiave
+
+Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, contenente le parole chiave e i concetti fondamentali di LSO.
+
+### Concetti Generali e SO
+* **Kernel**: Nucleo del sistema operativo, gira in modalità privilegiata (kernel mode).
+* **System Call**: Interfaccia tra user mode e kernel mode (es. `read`, `write`, `fork`). Richiede un'interruzione/TRAP (cambio di contesto).
+* **POSIX**: Standard IEEE per uniformare le API dei sistemi operativi Unix-like.
+* **Inode (i-node)**: Struttura dati del filesystem che memorizza i metadati di un file (permessi, proprietario, timestamp, puntatori ai blocchi).
+* **Hard Link**: Riferimento diretto e indiscriminato allo stesso inode (possibile solo sullo stesso filesystem, no directory).
+* **Symlink (Link Simbolico)**: File speciale che contiene il percorso verso un altro file.
+
+### Shell, Comandi e Scripting
+* **Pipeline (`|`)**: Collega lo standard output di un processo allo standard input del successivo.
+* **Redirezione (`>`, `<`, `>>`, `2>`)**: Devia l'input/output o gli errori da/verso file.
+* **Grep**: Comando per cercare pattern logici testuali usando Espressioni Regolari (BRE o ERE con `egrep`).
+* **Awk**: Linguaggio di elaborazione testuale per record/campi separati (variabili: `$1, $2, ...`, `NR`, `NF`).
+* **Sed**: Stream editor per operare su stream testuali senza interazione (es. `s/old/new/g`).
+* **Shebang (`#!/bin/bash`)**: Prima riga di uno script usata per specificare l'interprete al kernel.
+
+### Processi e Segnali
+* **PID / PPID**: Process ID (identificativo univoco) e Parent Process ID (PID del padre).
+* **Processo Zombie (`Z`)**: Processo terminato ma il cui padre non ha ancora recuperato l'exit status tramite `wait()`.
+* **Processo Orfano**: Processo il cui padre è terminato; viene solitamente adottato da `init` (PID 1).
+* **fork()**: System call che clona integralmente il processo corrente in un processo figlio distinto.
+* **wait() / waitpid()**: System call per attendere la terminazione di un figlio (scongiurando gli zombie) e leggerne l'exit status.
+* **exec()**: Famiglia di funzioni che sostituisce l'immagine del processo chiamante con un nuovo eseguibile.
+* **Segnale (Signal)**: Notifica software asincrona inviata a un processo (es. `SIGINT`, `SIGKILL`, `SIGPIPE`).
+* **sigaction()**: API robusta per registrare custom handler dei segnali, sostituendo lo standard `signal()`.
+
+### Thread e Sincronizzazione (Pthreads)
+* **Thread**: Flusso di esecuzione leggero allocato in un processo (condividono PID, memoria logica, file descriptor).
+* **Race Condition**: Anomalia scaturita quando l'ordine non deterministico di esecuzione di task concorrenti corrompe un dato condiviso.
+* **Mutex (`pthread_mutex_t`)**: Lucchetto software di lock/unlock atto a garantire la mutua esclusione nelle sezioni critiche.
+* **Condition Variable (`pthread_cond_t`)**: Costrutto usato per far attendere passivamente un thread finché una specifica logica applicativa diventa vera; lavora costantemente unita a un mutex.
+* **Deadlock**: Stallo logico bloccante ove due o più thread si attendono a vicenda e perpetuamente, incrociando i Mutex.
+
+### IPC (Inter-Process Communication)
+* **Pipe (`pipe()`)**: Canale di comunicazione unidirezionale e anonimo tra processi imparentati (byte-stream).
+* **FIFO (Named Pipe)**: Pipe persistente dotata di una path visibile nel filesystem (creata con `mkfifo`), utilizzabile anche da processi non parenti.
+* **mmap()**: System Call usata per mappare file (o memorie anonime) direttamente nello spazio d'indirizzamento virtuale del processo bypassando le classiche `read`/`write`.
+* **Memoria Condivisa**: Area di RAM fisicamente unica ma intercettabile da spazi d'indirizzi virtuali di più processi per comunicazione ad altissime prestazioni.
+
+### Reti e Socket
+* **Socket**: Endpoint bidirezionale per comunicare all'interno del PC locale (`AF_UNIX`) o nella rete IP (`AF_INET`/`AF_INET6`).
+* **TCP (`SOCK_STREAM`)**: Protocollo per connessioni affidabili e basato sul riassemblaggio ordinato di byte-stream (Lati Server: `socket`, `bind`, `listen`, `accept`).
+* **UDP (`SOCK_DGRAM`)**: Trasferimento senza connessione mediante datagrammi. Veloce ma non affidabile. (Lati Server: `socket`, `bind`, `recvfrom`).
+* **I/O Multiplexing / select()**: Meccanismo che abilita un singolo thread a gestire numerosi file descriptor contemporaneamente; il thread attende finché almeno una risorsa risulta "Ready".
+* **Broadcast**: Invio UDP limitato a IPv4 che instrada forzosamente a tutti gli IP della LAN sub-rete (`255.255.255.255`).
+* **Multicast**: Distribuzione UDP selettiva inviata a un gruppo (`224.x.x.x`), gestita dai Router con `IGMP/PIM`.
+* **getaddrinfo()**: Funzione moderna, sicura ed agnostica per tradurre domain-names (DNS) negli specifici ip (IPv4 o IPv6).
+
+### Virtualizzazione e Container
+* **Hypervisor / VMM**: Engine di gestione di macchine virtuali; può essere di **Type 1** (installato nativamente sull'Hardware) o **Type 2** (gestito via app sull'OS Host).
+* **Container**: Tecnologia di isolamento OS-Level che garantisce ambienti logicamente autonomi ma accomunati e limitati dallo stesso identico Kernel Host, senza pesanti Virtual Machine hardware-assisted.
+* **Namespace**: Sei/sette feature del Kernel Linux (es. *PID, NET, UTS, MNT*) in grado di occultare ad un gruppo di processi le effettive risorse globali (isolando così cosa esso "Vede").
+* **Cgroups (Control Groups)**: Sotto-Sistema di Linux volto a contingentarne le capienze (limitare RAM, soglie cicli CPU, massimali I/O disco).
+* **OverlayFS**: Union file system stratificato. Genera il paradigma dei Container disponendo l'immagine originaria Docker in un layer *ReadOnly* (`lowerdir`) ponendovi sopra lo strato transitorio *Writable* in cui salvare modifiche (`upperdir`).
+* **Docker**: Piattaforma standard per confezionare ed eseguire container; automatizza tramite `Dockerfile` le build e coordina networking nativo e persistenza via `Volumes`.
