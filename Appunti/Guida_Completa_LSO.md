@@ -2,7 +2,7 @@
 
 > **Corso di Laurea in Informatica — A.A. 2025-2026**  
 > **Prof. Alberto Finzi**  
-> Questa guida copre **tutti gli argomenti** delle lezioni 1–31 ed è pensata per essere **completamente sostitutiva** allo studio delle slide.
+> Questa guida copre **tutti gli argomenti** delle lezioni 1–31.
 
 ---
 
@@ -467,6 +467,7 @@ Stampa le righe che corrispondono al pattern. Se non si specifica un file, legge
 | `\<exp` | exp a inizio parola |
 | `exp\>` | exp a fine parola |
 | `exp\{N\}` | exp compare esattamente N volte |
+| `exp\{N,\}` | exp compare almeno N volte |
 | `exp\{N,M\}` | exp compare da N a M volte |
 
 **Classi POSIX:**
@@ -478,7 +479,9 @@ Stampa le righe che corrispondono al pattern. Se non si specifica un file, legge
 
 ### 5.3 Espressioni Regolari Estese (ERE)
 
-In `grep` si usano con backslash (`\+`, `\|`, `\(...\)`). In `egrep` si usano direttamente.
+In `grep` si usano con backslash (`\+`, `\|`, `\(...\)`). In `egrep` si usano direttamente senza l'uso del backslash.
+
+Sintassi usabili solamente in `egrep`:
 
 | Sintassi | Significato |
 |----------|-------------|
@@ -552,13 +555,13 @@ ls
 
 ```bash
 cmd1; cmd2          # esegue cmd1 poi cmd2
-cmd1 && cmd2        # esegue cmd2 solo se cmd1 ha successo (exit=0)
-cmd1 || cmd2        # esegue cmd2 solo se cmd1 fallisce (exit≠0)
+cmd1 && cmd2        # esegue cmd2 solo se cmd1 ha successo (exit = 0)
+cmd1 || cmd2        # esegue cmd2 solo se cmd1 fallisce    (exit != 0)
 ```
 
 ### 6.5 Strutture di Controllo
 
-**if-then-else:**
+**if-then-else:** attenzione all'uso di `if` e `fi`
 ```bash
 if comando; then
     lista_comandi
@@ -573,7 +576,7 @@ fi
 
 | Tipo | Operatori |
 |------|-----------|
-| Stringhe | `==`, `!=`, `-z` (vuota) |
+| Stringhe | `==`, `!=`, `-z` (stringa vuota) |
 | Interi | `-lt`, `-le`, `-eq`, `-ne`, `-ge`, `-gt` |
 | File | `-e` (esiste), `-f` (file regolare), `-d` (directory), `-r`, `-w`, `-x` (permessi) |
 
@@ -587,7 +590,7 @@ elif [ ! -e "$1" ]; then
 fi
 ```
 
-**while:**
+**while:** (esegue finché la condizione è **VERA**)
 ```bash
 i=0
 while [ $i -lt 10 ]; do
@@ -595,7 +598,7 @@ while [ $i -lt 10 ]; do
 done
 ```
 
-**until** (esegue finché la condizione è **falsa**):
+**until** (esegue finché la condizione è **FALSA**):
 ```bash
 COUNTER=20
 until [ $COUNTER -lt 10 ]; do
@@ -606,19 +609,23 @@ done
 
 **for:**
 ```bash
-for a in 1 2 3; do
+for a in 1 2 3; do   output: argomenti su righe separate
     echo $a
 done
 
-for a in $(ls); do
+for a in $(ls); do    output: argomenti su righe separate
     echo $a
 done
 
-for a in "$@"; do
+for a in "$@"; do output: argomenti su righe separate
     echo $a
 done
 
-for a in *.txt; do
+for a in "$*"; do output: argomenti su una sola stringa
+    echo $a
+done
+
+for a in *.txt; do    output: file .txt nella directory corrente
     echo $a
 done
 ```
@@ -636,9 +643,9 @@ esac
 
 ```bash
 a=7
-echo $(( a + 1 ))      # 8
-echo $(( a * 3 > 8 ))  # 1 (vero)
-echo $(( a++ ))         # 7, poi a diventa 8
+echo $(( a + 1 ))         # 8
+echo $(( a * 3 > 8 ))     # 1 (vero)
+echo $(( a++ ))  echo $a  # 7, poi a diventa 8
 ```
 
 Operatori: `+`, `-`, `/`, `*`, `%`, `**`, `<<`, `>>`, `&`, `|`, `~`, `<`, `<=`, `==`, `!=`, `>`, `>=`, `&&`, `||`, `!`
@@ -652,6 +659,12 @@ Operatori: `+`, `-`, `/`, `*`, `%`, `**`, `<<`, `>>`, `&`, `|`, `~`, `<`, `<=`, 
 **sed** è un editor non interattivo di file di testo. **Non modifica l'input** — l'output va allo stdout.
 
 **Sintassi:** `sed [opzioni] 'comando' [file]`
+
+**Opzioni principali:**
+* `-n`: Sopprime l'output automatico (di default `sed` stampa ogni riga processata). Utile in combinazione con il comando `p` per stampare solo le righe modificate o cercate.
+* `-e`: Permette di concatenare più comandi `sed` (es. `sed -e 'comando1' -e 'comando2'`).
+* `-f script_file`: Legge i comandi `sed` da un file specificato.
+* `-i`: Modifica il file direttamente (*in-place*) sovrascrivendo l'originale.
 
 **Funzionamento:**
 1. Copia ciclicamente una linea di input nel **pattern space**
@@ -976,15 +989,19 @@ int open(const char *pathname, int oflag, ... /* mode_t mode */);
 
 **Esempi:**
 ```c
-open("prova.txt", O_RDONLY);
-open("prova.txt", O_RDONLY | O_CREAT, S_IRWXU);
-open("prova.txt", O_RDWR | O_CREAT | O_EXCL, S_IRWXU);
+int fd = open("prova.txt", O_RDONLY);
+int fd = open("prova.txt", O_RDONLY | O_CREAT, S_IRWXU);
+int fd = open("prova.txt", O_RDWR | O_CREAT | O_EXCL, S_IRWXU);
 ```
 
 #### `creat` — Creazione di un file
 ```c
 int creat(const char *pathname, mode_t mode);
 // Equivalente a: open(pathname, O_WRONLY | O_CREAT | O_TRUNC, mode);
+```
+**Esempio:**
+```c
+int fd = creat("prova.txt", S_IRWXU);
 ```
 
 #### `close` — Chiusura di un file
@@ -993,19 +1010,38 @@ int creat(const char *pathname, mode_t mode);
 int close(int filedes);
 // Restituisce: 0 successo, -1 errore
 ```
+**Esempio:**
+```c
+int fd = open("prova.txt", O_RDONLY);
+int result = close(fd);
+```
 
 #### `read` — Lettura da file
 ```c
 #include <unistd.h>
 ssize_t read(int filedes, void *buf, size_t nbytes);
 // Restituisce: byte letti, 0 se fine file, -1 errore
+//  Legge dal file e inserisce nel buffer (buf) fino a nbytes byte
+```
+**Esempio:**
+```c
+int fd = open("prova.txt", O_RDONLY);
+char buf[10];
+ssize_t nbytes = read(fd, buf, 10);
 ```
 
 #### `write` — Scrittura su file
 ```c
 #include <unistd.h>
 ssize_t write(int filedes, void *buf, size_t nbytes);
-// Restituisce: byte scritti, -1 errore
+// Restituisce: byte scritti, -1 errore, 
+// Scrive nel file il contenuto del buffer (buf) per nbytes byte
+```
+**Esempio:**
+```c
+int fd = open("prova.txt", O_WRONLY | O_CREAT, S_IRWXU);
+char buf[] = "Hello, world!";
+ssize_t nbytes = write(fd, buf, strlen(buf));
 ```
 
 ### 10.3 Offset e `lseek`
@@ -1017,6 +1053,7 @@ L'**offset** è la posizione (in byte dall'inizio) dove avviene la prossima oper
 #include <unistd.h>
 off_t lseek(int filedes, off_t offset, int whence);
 // Restituisce: nuovo offset, -1 errore
+// Sposta l'offset del file descriptor in base a whence e offset
 ```
 
 | `whence` | Significato |
@@ -1034,6 +1071,12 @@ lseek(fd, 0, SEEK_SET);
 
 // Posizionarsi alla fine
 lseek(fd, 0, SEEK_END);
+```
+
+**Esempio:**
+```c
+int fd = open("prova.txt", O_RDONLY);
+off_t currpos = lseek(fd, 0, SEEK_CUR);
 ```
 
 ### 10.4 Gestione Errori con `perror` e `errno`
@@ -1057,8 +1100,9 @@ Il kernel usa tre strutture dati:
 
 ```c
 #include <unistd.h>
-int dup(int filedes);       // ritorna il minimo fd non utilizzato
-int dup2(int filedes, int filedes2);  // specifica quale fd usare (operazione atomica)
+int dup(int oldFileDescriptor);       // ritorna il minimo fd non utilizzato
+int dup2(int oldFileDescriptor, int newFileDescriptor);  // specifica quale fd usare (operazione atomica)
+// Se newFileDescriptor è già in uso, viene chiuso prima di essere duplicato
 ```
 
 **Esempio di redirezione stdout su file:**
@@ -1068,6 +1112,9 @@ dup2(fd, STDOUT_FILENO);  // ora stdout scrive su testfile
 ```
 
 ### 10.7 Struttura `stat`
+
+La structura `stat` contiene informazioni sul tipo di file e sulle sue proprietà. Viene restituita dalle funzioni `stat()`, `fstat()` e `lstat()`.
+E' la rappresentazione di un **i-node** in C, la sua dimensione, i permessi, chi lo possiede, ecc.
 
 ```c
 #include <sys/stat.h>
@@ -1090,6 +1137,18 @@ struct stat {
 };
 ```
 
+**Esempio pratico**
+```c
+struct stat filestat;     // dichiariamo una variabile di tipo stat
+stat("file.txt", &filestat); // eseguiamo la stat
+printf("file: %s\n", filestat.st_mode);
+
+int fd = open("file.txt", O_RDONLY);
+struct stat filestat;        // dichiariamo una variabile di tipo stat
+fstat(fd, &filestat);    // eseguiamo la stat sul file descriptor
+printf("file: %s\n", filestat.st_mode);
+```
+
 ### 10.8 Esempio Completo: Copia tra File
 
 ```c
@@ -1101,15 +1160,28 @@ struct stat {
 int main(int argc, char **argv) {
     int infile, outfile, nread;
     char buffer[BUFDIM];
-    if (argc != 3) { printf("Uso: copia dest sorg\n"); exit(1); }
-    if ((infile = open(argv[2], O_RDONLY)) < 0) { perror("apertura sorgente"); exit(1); }
-    if ((outfile = creat(argv[1], 0777)) < 0) { perror("apertura dest"); close(infile); exit(1); }
+    if (argc != 3) { 
+        printf("Uso: copia dest sorg\n"); 
+        exit(1); 
+    }
+    if ((infile = open(argv[2], O_RDONLY)) < 0) {
+        perror("apertura sorgente");
+        exit(1); 
+    }
+    if ((outfile = creat(argv[1], 0777)) < 0) { 
+        perror("apertura dest"); 
+        close(infile); 
+        exit(1); 
+    }
     while ((nread = read(infile, buffer, BUFDIM)) > 0) {
         if (write(outfile, buffer, nread) == -1) {
-            close(infile); close(outfile); exit(1);
+            close(infile); 
+            close(outfile);
+            exit(1);
         }
     }
-    close(infile); close(outfile);
+    close(infile); 
+    close(outfile);
     return 0;
 }
 ```
@@ -1428,32 +1500,32 @@ Le **pipe** sono canali di comunicazione **unidirezionali** tra processi con rel
 
 ```c
 #include <unistd.h>
-int pipe(int fd[2]);
-// fd[0] = estremità di lettura (read-end)
-// fd[1] = estremità di scrittura (write-end)
+int pipe(int pipeChildFather[2]);
+// pipeChildFather[0] = estremità di lettura (read-end)
+// pipeChildFather[1] = estremità di scrittura (write-end)
 ```
 
 **Funzionamento:**
 - Modello **produttore-consumatore**
-- Il produttore scrive su `fd[1]`, il consumatore legge da `fd[0]`
+- Il produttore scrive su `pipeChildFather[1]`, il consumatore legge da `pipeChildFather[0]`
 - **Occorre chiudere le imboccature non utilizzate** (altrimenti il lettore non riceve EOF)
 
 **Esempio:**
 ```c
-int fd[2];
-pipe(fd);
+int pipeChildFather[2];
+pipe(pipeChildFather);
 pid_t pid = fork();
-if (pid == 0) {         // Figlio (lettore)
-    close(fd[1]);       // chiude la scrittura
+if (pid == 0) {                      // Figlio (lettore)
+    close(pipeChildFather[1]);       // chiude la scrittura
     char buf[64];
-    while (read(fd[0], buf, sizeof(buf)) > 0)
-        write(STDOUT_FILENO, buf, 5);
-    close(fd[0]);
+    while (read(pipeChildFather[0], buf, sizeof(buf)) > 0)// LEGGE DALLA PIPE
+        write(STDOUT_FILENO, buf, 5);                     // SCRIVE NELLO STDOUT
+    close(pipeChildFather[0]);
     _exit(0);
-} else {                // Padre (scrittore)
-    close(fd[0]);       // chiude la lettura
-    write(fd[1], "ciao\n", 5);
-    close(fd[1]);       // segnala EOF
+} else {                             // Padre (scrittore)
+    close(pipeChildFather[0]);       // chiude la lettura
+    write(pipeChildFather[1], "ciao\n", 5);               // SCRIVE SULLA PIPE
+    close(pipeChildFather[1]);       // segnala EOF
     wait(NULL);
 }
 ```
