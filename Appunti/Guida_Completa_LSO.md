@@ -1104,11 +1104,14 @@ int dup(int oldFileDescriptor);       // ritorna il minimo fd non utilizzato
 int dup2(int oldFileDescriptor, int newFileDescriptor);  // specifica quale fd usare (operazione atomica)
 // Se newFileDescriptor è già in uso, viene chiuso prima di essere duplicato
 ```
-
+Nel caso di dup2 newFileDescriptor punta alla stessa cosa di oldFileDescriptor, infatti l'entry di newFileDescriptor viene chiusa e la nuova entry che verra creata sara una copia della entry di oldFileDescriptor. In questo modo i due file descriptor puntano allo stesso file.
 **Esempio di redirezione stdout su file:**
 ```c
 int fd = open("testfile", O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
 dup2(fd, STDOUT_FILENO);  // ora stdout scrive su testfile
+printf("Hello world!\n"); //questa print scrivera su testfile, non sulla console
+close(fd); 
+printf("Hello world!\n"); //questa print scrivera sulla console
 ```
 
 ### 10.7 Struttura `stat`
@@ -1220,19 +1223,35 @@ pid_t fork(void);
   - PID del figlio al processo **padre**
   - `-1` in caso di errore
 
-Il figlio eredita dal padre: codice, dati, heap, stack, file descriptor, variabili di ambiente, working directory, permessi, ecc.
+**Cosa ereditano e memorie separate:**
+- **Condividono:** Il codice sorgente (Text segment), le variabili di ambiente, la working directory e i **File Descriptor** aperti prima della `fork()`.
+- **Copia indipendente:** Il figlio riceve una *copia* esatta dei dati (variabili, heap, stack) del padre. Dopo la fork, queste memorie sono isolate: se un processo modifica una variabile, l'altro non vedrà la modifica.
+
+**Come gestire il flusso (Valore di ritorno):**
+Dato che da questo punto in poi ci sono *due* processi che eseguono lo stesso codice, si usa un costrutto `if-else` basato sul valore restituito da `fork()` per far prendere loro strade diverse:
 
 ```c
-pid_t pid = fork();
+pid_t pid;
+int variabile_condivisa = 10;
+printf("Inizio del programma. (Eseguito solo dal padre)\n");
+// Chiamata a fork
+pid = fork();
+// Da qui in poi, ci sono DUE processi che eseguono lo stesso codice!
+
 if (pid < 0) {
+    // Errore: la clonazione è fallita
     perror("fork failed");
+    
 } else if (pid == 0) {
-    // Codice eseguito dal FIGLIO
-    printf("Sono il figlio, PID=%d\n", getpid());
+    // --- CODICE ESEGUITO SOLO DAL FIGLIO ---
+    // La fork() restituisce 0 al processo figlio
+    printf("Sono il FIGLIO, PID=%d (Padre PID=%d)\n", getpid(), getppid());
+    
 } else {
-    // Codice eseguito dal PADRE
-    printf("Sono il padre, figlio PID=%d\n", pid);
-    wait(NULL);  // aspetta la terminazione del figlio
+    // --- CODICE ESEGUITO SOLO DAL PADRE ---
+    // La fork() restituisce il PID del nuovo figlio al processo padre
+    printf("Sono il PADRE, ho appena creato il figlio PID=%d\n", pid);
+    wait(NULL);  // Il padre si mette in pausa e aspetta la terminazione del figlio
 }
 ```
 
@@ -1303,15 +1322,25 @@ int execve(char *pathname, char *argv[], char *envp[]);    // unica vera syscall
 
 | Suffisso | Significato |
 |----------|-------------|
-| `l` | Argomenti come lista (terminata da NULL) |
-| `v` | Argomenti come array argv[] |
-| `p` | Cerca nel PATH |
-| `e` | Ambiente specificato esplicitamente |
+| `l` | Argomenti passati come **L**ista variabile (terminata da `NULL`) |
+| `v` | Argomenti passati come **V**ettore (array `argv[]`) |
+| `p` | **PATH**: Cerca il comando nella variabile d'ambiente `PATH` |
+| `e` | **E**nvironment: Ambiente specificato esplicitamente |
+
+> [!NOTE] 
+> **Cosa significa "cerca nel PATH" (suffisso `p`)?**
+> Il `PATH` è una variabile d'ambiente che contiene un elenco di cartelle (es. `/bin:/usr/bin`).
+> - **Senza `p` (`execl`, `execv`)**: Devi fornire il **percorso esatto** dell'eseguibile (es. `/bin/ls`). Se gli passi solo `"ls"`, la chiamata fallirà.
+> - **Con `p` (`execlp`, `execvp`)**: Puoi fornire solo il **nome del programma** (es. `"ls"`). Il sistema lo cercherà automaticamente in tutte le cartelle listate nel tuo `PATH`, come fa la shell.
 
 **Esempio fork + exec:**
 ```c
 pid_t pid = fork();
 if (pid == 0) {
+    //"/bin/ls" = percorso esatto del programma
+    //"ls" = arg0 (il nome del programma convenzionalmente il primo argomento)
+    //"-l" = arg1 (il primo argomento vero e proprio)
+    //(char *)0 = terminatore della lista di argomenti
     execl("/bin/ls", "ls", "-l", (char *)0);
     perror("exec failed");  // eseguito solo se exec fallisce
     exit(1);
@@ -1340,6 +1369,30 @@ Simile a `fork()`, ma:
 - Il figlio esegue **per primo** fino a `exec()` o `_exit()`
 - Usato tipicamente prima di `exec()` per efficienza
 
+**Esempio vfork vs fork:**
+
+```c
+// Esempio fork (copia memoria)
+pid_t pid = fork();
+if (pid == 0) {
+    printf("Figlio (fork): modifica variabile...");
+    variabile_condivisa = 100; // modifica locale, non impatta il padre
+    _exit(0);
+}
+wait(NULL);
+printf("Padre (fork): variabile=%d\n", variabile_condivisa); // sempre 10
+
+// Esempio vfork (condivide memoria finché non c'è exec)
+pid_t pid = vfork();
+if (pid == 0) {
+    printf("Figlio (vfork): modifica variabile...");
+    variabile_condivisa = 100; // modifica VISIBILE al padre!
+    _exit(0);
+}
+wait(NULL);
+printf("Padre (vfork): variabile=%d\n", variabile_condivisa); // vedrà 100
+```
+
 ### 11.9 La funzione `system()`
 
 ```c
@@ -1353,8 +1406,11 @@ int system(char *command);
 
 ```c
 // Accedere all'ambiente
-char *getenv(const char *name);        // ottiene valore di una variabile
+char *getenv(const char *name);        // ottiene valore di una variabile d'ambiente
 int putenv(char *string);              // "variabile=valore"
+**ESEMPIO**
+putenv("VARIABILE_ESEMPIO=12345");
+
 extern char **environ;                 // variabile globale con tutto l'ambiente
 
 // Accesso tramite main
