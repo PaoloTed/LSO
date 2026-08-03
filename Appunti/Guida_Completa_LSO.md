@@ -1870,7 +1870,7 @@ Un **segnale** è un **interrupt software** che consente la comunicazione **asin
 
 ### 12.2 Segnali Principali
 
-| Num | Nome | Significato | Azione di Default |
+| Numero | Nome | Significato | Azione di Default |
 |:---:|------|-------------|-------------------|
 | **2** | `SIGINT` | Interruzione da tastiera (Ctrl-C) | Terminare |
 | **3** | `SIGQUIT` | Quit da tastiera (Ctrl-\) | Terminare |
@@ -1982,19 +1982,67 @@ unsigned int alarm(unsigned int seconds);
 
 ### 12.7 Insiemi di Segnali e Maschere
 
+La **maschera dei segnali (signal mask)** di un processo è una lista di segnali che il processo decide temporaneamente di "bloccare".
+Quando un segnale viene generato ed inviato al processo, il sistema controlla questa maschera:
+- Se il segnale **è presente** nella maschera, viene bloccato e messo "in attesa" (pending). Il segnale non viene perso, ma sarà consegnato solo quando (e se) verrà sbloccato.
+- Se il segnale **non è presente**, viene consegnato e gestito immediatamente.
+
+Per manipolare questi gruppi di segnali in C, si utilizza il tipo di dato **`sigset_t`** e una serie di funzioni dedicate:
+
 ```c
 #include <signal.h>
-int sigemptyset(sigset_t *set);     // set vuoto
-int sigfillset(sigset_t *set);      // set con tutti i segnali
-int sigaddset(sigset_t *set, int sig);  // aggiunge segnale
-int sigdelset(sigset_t *set, int sig);  // rimuove segnale
-int sigismember(const sigset_t *set, int sig);  // test appartenenza
-
-int sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
-// how: SIG_BLOCK (unione), SIG_UNBLOCK (intersezione), SIG_SETMASK (sostituzione)
+// Funzioni per preparare e gestire gli insiemi (sigset_t)
+int sigemptyset(sigset_t *set);                 // Svuota l'insieme (nessun segnale presente)
+int sigfillset(sigset_t *set);                  // Inserisce nell'insieme tutti i segnali supportati
+int sigaddset(sigset_t *set, int sig);          // Aggiunge un segnale specifico all'insieme
+int sigdelset(sigset_t *set, int sig);          // Rimuove un segnale specifico dall'insieme
+int sigismember(const sigset_t *set, int sig);  // Verifica se un segnale è presente nell'insieme
 ```
 
-La **signal mask** blocca la consegna dei segnali mascherati al processo.
+**Esempio:**
+```c
+sigset_t mask;
+
+// 1. Inizializzo la maschera a "vuota"
+sigemptyset(&mask);  // mask ora non contiene nessun segnale
+
+// 2. Aggiungo SIGINT (segnale 2) alla maschera
+sigaddset(&mask, SIGINT);
+
+// Ora "mask" contiene solo SIGINT. Qualsiasi invio di SIGINT al processo
+// verrà bloccato fino a quando non rimuoverò SIGINT dalla maschera.
+```
+
+Una volta preparato l'insieme (`sigset_t`), si deve utilizzare la funzione `sigprocmask` per applicarlo e modificare effettivamente la maschera attiva del processo:
+
+```c
+int sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
+```
+I parametri fondamentali sono:
+- **`how`**: Definisce *come* il nuovo insieme modificherà la maschera attuale:
+  - `SIG_BLOCK`: **Unione**. Aggiunge i segnali di `set` a quelli attualmente bloccati.
+  - `SIG_UNBLOCK`: **Rimozione**. Rimuove i segnali di `set` dalla maschera (li sblocca).
+  - `SIG_SETMASK`: **Sostituzione**. Sostituisce interamente la vecchia maschera con il nuovo `set`.
+- **`set`**: Il puntatore all'insieme di segnali da applicare.
+- **`oldset`**: Se diverso da `NULL`, la funzione vi salverà la vecchia maschera prima di effettuare la modifica (molto utile se si vuole ripristinarla in seguito).
+
+**Esempio:**
+```c
+sigset_t mask oldmask;
+
+// 1. Inizializzo la maschera a "vuota"
+sigemptyset(&mask);  // mask ora non contiene nessun segnale
+
+// 2. Aggiungo SIGINT (segnale 2) alla maschera
+sigaddset(&mask, SIGINT);
+if (sigprocmask(SIG_BLOCK, &mask, &oldmask) == -1) {
+    perror("sigprocmask");
+    exit(EXIT_FAILURE);
+}
+
+// Ora "mask" contiene solo SIGINT. Qualsiasi invio di SIGINT al processo
+// verrà bloccato fino a quando non rimuoverò SIGINT dalla maschera.
+```
 
 ---
 
