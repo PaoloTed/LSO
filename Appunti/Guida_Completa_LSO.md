@@ -2069,20 +2069,25 @@ int pipe(int pipeChildFather[2]);
 int pipeChildFather[2];
 pipe(pipeChildFather);
 pid_t pid = fork();
+//Si creano due pipe una padre-figlio e una figlio-padre per comunicare tra i due processi 
 if (pid == 0) {                      // Figlio (lettore)
-    close(pipeChildFather[1]);       // chiude la scrittura
+    close(pipeChildFather[1]);       // chiude la scrittura nel processo figlio non del padre
     char buf[64];
     while (read(pipeChildFather[0], buf, sizeof(buf)) > 0)// LEGGE DALLA PIPE
-        write(STDOUT_FILENO, buf, 5);                     // SCRIVE NELLO STDOUT
-    close(pipeChildFather[0]);
+        write(STDOUT_FILENO, buf, 5);                     // SCRIVE NELLO STDOUT 5 byte del buffer
+    close(pipeChildFather[0]);      // chiude la lettura nel processo figlio non del padre
     _exit(0);
 } else {                             // Padre (scrittore)
-    close(pipeChildFather[0]);       // chiude la lettura
+    close(pipeChildFather[0]);       // chiude la lettura nel processo padre non del figlio
     write(pipeChildFather[1], "ciao\n", 5);               // SCRIVE SULLA PIPE
-    close(pipeChildFather[1]);       // segnala EOF
+    close(pipeChildFather[1]);       // segnala EOF nel processo padre non del figlio
     wait(NULL);
 }
 ```
+
+Il figlio puo' leggere anche se il padre ha chiuso la lettura perche' sono due file descriptors distinti. 
+Dopo la fork(), sia il Padre che il Figlio hanno accesso in lettura e scrittura alla stessa pipe! Ci sono in totale 4 file descriptor aperti verso la stessa pipe.
+Il padre per comunicare col figlio deve chiudere l'estremo di lettura e il figlio deve chiudere l'estremo di scrittura.
 
 ### 13.2 Pipe con Nome (FIFO)
 
