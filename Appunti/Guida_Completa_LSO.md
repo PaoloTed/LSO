@@ -725,52 +725,230 @@ sed -e 's/.*/lui dice: &/' file
 
 ### 7.2 Awk — Linguaggio di Elaborazione Testuale
 
-**awk** è un linguaggio data-driven che suddivide ogni riga in **campi** separati da spazi/tab.
+**awk** è un vero e proprio **linguaggio di programmazione** interpretato, progettato per elaborare file di testo strutturati a campi. Ogni riga del file viene chiamata **record**, ogni "parola" separata dal delimitatore è un **campo**.
 
-**Sintassi:** `awk 'programma' file` o `awk -f script.awk file`
-
-**Struttura del programma:**
-```
-BEGIN { azioni_iniziali }
-/pattern/ { azioni }
-END { azioni_finali }
+**Sintassi base:**
+```bash
+awk 'programma' file          # programma inline
+awk -f script.awk file        # programma da file
+awk -F: 'programma' file      # specifica il delimitatore (qui ':')
 ```
 
-**Variabili predefinite:**
+---
+
+#### Struttura di un programma awk
+
+Un programma awk è composto da **blocchi** nella forma `pattern { azione }`.
+Awk legge il file riga per riga e, per ogni riga, esegue le azioni di tutti i blocchi il cui pattern è soddisfatto.
+
+```
+BEGIN  { ... }      # eseguito UNA volta, prima di leggere qualsiasi riga
+/regex/ { ... }     # eseguito per ogni riga che matcha la regex
+expr    { ... }     # eseguito per ogni riga in cui l'espressione è vera
+END    { ... }      # eseguito UNA volta, dopo aver letto tutte le righe
+```
+
+Se manca il pattern, l'azione viene eseguita per **ogni riga**.
+
+```bash
+# Esempio: report su /etc/passwd
+awk -F: '
+    BEGIN { print "=== Utenti del sistema ===" }
+    { print "Utente:", $1, "| Shell:", $NF }
+    END   { print "Totale righe:", NR }
+' /etc/passwd
+```
+
+---
+
+#### Variabili predefinite
 
 | Variabile | Significato |
 |-----------|-------------|
-| `$0` | Riga intera |
-| `$1, $2, ..., $N` | Campo 1, 2, ..., N |
-| `FS` | Field Separator (default: spazio/tab) |
-| `OFS` | Output Field Separator (default: spazio) |
-| `ORS` | Output Record Separator (default: `\n`) |
-| `NR` | Numero di record processati |
+| `$0` | L'intera riga corrente |
+| `$1`, `$2`, ..., `$NF` | Il campo 1, 2, ..., ultimo |
 | `NF` | Numero di campi nella riga corrente |
+| `NR` | Numero di record (righe) letti finora (globale) |
+| `FNR` | Numero di record nel file corrente (si azzera ad ogni nuovo file) |
+| `FS` | Field Separator in input (default: spazio/tab) |
+| `OFS` | Output Field Separator (default: spazio) |
+| `RS` | Record Separator in input (default: `\n`) |
+| `ORS` | Output Record Separator (default: `\n`) |
+| `FILENAME` | Nome del file corrente in elaborazione |
 
-**Esempi:**
 ```bash
-# Stampa primo e terzo campo
-df | awk '{ print $1, $3 }'
+# OFS: cambia il separatore di output
+awk -F: 'BEGIN { OFS=" -> " } { print $1, $3 }' /etc/passwd
+# output: root -> 0
 
-# Con espressione regolare
-df | awk '/dev\/hd/ { print "Partizione:" $1 "\t usata al " $5 }'
+# NF: stampa solo l'ultimo campo di ogni riga
+awk '{ print $NF }' file.txt
 
-# BEGIN e END
-df | awk 'BEGIN {print "Report"} /dev/ {print $1, $5} END {print "Fine"}'
+# FNR vs NR con due file
+awk '{ print FILENAME, FNR, NR, $0 }' file1.txt file2.txt
+```
 
-# Cambiare separatore
-awk 'BEGIN { FS=":" } { print $1, $3 }' /etc/passwd
+---
 
-# Output formattato con printf
-awk 'BEGIN { printf "%d %4.3f %s\n", 5, 3, "abc" }'
+#### Variabili utente e operatori
 
-# Somma con script awk
-# somma.awk:
-# BEGIN { FS=":"; print "Calcolo Subtotali" }
-# { subtotale=$1*$2; totale = totale+subtotale; print "Sub per " $3 "=" subtotale }
-# END { print "Totale =" totale }
-awk -f somma.awk dati.txt
+Puoi creare le tue variabili in qualsiasi blocco. Non serve dichiararle: le variabili numeriche partono da `0`, quelle stringa da `""`.
+
+```bash
+# Conta le righe più lunghe di 80 caratteri
+awk '{ if (length($0) > 80) count++ } END { print count }' file.txt
+
+# Somma il terzo campo di tutte le righe
+awk '{ somma += $3 } END { print "Totale:", somma }' dati.txt
+
+# Media
+awk '{ somma += $1; n++ } END { print "Media:", somma/n }' numeri.txt
+```
+
+**Operatori disponibili:** `+`, `-`, `*`, `/`, `%`, `^` (potenza), `++`, `--`, `+=`, `-=`, `==`, `!=`, `<`, `>`, `<=`, `>=`, `&&`, `||`, `!`, `? :` (ternario).
+
+---
+
+#### Condizionali e Cicli
+
+Awk supporta le stesse strutture di controllo del C.
+
+```bash
+# if / else if / else
+awk '{
+    if ($3 > 1000)
+        print $1, "-> ricco"
+    else if ($3 > 500)
+        print $1, "-> medio"
+}' stipendi.txt
+
+# while
+
+# for (stile C)
+
+# for ... in (itera sugli array associativi)
+awk '{
+    conteggio[$1]++
+} END {
+    for (parola in conteggio)
+        print parola, "appare", conteggio[parola], "volte"
+}' testo.txt
+```
+
+---
+
+#### Array Associativi
+
+Gli array in awk sono **associativi**: la chiave può essere qualsiasi stringa o numero.
+
+```bash
+# Conta quante volte appare ogni parola nel file
+awk '{ for (i=1; i<=NF; i++) freq[$i]++ }
+     END { for (w in freq) print freq[w], w }' testo.txt | sort -rn
+
+
+# Verifica se una chiave esiste nell'array
+awk '{ if ("admin" in utenti) print "admin trovato" }' file.txt
+
+```
+
+---
+
+#### Funzioni Built-in di Awk
+
+Awk include molte funzioni predefinite. Ecco le più importanti:
+
+##### Funzioni per le Stringhe
+
+| Funzione | Descrizione |
+|----------|-------------|
+| `length(s)` | Lunghezza della stringa `s`. Senza argomento: lunghezza di `$0`. |
+| `substr(s, m, n)` | Sottostinga di `s` a partire dalla posizione `m`, lunga `n` caratteri. |
+| `index(s, t)` | Posizione della prima occorrenza di `t` in `s` (0 se non trovata). |
+| `split(s, a, sep)` | Divide `s` usando `sep` come delimitatore e popola l'array `a`. Ritorna il numero di elementi. |
+| `sub(regex, repl, s)` | Sostituisce la **prima** occorrenza di `regex` con `repl` in `s`. |
+| `gsub(regex, repl, s)` | Sostituisce **tutte** le occorrenze di `regex` con `repl` in `s`. |
+| `match(s, regex)` | Cerca `regex` in `s`. Imposta `RSTART` e `RLENGTH`. Ritorna la posizione (0 se non trovata). |
+| `sprintf(fmt, ...)` | Formatta una stringa come `printf` ma la ritorna invece di stamparla. |
+| `tolower(s)` | Converte `s` in minuscolo. |
+| `toupper(s)` | Converte `s` in maiuscolo. |
+
+```bash
+# length: lunghezza di ogni riga
+awk '{ print NR, length($0), $0 }' file.txt
+
+# substr: estrai i primi 5 caratteri
+awk '{ print substr($0, 1, 5) }' file.txt
+
+# index: trova posizione di "@" in una email
+awk '{ pos = index($1, "@"); print "@ è alla posizione:", pos }' email.txt
+
+# split: divide un IP nei suoi ottetti
+awk '{
+    n = split($1, parti, ".")
+    for (i=1; i<=n; i++) print "Ottetto", i, "=", parti[i]
+}' ips.txt
+
+# sub: sostituisce solo la prima occorrenza di "foo" con "bar" in $0
+awk '{ sub(/foo/, "bar"); print }' file.txt
+
+# gsub: sostituisce tutte le occorrenze di spazi multipli con uno solo
+awk '{ gsub(/  +/, " "); print }' file.txt
+
+# match: trova una parola che inizia con maiuscola
+awk '{
+    if (match($0, /[A-Z][a-z]+/))
+        print "Trovato:", substr($0, RSTART, RLENGTH)
+}' file.txt
+
+# sprintf: formatta senza stampare
+awk '{
+    riga_formattata = sprintf("%-20s %5d", $1, $2)
+    print riga_formattata
+}' dati.txt
+
+# tolower / toupper
+awk '{ print toupper($1), tolower($2) }' file.txt
+```
+
+---
+
+#### Funzioni Definite dall'Utente
+
+Puoi definire le tue funzioni in awk. La sintassi è simile al C. Le variabili dichiarate come parametri extra (dopo uno spazio) fungono da **variabili locali**.
+
+```bash
+# Sintassi:
+# function nome(param1, param2,    locale1, locale2) {
+#     ...
+#     return valore
+# }
+
+```
+
+```bash
+# Funzione con variabile locale (il doppio spazio è una convenzione)
+awk '
+function fattoriale(n,    risultato) {
+    risultato = 1
+    for (i = 2; i <= n; i++)
+        risultato *= i
+    return risultato
+}
+
+{ print $1, "! =", fattoriale($1) }
+' numeri.txt
+```
+
+---
+
+#### Pipe e Interazione con la Shell
+
+Awk può comunicare con comandi shell tramite pipe.
+
+```bash
+# Pipe in output: invia l'output di print a un comando
+awk '{ print $1 | "sort -u" }' file.txt
 ```
 
 ---
@@ -1028,13 +1206,15 @@ ssize_t read(int filedes, void *buf, size_t nbytes);
 int fd = open("prova.txt", O_RDONLY);
 char buf[10];
 ssize_t nbytes = read(fd, buf, 10);
+if (nbytes == -1) perror("read");  // errore
+if (nbytes == 0)  printf("EOF\n"); // fine file
 ```
 
 #### `write` — Scrittura su file
 ```c
 #include <unistd.h>
 ssize_t write(int filedes, void *buf, size_t nbytes);
-// Restituisce: byte scritti, -1 errore, 
+// Restituisce: byte scritti, -1 errore
 // Scrive nel file il contenuto del buffer (buf) per nbytes byte
 ```
 **Esempio:**
@@ -1042,7 +1222,14 @@ ssize_t write(int filedes, void *buf, size_t nbytes);
 int fd = open("prova.txt", O_WRONLY | O_CREAT, S_IRWXU);
 char buf[] = "Hello, world!";
 ssize_t nbytes = write(fd, buf, strlen(buf));
+if (nbytes == -1) perror("write"); // errore
 ```
+
+> **Nota su `ssize_t` e `size_t`:**
+> - `size_t` — intero **senza segno** (`unsigned`). Usato per le *dimensioni* passate come argomento (non può essere negativo).
+> - `ssize_t` — intero **con segno** (`signed`). Usato come *valore di ritorno* perché deve poter restituire `-1` in caso di errore, `0` per EOF, o un numero positivo di byte letti/scritti.
+> - Su sistemi a **32 bit** corrispondono a `unsigned int` / `int`. Su **64 bit** a `unsigned long` / `long`.
+> - Il formato `printf` corretto è **`%zu`** per `size_t` e **`%zd`** per `ssize_t`.
 
 ### 10.3 Offset e `lseek`
 
@@ -1079,12 +1266,38 @@ int fd = open("prova.txt", O_RDONLY);
 off_t currpos = lseek(fd, 0, SEEK_CUR);
 ```
 
-### 10.4 Gestione Errori con `perror` e `errno`
+### 10.4 Gestione Errori con `errno` e `perror`
+
+Quando una system call fallisce, **non lancia un'eccezione** come in altri linguaggi. Invece:
+1. La funzione restituisce **-1** (o `NULL` per funzioni che ritornano puntatori).
+2. Il kernel imposta la variabile globale **`errno`** con un codice numerico che identifica il tipo di errore.
 
 ```c
+#include <errno.h>
+
+int fd = open("inesistente.txt", O_RDONLY);
+if (fd == -1) {
+    // errno contiene adesso il codice dell'errore
+    printf("Codice errore: %d\n", errno);  // es. stampa 2
+}
+```
+---
+
+#### `perror()` — stampa il messaggio di errore
+
+`perror()` è una funzione di libreria che legge automaticamente `errno` e stampa su **stderr** una riga nel formato:
+```
+<stringa_prefisso>: <messaggio_errore_in_italiano/inglese>
+```
+
+```c
+#include <stdio.h>
+
 int fd = open("prova.txt", O_RDONLY);
-if (fd < 0)
-    perror("errore di open");  // stampa "errore di open: No such file or directory"
+if (fd == -1) {
+    perror("Apertura file");  
+    // Stampa su stderr: "Apertura file: No such file or directory"
+}
 ```
 
 ### 10.5 Implementazione nel Kernel
@@ -1293,6 +1506,13 @@ pid_t wait(int *status);
 pid_t waitpid(pid_t pid, int *status, int options);
 // Può attendere un figlio specifico
 ```
+*status* è un puntatore a intero che wait() usa come parametro di output: tu gli passi l'indirizzo di una variabile intera, e il kernel ci scrive informazioni su come il figlio è terminato.
+
+**Esempio**
+```c
+int status;                 // variabile dove il kernel scriverà le info
+pid_t pid = wait(&status);  // il kernel riempie 'status'
+```
 
 **Argomento `pid` di `waitpid`:**
 - `pid > 0` → attende il figlio con quel PID
@@ -1309,57 +1529,93 @@ pid_t waitpid(pid_t pid, int *status, int options);
 
 ### 11.7 La Famiglia `exec`
 
-Le `exec` **sovrascrivono** la memoria del processo con un nuovo programma. Il PID **non cambia**.
+#### A cosa serve?
+
+`exec` serve a **trasformare un processo in un programma completamente diverso**. È la syscall che la shell usa ogni volta che scrivi un comando: prima fa una `fork()` per creare un figlio, poi il figlio chiama `exec()` per diventare il programma richiesto.
+
+> **Regola fondamentale:** `exec` NON crea un nuovo processo. Prende il processo corrente e lo **svuota** completamente (codice, dati, stack, heap), poi ci carica dentro il nuovo programma. Il PID rimane lo stesso.
+
+> Se `exec` ha successo, **non ritorna mai**: il vecchio codice è stato cancellato. Il codice dopo `exec()` viene eseguito solo in caso di errore.
 
 ```c
-int execl(char *pathname, char *arg0, ... );       // argomenti come lista
-int execv(char *pathname, char *argv[]);            // argomenti come array
-int execlp(char *filename, char *arg0, ... );       // cerca nel PATH
-int execvp(char *filename, char *argv[]);           // cerca nel PATH
-int execle(char *pathname, char *arg0, ..., char *envp[]); // con ambiente
-int execve(char *pathname, char *argv[], char *envp[]);    // unica vera syscall
+int execl(char *pathname, char *arg0, ... );            // lista argomenti, percorso esatto
+int execv(char *pathname, char *argv[]);                // array argomenti, percorso esatto
+int execlp(char *filename, char *arg0, ... );           // lista argomenti, cerca nel PATH
+int execvp(char *filename, char *argv[]);               // array argomenti, cerca nel PATH
+int execle(char *pathname, char *arg0, ..., char *envp[]); // lista argomenti + ambiente custom
+int execve(char *pathname, char *argv[], char *envp[]);    // unica vera syscall del kernel
 ```
 
-| Suffisso | Significato |
-|----------|-------------|
-| `l` | Argomenti passati come **L**ista variabile (terminata da `NULL`) |
-| `v` | Argomenti passati come **V**ettore (array `argv[]`) |
-| `p` | **PATH**: Cerca il comando nella variabile d'ambiente `PATH` |
-| `e` | **E**nvironment: Ambiente specificato esplicitamente |
+**Come scegliere quale usare:**
 
-> [!NOTE] 
-> **Cosa significa "cerca nel PATH" (suffisso `p`)?**
-> Il `PATH` è una variabile d'ambiente che contiene un elenco di cartelle (es. `/bin:/usr/bin`).
-> - **Senza `p` (`execl`, `execv`)**: Devi fornire il **percorso esatto** dell'eseguibile (es. `/bin/ls`). Se gli passi solo `"ls"`, la chiamata fallirà.
-> - **Con `p` (`execlp`, `execvp`)**: Puoi fornire solo il **nome del programma** (es. `"ls"`). Il sistema lo cercherà automaticamente in tutte le cartelle listate nel tuo `PATH`, come fa la shell.
+| Suffisso | Cosa cambia | Quando usarlo |
+|----------|-------------|---------------|
+| `l` (list) | Argomenti come lista variabile terminata da `(char*)NULL` | Quando conosci gli argomenti a compile-time |
+| `v` (vector) | Argomenti come array `char *argv[]` | Quando gli argomenti variano a runtime (es. letti dall'utente) |
+| `p` (path) | Cerca l'eseguibile nel `PATH` automaticamente | Quando usi comandi standard di sistema (`ls`, `grep`, ...) |
+| `e` (env) | Passi un ambiente custom invece di ereditare quello del padre | Quando vuoi controllare le variabili d'ambiente del nuovo processo |
 
-**Esempio fork + exec:**
 ```c
-pid_t pid = fork();
-if (pid == 0) {
-    //"/bin/ls" = percorso esatto del programma
-    //"ls" = arg0 (il nome del programma convenzionalmente il primo argomento)
-    //"-l" = arg1 (il primo argomento vero e proprio)
-    //(char *)0 = terminatore della lista di argomenti
-    execl("/bin/ls", "ls", "-l", (char *)0);
-    perror("exec failed");  // eseguito solo se exec fallisce
-    exit(1);
-} else {
+// execl: percorso esatto + argomenti come lista
+execl("/bin/ls", "ls",       "-l", "-a", (char *)NULL);
+//     ↑ percorso  ↑ argv[0]  ↑ argv[1]  ↑ terminatore obbligatorio
+
+// execlp: cerca "ls" nel PATH automaticamente
+execlp("ls", "ls", "-l", (char *)NULL);
+
+// execvp: argomenti come array (utile quando non sai quanti sono)
+char *args[] = {"ls", "-l", "-a", NULL};  // NULL come terminatore
+execvp("ls", args);
+
+// execle: percorso esatto + ambiente personalizzato
+char *env[] = {"HOME=/tmp", "PATH=/bin", NULL};
+execle("/bin/ls", "ls", "-l", (char *)NULL, env);
+```
+
+**Pattern completo fork + exec:**
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
+int main() {
+    pid_t pid = fork();
+
+    if (pid < 0) {
+        perror("fork");
+        exit(1);
+    }
+    if (pid == 0) {
+        // --- FIGLIO: si trasforma in "ls -l" ---
+        // "/bin/ls" = percorso esatto del programma
+        // "ls"      = argv[0] (convenzione: nome del programma)
+        // "-l"      = argv[1] (primo argomento reale)
+        // (char*)0  = terminatore obbligatorio della lista
+        execl("/bin/ls", "ls", "-l", (char *)0);
+
+        // Questa riga viene raggiunta SOLO se execl fallisce
+        perror("execl failed");
+        exit(1);
+    }
+    // --- PADRE: aspetta che il figlio (cioè ls) finisca ---
     wait(NULL);
     printf("ls completato\n");
+    return 0;
 }
 ```
 
-**Proprietà ereditate da `exec`:**
-- process ID e parent process ID
-- real uid e real gid, supplementary gid
-- process group ID, session ID, terminale di controllo
-- current working directory, root directory
-- umask, file locks, maschera dei segnali, segnali in attesa
+**Cosa il nuovo programma eredita (dopo exec):**
+- PID, PPID, process group ID, session ID
+- UID, GID reali
+- Current working directory, root directory
+- Umask, file lock, maschera dei segnali
+- File descriptor aperti (tranne quelli con `FD_CLOEXEC`)
 
-**Proprietà NON ereditate da `exec`:**
-- effective user ID e effective group ID (reimpostati dai bit di protezione del file)
-- File descriptor con flag `FD_CLOEXEC` (`close-on-exec`) attivo → vengono chiusi automaticamente
+**Cosa NON eredita (viene reimpostato):**
+- Effective UID/GID (reimpostati secondo i bit setuid/setgid del nuovo eseguibile)
+- File descriptor con flag `FD_CLOEXEC` → vengono chiusi automaticamente al momento di exec
+- Handler dei segnali personalizzati → tornano a `SIG_DFL`
 
 ### 11.8 `vfork()`
 
@@ -1373,6 +1629,7 @@ Simile a `fork()`, ma:
 
 ```c
 // Esempio fork (copia memoria)
+int variabile_condivisa = 10;
 pid_t pid = fork();
 if (pid == 0) {
     printf("Figlio (fork): modifica variabile...");
@@ -1383,6 +1640,7 @@ wait(NULL);
 printf("Padre (fork): variabile=%d\n", variabile_condivisa); // sempre 10
 
 // Esempio vfork (condivide memoria finché non c'è exec)
+int variabile_condivisa = 10;
 pid_t pid = vfork();
 if (pid == 0) {
     printf("Figlio (vfork): modifica variabile...");
@@ -1395,48 +1653,208 @@ printf("Padre (vfork): variabile=%d\n", variabile_condivisa); // vedrà 100
 
 ### 11.9 La funzione `system()`
 
-```c
-int system(char *command);
-```
-- Esegue un comando shell (`/bin/sh -c command`)
-- **Attende la terminazione** del comando
-- È una funzione di libreria (non una system call)
-
-### 11.10 Ambiente di un Processo
+`system()` è una scorciatoia che fa internamente `fork()` + `exec("/bin/sh -c command")` + `wait()` in un'unica chiamata. Comoda, ma meno efficiente e meno sicura (mai usarla in programmi setuid).
 
 ```c
-// Accedere all'ambiente
-char *getenv(const char *name);        // ottiene valore di una variabile d'ambiente
-int putenv(char *string);              // "variabile=valore"
-**ESEMPIO**
-putenv("VARIABILE_ESEMPIO=12345");
-
-extern char **environ;                 // variabile globale con tutto l'ambiente
-
-// Accesso tramite main
-int main(int argc, char **argv, char **envp) { ... }
-
-// Passare ambiente custom a exec
-execle(path, arg0, arg1, (char*)0, envp);  // con lista argomenti
-execve(path, argv, envp);                  // con array argomenti
+#include <stdlib.h>
+int system(const char *command);
+// Ritorna: exit status del comando, -1 se fork fallisce
 ```
 
-**Cambiare directory e root del processo:**
+```c
+// Equivalente a scrivere "ls -l" nel terminale
+int ret = system("ls -l");
+if (ret == -1) perror("system");
+printf("Comando terminato con status %d\n", WEXITSTATUS(ret));
+
+// Utile per operazioni rapide senza gestire fork/exec manualmente
+system("mkdir -p /tmp/mydir");
+system("cp file.txt /tmp/mydir/");
+```
+
+> ⚠️ **Non usare `system()` in programmi con privilegi elevati** (setuid). Un attaccante potrebbe modificare il `PATH` o le variabili d'ambiente per eseguire comandi arbitrari.
+
+### 11.10 Ambiente di un Processo: `getenv` e `putenv`
+
+Ogni processo ha un **ambiente**: una lista di coppie `NOME=valore` (es. `PATH=/bin:/usr/bin`, `HOME=/home/user`) che vengono passate automaticamente a tutti i processi figli.
+
+#### `getenv` — leggere una variabile d'ambiente
+
+```c
+#include <stdlib.h>
+char *getenv(const char *name);
+// Ritorna: puntatore al valore, oppure NULL se la variabile non esiste
+```
+
+`getenv` cerca nell'ambiente del processo la variabile con quel nome e restituisce il suo valore come stringa. **Non copiare mai il risultato in un puntatore che poi modifichi**: il puntatore punta direttamente alla memoria dell'ambiente.
+
+```c
+#include <stdlib.h>
+#include <stdio.h>
+
+// Leggo la variabile HOME
+char *home = getenv("HOME");
+if (home != NULL)
+    printf("Home directory: %s\n", home);  // es. /home/paolo
+else
+    printf("Variabile HOME non trovata\n");
+
+// Leggo il PATH
+char *path = getenv("PATH");
+printf("PATH = %s\n", path);  // es. /bin:/usr/bin:/usr/local/bin
+
+// Uso pratico: configurare il programma senza argomenti a riga di comando
+char *debug = getenv("MY_APP_DEBUG");
+if (debug != NULL && strcmp(debug, "1") == 0) {
+    printf("Modalità debug attivata\n");
+}
+```
+
+#### `putenv` — aggiungere o modificare una variabile d'ambiente
+
+```c
+#include <stdlib.h>
+int putenv(char *string);  // string deve essere nel formato "NOME=valore"
+// Ritorna: 0 successo, non-zero errore
+```
+
+`putenv` aggiunge la variabile all'ambiente del processo corrente. La modifica è visibile anche a tutti i processi figli che verranno creati con `fork()` dopo questa chiamata.
+
+```c
+// Aggiungo una nuova variabile
+putenv("MY_VAR=12345");
+printf("%s\n", getenv("MY_VAR"));  // stampa: 12345
+
+// Modifico una variabile esistente
+putenv("HOME=/tmp");
+printf("%s\n", getenv("HOME"));    // stampa: /tmp
+```
+
+> ⚠️ **Attenzione critica:** `putenv` non copia la stringa, ma inserisce direttamente il puntatore nell'ambiente. Se usi una variabile locale (stack), questa viene distrutta al termine della funzione e l'ambiente punta a memoria invalida!
+> ```c
+> // SBAGLIATO: variabile locale, viene distrutta!
+> void imposta() {
+>     char buf[] = "NOME=valore";  // sullo stack!
+>     putenv(buf);  // PERICOLOSO: buf viene distrutto al return
+> }
+>
+> // CORRETTO: stringa letterale (in memoria statica, non viene distrutta)
+> putenv("NOME=valore");
+>
+> // CORRETTO: memoria heap (sopravvive alla funzione)
+> char *s = strdup("NOME=valore");  // malloc + strcpy
+> putenv(s);
+> // NON fare free(s) finché la variabile è nell'ambiente!
+> ```
+
+#### Accedere all'intero ambiente
+
+```c
+extern char **environ;  // array di stringhe "NOME=valore", terminato da NULL
+
+// Stampa tutte le variabili d'ambiente
+for (int i = 0; environ[i] != NULL; i++)
+    printf("%s\n", environ[i]);
+
+// Accesso tramite il terzo parametro del main
+int main(int argc, char *argv[], char *envp[]) {
+    for (int i = 0; envp[i] != NULL; i++)
+        printf("%s\n", envp[i]);
+}
+```
+
+#### Passare un ambiente custom a `exec`
+
+Con `execle` o `execve` puoi passare un ambiente completamente diverso al nuovo programma:
+
+```c
+// Creo un ambiente minimale per il processo figlio
+char *env_figlio[] = {
+    "PATH=/bin:/usr/bin",
+    "HOME=/tmp",
+    "LANG=it_IT.UTF-8",
+    NULL  // terminatore obbligatorio
+};
+execle("/bin/ls", "ls", "-l", (char*)NULL, env_figlio);
+// ls verrà eseguito con SOLO quelle variabili d'ambiente
+```
+
+---
+
+### 11.11 `chdir` e `chroot` — Cambiare directory e root
+
+#### `chdir` — Cambia la Current Working Directory (CWD)
+
 ```c
 #include <unistd.h>
-int chdir(const char *path);   // cambia la CWD del processo (ereditata dai figli)
-int chroot(const char *path);  // cambia la root directory del processo
-// chroot: utile per sandboxing (es. nei container prima di pivot_root)
+int chdir(const char *path);  // ritorna 0 successo, -1 errore
+```
+
+`chdir` cambia la **directory corrente** del processo (quella che si vede con `pwd` nella shell). La nuova CWD viene **ereditata dai figli** creati con `fork()` dopo la chiamata.
+
+```c
+#include <unistd.h>
+#include <stdio.h>
+
+// Sposto il processo nella directory /tmp
+if (chdir("/tmp") == -1) {
+    perror("chdir");
+    exit(1);
+}
+
+// Ora un open("file.txt", ...) cerca /tmp/file.txt
+int fd = open("file.txt", O_RDONLY);
+
+// Stampa la directory corrente
+char cwd[256];
+getcwd(cwd, sizeof(cwd));
+printf("CWD attuale: %s\n", cwd);  // /tmp
+```
+
+**Uso tipico:** I daemon (servizi) di solito chiamano `chdir("/")` all'avvio per non "bloccare" il filesystem da cui sono stati lanciati (impedendo di smontarlo).
+
+#### `chroot` — Cambia la Root Directory (Sandboxing)
+
+```c
+#include <unistd.h>
+int chroot(const char *path);  // richiede privilegi root!
+// ritorna 0 successo, -1 errore
+```
+
+`chroot` cambia quella che il processo percepisce come la **directory radice `/`**. Dopo la chiamata, il processo non riesce più ad accedere a nessun file al di fuori della nuova root: è **intrappolato** in quella directory e nelle sue sottodirectory. Questo è il concetto alla base del **sandboxing**.
+
+```
+Filesystem reale:          Dopo chroot("/jail"):
+/                          / (= /jail nel filesystem reale)
+├── bin/                   ├── bin/
+├── etc/                   ├── etc/
+├── jail/           →      └── lib/
+│   ├── bin/
+│   ├── etc/
+│   └── lib/
+└── home/   ← inaccessibile al processo!
+```
+
+```c
+// Richede di essere root (UID 0)
+if (chroot("/var/jail") == -1) {
+    perror("chroot"); exit(1);
+}
+// Da qui in poi, il processo non può uscire da /var/jail
+chdir("/");  // importante: spostarsi nella nuova root dopo chroot!
+
+// Questo ora cerca /var/jail/etc/passwd
+open("/etc/passwd", O_RDONLY);
 ```
 
 **`exit()` vs `_exit()`:**
 
 | Funzione | Comportamento |
 |----------|---------------|
-| `exit(status)` | Invoca exit handlers registrati, chiude stream I/O, poi chiama `_exit()` |
+| `exit(status)` | Invoca exit handlers registrati, chiude stream I/O (flush), poi chiama `_exit()` |
 | `_exit(status)` | Ritorna immediatamente al kernel senza flush dei buffer |
 
-> Nei processi figli dopo `fork()` si usa `_exit()` (mai `exit()`) per evitare di fluscare buffer del padre che non appartengono al figlio.
+> Nei processi figli dopo `fork()` si usa `_exit()` (mai `exit()`) per evitare di fluscare i buffer I/O del padre (che il figlio ha ereditato come copia).
 
 ---
 
@@ -1452,20 +1870,21 @@ Un **segnale** è un **interrupt software** che consente la comunicazione **asin
 
 ### 12.2 Segnali Principali
 
-| Nome | Significato | Default |
-|------|-------------|---------|
-| `SIGINT` | Interruzione da tastiera (Ctrl-C) | Terminare |
-| `SIGSTOP` | Stop al processo* | Fermare |
-| `SIGKILL` | Terminazione forzata* | Terminare |
-| `SIGQUIT` | Quit da tastiera (Ctrl-\) | Terminare |
-| `SIGTERM` | Terminazione | Terminare |
-| `SIGCHLD` | Figlio terminato o fermato | Ignorare |
-| `SIGALRM` | Sveglia (alarm) | Terminare |
-| `SIGSEGV` | Segmentation fault | Terminare |
-| `SIGUSR1/2` | A disposizione dell'utente | Terminare |
-| `SIGPIPE` | Scrittura su pipe senza lettore | Terminare |
+| Num | Nome | Significato | Azione di Default |
+|:---:|------|-------------|-------------------|
+| **2** | `SIGINT` | Interruzione da tastiera (Ctrl-C) | Terminare |
+| **3** | `SIGQUIT` | Quit da tastiera (Ctrl-\) | Terminare |
+| **9** | `SIGKILL` | Terminazione forzata* | Terminare |
+| **10** | `SIGUSR1` | A disposizione dell'utente | Terminare |
+| **11** | `SIGSEGV` | Segmentation fault | Terminare |
+| **12** | `SIGUSR2` | A disposizione dell'utente | Terminare |
+| **13** | `SIGPIPE` | Scrittura su pipe senza lettore | Terminare |
+| **14** | `SIGALRM` | Sveglia (alarm) | Terminare |
+| **15** | `SIGTERM` | Terminazione | Terminare |
+| **17** | `SIGCHLD` | Figlio terminato o fermato | Ignorare |
+| **19** | `SIGSTOP` | Stop al processo* | Fermare |
 
-> *`SIGKILL` e `SIGSTOP` **non possono** essere catturati o ignorati.
+> *`SIGKILL` (9) e `SIGSTOP` (19) **non possono** essere catturati o ignorati.
 
 ### 12.3 Azioni Possibili
 
@@ -1499,8 +1918,39 @@ int main(void) {
     for (;;) { pause(); }  // attende segnali
 }
 ```
+#### 12.4.1 Ignorare un Segnale — `signal()`
+
+"Ignorare" significa dire al kernel: "quando arriva questo segnale, fai finta di niente". Il segnale viene ricevuto ma scartato immediatamente, come se non fosse mai arrivato. Il processo continua la sua esecuzione senza interruzioni.
+
+```c
+// SIG_IGN: ignora completamente il segnale
+signal(SIGINT, SIG_IGN);
+// Ora se premi Ctrl+C, non succede nulla.
+// Il processo continua a girare indisturbato.
+```
+
+
+### 12.4.2 Azione di Default — `signal()`
+
+L'azione di default è quella che avviene se non catturi o ignori il segnale. Per ogni segnale, l'azione di default è definita in modo diverso, vedi tabella in 12.2.
+
+```c
+// Imposta l'azione di default per SIGINT
+signal(SIGINT, SIG_DFL);
+// Ora Ctrl+C causerà la terminazione del processo, come farebbe normalmente
+// Si comporta come se non avessi mai chiamato signal()
+```
+
 
 ### 12.5 Inviare Segnali
+
+**Nota**
+Il comando anche chiamandosi `kill` in realtà **non uccide** necessariamente il processo, ma invia un segnale generico al processo. Una volta inviato il segnale, il comportamento del processo dipende da come è stato configurato. Ad esempio, se viene inviato un segnale che non è stato catturato, il comportamento del processo dipenderà dall'azione di default per quel segnale. 
+Per "uccidere" un processo es. `1234`, si dovrebbe inviare il segnale `SIGKILL`.
+es: `kill -SIGKILL 1234`  oppure  `kill -9 1234`
+**Ragioni Storiche**
+Quando Unix fu creato nel 1969-1973, il meccanismo dei segnali era molto più primitivo. Le prime versioni supportavano pochissimi segnali, e l'utilizzo pratico era quasi esclusivamente quello di terminare processi che si erano bloccati o comportavano male.
+
 
 **Dalla shell:**
 ```bash
