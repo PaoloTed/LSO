@@ -2597,97 +2597,151 @@ void* usa_stampante(void* arg) {
 
 ## 16. Problemi Classici di Sincronizzazione
 
+Questi sono i classici problemi teorici e pratici che si affrontano studiando la programmazione concorrente.
+
 ### 16.1 Bounded-Buffer (Produttore-Consumatore)
 
-**Problema:** N produttori inseriscono in un buffer circolare di dimensione fissa, M consumatori lo svuotano.
+**Il Problema:** 
+Abbiamo $N$ **Produttori** che creano dati e li inseriscono in un buffer condiviso (una coda) di dimensione fissa (es. 10 posti), e $M$ **Consumatori** che prelevano questi dati per elaborarli.
+*Regole d'oro:*
+1. I produttori **non possono** inserire dati se il buffer è **pieno** (devono aspettare che si liberi spazio).
+2. I consumatori **non possono** prelevare dati se il buffer è **vuoto** (devono aspettare che arrivino nuovi dati).
+3. L'accesso al buffer (inserimento/rimozione) deve essere in **mutua esclusione** (un solo thread alla volta), per evitare di sovrascrivere dati o sballare gli indici.
 
-**Soluzione con mutex + condition variable:**
+#### Soluzione 1: Mutex + Condition Variable
+In questa soluzione usiamo:
+- **1 Mutex** per garantire la mutua esclusione (nessuno tocca il buffer contemporaneamente).
+- **2 Condition Variables** per le code di attesa: una per i produttori (`not_full`) e una per i consumatori (`not_empty`).
+
 ```c
 #define BUF_SIZE 10
 typedef struct {
     int buf[BUF_SIZE];
-    int in, out, count;
+    int in, out, count; // in=indice di scrittura, out=indice di lettura, count=numero elementi
     pthread_mutex_t mtx;
     pthread_cond_t not_full, not_empty;
 } bbuff_t;
 
 void put_item(bbuff_t *b, int item) {
     pthread_mutex_lock(&b->mtx);
-    while (b->count == BUF_SIZE)
+    
+    // Se il buffer è pieno, il produttore aspetta sulla condition 'not_full'
+    while (b->count == BUF_SIZE) {
         pthread_cond_wait(&b->not_full, &b->mtx);
+    }
+        
+    // --- Sezione Critica ---
     b->buf[b->in] = item;
-    b->in = (b->in + 1) % BUF_SIZE;
+    b->in = (b->in + 1) % BUF_SIZE; // Logica circolare
     b->count++;
+    
+    // Sveglia un eventuale consumatore in attesa che il buffer si riempisse
     pthread_cond_signal(&b->not_empty);
+    
     pthread_mutex_unlock(&b->mtx);
 }
 
 int get_item(bbuff_t *b) {
     pthread_mutex_lock(&b->mtx);
-    while (b->count == 0)
+    
+    // Se il buffer è vuoto, il consumatore aspetta sulla condition 'not_empty'
+    while (b->count == 0) {
         pthread_cond_wait(&b->not_empty, &b->mtx);
+    }
+        
+    // --- Sezione Critica ---
     int item = b->buf[b->out];
     b->out = (b->out + 1) % BUF_SIZE;
     b->count--;
+    
+    // Sveglia un eventuale produttore in attesa che si liberasse spazio
     pthread_cond_signal(&b->not_full);
+    
     pthread_mutex_unlock(&b->mtx);
     return item;
 }
 ```
 
-**Soluzione con semafori:**
+#### Soluzione 2: Semafori
+In questa soluzione i semafori contatori tengono traccia automaticamente di quanti slot sono liberi e quanti sono pieni, eliminando la necessità delle variabili condition e del controllo tramite `while` esplicito.
+
 ```c
-sem_t empty;   // slot liberi (init = BUF_SIZE)
-sem_t full;    // elementi presenti (init = 0)
-sem_t mutex;   // protezione buffer (init = 1)
+sem_t empty;   // slot liberi (Inizializzato a BUF_SIZE, es. 10)
+sem_t full;    // elementi presenti (Inizializzato a 0, all'inizio è vuoto)
+sem_t mutex;   // protezione buffer (Inizializzato a 1, agisce da Mutex)
 
 void put_item(int item) {
-    sem_wait(&empty);       // attende slot libero
-    sem_wait(&mutex);       // sezione critica
+    // 1. Chiedo uno slot libero. Se empty è 0 (pieno), mi blocco qui.
+    sem_wait(&empty);       
+    
+    // 2. Chiedo l'accesso esclusivo al buffer.
+    sem_wait(&mutex);       
     buffer[in_idx] = item;
     in_idx = (in_idx + 1) % BUF_SIZE;
-    sem_post(&mutex);
-    sem_post(&full);        // segnala nuovo elemento
+    sem_post(&mutex);       // Rilascio l'accesso esclusivo
+    
+    // 3. Avviso che c'è un elemento IN PIÙ (incremento full) e sblocco eventuali consumatori.
+    sem_post(&full);        
 }
 
 int get_item(void) {
-    sem_wait(&full);        // attende elemento
-    sem_wait(&mutex);       // sezione critica
+    // 1. Chiedo un elemento. Se full è 0 (vuoto), mi blocco qui.
+    sem_wait(&full);        
+    
+    // 2. Chiedo l'accesso esclusivo al buffer.
+    sem_wait(&mutex);       
     int item = buffer[out_idx];
     out_idx = (out_idx + 1) % BUF_SIZE;
-    sem_post(&mutex);
-    sem_post(&empty);       // segnala slot libero
+    sem_post(&mutex);       // Rilascio l'accesso esclusivo
+    
+    // 3. Avviso che c'è uno slot libero IN PIÙ (incremento empty) e sblocco eventuali produttori.
+    sem_post(&empty);       
     return item;
 }
 ```
 
-### 16.2 Readers-Writers
+### 16.2 Readers-Writers (Lettori-Scrittori)
 
-**Problema:** dati condivisi tra lettori (solo lettura) e scrittori (lettura+scrittura). Lettori multipli simultanei OK, ma uno scrittore deve avere accesso esclusivo.
+**Il Problema:** 
+Abbiamo una base di dati condivisa (es. un file o un array). Ci sono thread che vogliono solo *leggere* (Lettori) e thread che vogliono *modificare* (Scrittori).
+*Regole d'oro:*
+1. Più Lettori possono leggere **contemporaneamente** senza darsi fastidio a vicenda.
+2. Quando uno Scrittore accede, deve avere **accesso esclusivo assoluto** (nessun altro scrittore e *nessun* lettore può accedere finché non ha finito).
+
+*Soluzione (con priorità ai lettori):* Usiamo un contatore di lettori. Il primo lettore che arriva "chiude la porta" in faccia agli scrittori usando un lucchetto. Finché ci sono lettori che continuano ad arrivare e leggere, la porta rimane chiusa agli scrittori. Solo l'ultimo lettore che se ne va, riapre la porta rimuovendo il lucchetto.
 
 ```c
-pthread_mutex_t mutex;      // protegge read_count
-pthread_mutex_t rw_mutex;   // accesso esclusivo ai dati
-int read_count = 0;
+pthread_mutex_t mutex;      // Protegge la modifica della variabile 'read_count'
+pthread_mutex_t rw_mutex;   // Agisce come un "lucchetto gigante" per la risorsa/dati
+int read_count = 0;         // Quanti lettori ci sono attualmente dentro
 
-// Scrittore
-pthread_mutex_lock(&rw_mutex);
-// ... scrittura ...
+// --- SCRITTORE ---
+pthread_mutex_lock(&rw_mutex); // Chiede l'accesso esclusivo. Se c'è anche un solo lettore dentro, si blocca.
+// ... Scrive/Modifica i dati in totale solitudine ...
 pthread_mutex_unlock(&rw_mutex);
 
-// Lettore
-pthread_mutex_lock(&mutex);
+
+// --- LETTORE ---
+// FASE DI INGRESSO
+pthread_mutex_lock(&mutex); // Proteggiamo il contatore
 read_count++;
-if (read_count == 1)           // primo lettore
-    pthread_mutex_lock(&rw_mutex);  // blocca gli scrittori
+if (read_count == 1) { 
+    // Sono il PRIMO lettore ad entrare! 
+    // Metto il lucchetto gigante agli scrittori, così nessuno può modificare mentre leggiamo.
+    pthread_mutex_lock(&rw_mutex);  
+}
 pthread_mutex_unlock(&mutex);
 
-// ... lettura ...
+// ... Legge i dati (possono esserci N lettori qui dentro contemporaneamente!) ...
 
-pthread_mutex_lock(&mutex);
+// FASE DI USCITA
+pthread_mutex_lock(&mutex); // Proteggiamo di nuovo il contatore per uscire
 read_count--;
-if (read_count == 0)           // ultimo lettore
-    pthread_mutex_unlock(&rw_mutex);  // sblocca gli scrittori
+if (read_count == 0) {
+    // Sono l'ULTIMO lettore ad uscire! Non c'è più nessuno che legge.
+    // Tolgo il lucchetto gigante, ora gli scrittori possono rientrare.
+    pthread_mutex_unlock(&rw_mutex);  
+}
 pthread_mutex_unlock(&mutex);
 ```
 
