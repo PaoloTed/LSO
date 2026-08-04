@@ -2278,11 +2278,15 @@ void pthread_exit(void *retval);
 pthread_t pthread_self(void);  // ID del thread corrente
 ```
 
-#### Detach
+#### Detach (Scollegamento)
 ```c
 int pthread_detach(pthread_t thread);
-// Il thread si "auto-raccoglie" alla terminazione (no join necessario)
 ```
+**Spiegazione:**
+Di default, un thread è "joinable", ovvero le sue risorse (come lo stack e l'exit status) non vengono liberate finché un altro thread non chiama `pthread_join()` su di esso (simile all'attesa dei processi zombie).
+La funzione `pthread_detach()` scollega il thread in modo che, al momento della sua terminazione, le sue risorse vengano **automaticamente e immediatamente rilasciate** dal sistema, senza bisogno di alcun `pthread_join()`.
+- **Uso:** È utile per thread eseguiti in background di cui non ci interessa attendere la fine né raccogliere il valore di ritorno.
+- *Nota:* Una volta "detached", un thread non può più essere "joinato".
 
 **Esempio completo:**
 ```c
@@ -2322,16 +2326,31 @@ int main(void) {
 
 ### 14.6 Cancellazione Thread
 
-```c
-int pthread_cancel(pthread_t thread);  // richiede la cancellazione
-int pthread_setcancelstate(int state, int *oldstate);
-// PTHREAD_CANCEL_ENABLE o PTHREAD_CANCEL_DISABLE
-void pthread_testcancel(void);  // cancellation point
-```
+La cancellazione permette a un thread di forzare la terminazione di un altro thread. Questo meccanismo richiede la cooperazione del thread "bersaglio", poiché terminare bruscamente un thread potrebbe lasciare dati in stati inconsistenti o risorse bloccate (come i mutex).
 
-Due approcci:
-- **Asincrona**: terminazione immediata
-- **Deferred** (default): cancellazione solo ai *cancellation point* (`pthread_testcancel()`)
+```c
+int pthread_cancel(pthread_t thread);
+```
+- **Scopo:** Invia una **richiesta** di cancellazione al `thread` specificato. La richiesta non ferma istantaneamente il thread, ma il modo e il momento in cui reagirà dipendono dal suo stato e tipo di cancellazione.
+
+```c
+int pthread_setcancelstate(int state, int *oldstate);
+```
+- **Scopo:** Imposta lo stato di cancellabilità del thread chiamante.
+- **`state`:**
+  - `PTHREAD_CANCEL_ENABLE` (default): Il thread accetta e gestisce le richieste di cancellazione.
+  - `PTHREAD_CANCEL_DISABLE`: Le richieste di cancellazione rimangono in sospeso. Il thread le ignorerà fino a quando non riabiliterà la cancellazione.
+- **`oldstate`:** Se non è `NULL`, vi viene salvato lo stato precedente, utile per ripristinarlo in seguito.
+
+```c
+void pthread_testcancel(void);
+```
+- **Scopo:** Crea esplicitamente un **cancellation point** (punto di cancellazione). Se c'è una richiesta di cancellazione in sospeso per il thread (e lo stato è `ENABLE`), chiamando questa funzione il thread terminerà in quel preciso istante.
+
+**Tipi di Cancellazione (quando abilitata):**
+
+1. **Deferred (Ritardata - Default):** Il thread viene terminato solo quando raggiunge un *cancellation point*. Molte system call bloccanti (`sleep`, `wait`, `pthread_cond_wait`) fungono automaticamente da cancellation point. Nei calcoli intensivi (senza system call bloccanti), si usa `pthread_testcancel()` per creare dei checkpoint manuali in cui è sicuro interrompere l'esecuzione.
+2. **Asincrona:** Il thread può essere cancellato in **qualsiasi istante**. È molto pericolosa e sconsigliata, tranne per thread che non allocano risorse e non usano lock, perché rischia di interrompere il thread a metà di un'operazione critica lasciando lock presi o memoria pendente.
 
 ---
 
