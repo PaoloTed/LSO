@@ -2091,63 +2091,127 @@ Il padre per comunicare col figlio deve chiudere l'estremo di lettura e il figli
 
 ### 13.2 Pipe con Nome (FIFO)
 
-Le **Named Pipes** (FIFO) sono più potenti delle pipe ordinarie:
-- **Non richiedono** relazione parentale tra i processi
-- Creano un **file speciale** nel filesystem
-- Devono essere cancellate con `unlink()`
-- Usate in modalità unidirezionale
+Le **Named Pipes** (o FIFO) superano il limite principale delle pipe ordinarie: permettono la comunicazione tra processi **senza alcuna relazione di parentela** (es. client e server indipendenti).
 
+**Caratteristiche Principali:**
+- **File Speciale:** Una FIFO appare come un file speciale nel file system. Qualsiasi processo con i giusti permessi vi può accedere usando le normali syscall (`open`, `read`, `write`, `close`).
+- **Persistenza nel File System:** Il nodo sul file system esiste finché non viene esplicitamente eliminato (con `unlink()` o tramite il comando shell `rm`). Tuttavia, i *dati* passati nella FIFO risiedono in memoria (buffer gestito dal kernel) e non sul disco.
+- **Unidirezionali:** Come le pipe ordinarie, il flusso dati è unidirezionale. Per una comunicazione bidirezionale servono due FIFO distinte.
+
+**Creazione e Cancellazione:**
 ```c
 #include <sys/stat.h>
+#include <unistd.h>
+
+// Crea una FIFO. Ritorna 0 in caso di successo, -1 in caso di errore
 int mkfifo(const char *pathname, mode_t mode);
+
+// Elimina la FIFO dal file system
+int unlink(const char *pathname);
 ```
+- `pathname`: Il percorso nel file system dove creare la FIFO.
+- `mode`: I permessi del file speciale (es. `0666` per lettura/scrittura per tutti).
 
-**Comportamento dell'open su FIFO:**
+**Comportamento dell'open() su FIFO:**
+L'apertura di una FIFO prevede una **sincronizzazione intrinseca** tra lettore e scrittore. Se uno dei due manca, l'altro si blocca in attesa.
 
-| Operazione | Comportamento |
-|------------|---------------|
-| `open("fifo", O_RDONLY)` | Blocca finché non c'è un writer |
-| `open("fifo", O_WRONLY)` | Blocca finché non c'è un reader |
-| `open("fifo", O_RDWR)` | Non blocca mai |
-| Con `O_NONBLOCK` | Non blocca, ma errore se nessun peer |
+| Operazione | Comportamento Default (Bloccante) | Con flag `O_NONBLOCK` |
+|------------|-----------------------------------|-----------------------|
+| `open("f", O_RDONLY)` | **Blocca** finché un processo non apre la FIFO in scrittura | Non blocca (ha successo immediato) |
+| `open("f", O_WRONLY)` | **Blocca** finché un processo non apre la FIFO in lettura | Fallisce con errore `ENXIO` (se non c'è già un lettore) |
+| `open("f", O_RDWR)`   | **Sconsigliata** / Comportamento indefinito in POSIX (se supportato non blocca) | - |
+
+**Esempio di Utilizzo (Scrittore e Lettore separati):**
+```c
+// --- PROCESSO SCRITTORE ---
+mkfifo("mia_fifo", 0666);
+int fd = open("mia_fifo", O_WRONLY); // Si blocca qui se non c'è ancora un lettore
+write(fd, "Messaggio!", 11);
+close(fd);
+```
+```c
+// --- PROCESSO LETTORE ---
+int fd = open("mia_fifo", O_RDONLY); // Si blocca qui se non c'è ancora uno scrittore
+char buf[128];
+read(fd, buf, sizeof(buf));
+printf("Ricevuto: %s\n", buf);
+close(fd);
+unlink("mia_fifo"); // Pulizia finale
+```
 
 ### 13.3 Memoria Condivisa con `mmap`
 
-**mmap** mappa in memoria un file o un device, permettendo accesso diretto.
+La **memoria condivisa** è il meccanismo IPC più veloce perché permette a più processi di mappare la stessa area di memoria nel proprio spazio di indirizzamento virtuale. Qualsiasi modifica effettuata da un processo è immediatamente visibile agli altri, senza overhead di chiamate di sistema (`read`/`write`) e senza copiare i dati tra user-space e kernel-space (zero-copy).
 
+La system call `mmap` mappa file, dispositivi o memoria anonima nello spazio di indirizzamento di un processo.
+
+**Definizione e Parametri:**
 ```c
 #include <sys/mman.h>
+
 void *mmap(void *address, size_t length, int protect, int flags, int filedes, off_t offset);
-int munmap(void *addr, size_t length);
+int munmap(void *addr, size_t length);  // Rilascia la memoria mappata
+int msync(void *addr, size_t length, int flags); // Forza l'allineamento su disco
 ```
 
 | Parametro | Significato |
 |-----------|-------------|
-| `protect` | `PROT_READ`, `PROT_WRITE`, `PROT_EXEC`, `PROT_NONE` |
-| `flags` | `MAP_SHARED` (visibile ad altri), `MAP_PRIVATE`, `MAP_ANONYMOUS` |
+| `address` | Indirizzo di memoria suggerito per il mapping. Solitamente si passa `NULL` per far decidere al kernel. |
+| `length`  | Dimensione dell'area di memoria da mappare (in byte). |
+| `protect` | Permessi sulla pagina: `PROT_READ` (lettura), `PROT_WRITE` (scrittura), `PROT_EXEC` (esecuzione), `PROT_NONE` (nessun accesso). |
+| `flags`   | Visibilità: `MAP_SHARED` (le modifiche sono condivise/visibili ad altri processi e aggiornano l'eventuale file), `MAP_PRIVATE` (Copy-on-Write: modifiche private). Può includere `MAP_ANONYMOUS` (per memoria RAM non associata a file). |
+| `filedes` | File descriptor del file da mappare in memoria (o `-1` se si usa `MAP_ANONYMOUS`). |
+| `offset`  | Punto di partenza nel file da cui iniziare la mappatura (deve essere multiplo della page size del sistema). |
 
-**Esempio — mmap anonima tra padre e figlio:**
-```c
-char *shared = mmap(NULL, 256,
-    PROT_READ | PROT_WRITE,
-    MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+#### Tipi di Mapping con `mmap`:
 
-pid_t pid = fork();
-if (pid == 0) {
-    strcpy(shared, "Ciao dal figlio via mmap anonima!");
-    _exit(0);
-}
-waitpid(pid, NULL, 0);
-printf("[Padre] Letto: \"%s\"\n", shared);
-munmap(shared, 256);
-```
+1. **Mapping Anonimo (`MAP_ANONYMOUS`)**
+   Non utilizza alcun file di supporto. Serve ad allocare memoria RAM condivisa esclusivamente tra processi con una relazione di parentela (es. creati con `fork()` *dopo* la chiamata a `mmap`).
 
-**Confronto Pipe vs Memoria Condivisa:**
+   **Esempio — mmap anonima tra padre e figlio:**
+   ```c
+   char *shared = mmap(NULL, 256,
+       PROT_READ | PROT_WRITE,
+       MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-| Aspetto | Pipe / Message Passing | Memoria Condivisa |
-|---------|----------------------|-------------------|
-| Velocità | Più lento (ogni scambio passa per il kernel) | Più veloce (accesso diretto) |
-| Coordinazione | Gestita dal kernel | Responsabilità dei processi |
+   pid_t pid = fork();
+   if (pid == 0) {
+       strcpy(shared, "Ciao dal figlio via mmap anonima!");
+       _exit(0);
+   }
+   waitpid(pid, NULL, 0);
+   printf("[Padre] Letto in memoria: \"%s\"\n", shared);
+   munmap(shared, 256);
+   ```
+
+2. **Mapping basato su File (File-backed Mapping)**
+   Associa direttamente un file esistente su disco alla memoria. Scrivere nella memoria equivale a scrivere nel file. Permette la condivisione tra **processi non correlati**.
+   *Attenzione:* Il file deve essere aperto in precedenza e deve essere sufficientemente grande (spesso lo si ridimensiona prima con `ftruncate()`).
+
+   **Esempio — mmap su file:**
+   ```c
+   int fd = open("file_condiviso.txt", O_RDWR | O_CREAT, 0666);
+   ftruncate(fd, 4096); // Estende il file a 4KB
+
+   // Mappa il file in memoria
+   char *data = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+   close(fd); // Il fd può essere chiuso dopo aver mappato il file
+
+   // Scrive direttamente "nel" file attraverso la RAM
+   sprintf(data, "Messaggio visibile agli altri processi che mappano il file!");
+
+   // Sincronizza esplicitamente la memoria col disco prima di rimuovere il mapping
+   msync(data, 4096, MS_SYNC);
+   munmap(data, 4096);
+   ```
+
+**Confronto IPC: Pipe / FIFO vs Memoria Condivisa (`mmap`)**
+
+| Aspetto | Pipe / FIFO (Message Passing) | Memoria Condivisa (`mmap`) |
+|---------|-------------------------------|-----------------------------|
+| **Velocità** | Più lenta (ogni I/O richiede `read()`/`write()` e un context switch nel kernel) | Molto più veloce (accesso diretto in RAM, zero-copy IPC) |
+| **Coordinazione** | Sincronizzazione automatica gestita dal kernel (lettore attende se vuoto, ecc.) | **Responsabilità dello sviluppatore!** Occorre usare meccanismi come semafori o mutex per evitare race conditions |
+| **Formato Dati** | Flusso di byte non strutturato (stream unidirezionale) | Spazio di memoria indirizzabile, ideale per strutture dati complesse |
 | Complessità | Più semplice | Richiede sincronizzazione |
 
 ---
