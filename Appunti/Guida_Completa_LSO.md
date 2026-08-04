@@ -2348,9 +2348,14 @@ void pthread_testcancel(void);
 - **Scopo:** Crea esplicitamente un **cancellation point** (punto di cancellazione). Se c'è una richiesta di cancellazione in sospeso per il thread (e lo stato è `ENABLE`), chiamando questa funzione il thread terminerà in quel preciso istante.
 
 **Tipi di Cancellazione (quando abilitata):**
-
-1. **Deferred (Ritardata - Default):** Il thread viene terminato solo quando raggiunge un *cancellation point*. Molte system call bloccanti (`sleep`, `wait`, `pthread_cond_wait`) fungono automaticamente da cancellation point. Nei calcoli intensivi (senza system call bloccanti), si usa `pthread_testcancel()` per creare dei checkpoint manuali in cui è sicuro interrompere l'esecuzione.
-2. **Asincrona:** Il thread può essere cancellato in **qualsiasi istante**. È molto pericolosa e sconsigliata, tranne per thread che non allocano risorse e non usano lock, perché rischia di interrompere il thread a metà di un'operazione critica lasciando lock presi o memoria pendente.
+Il tipo di cancellazione si imposta dall'interno del thread con la funzione:
+```c
+int pthread_setcanceltype(int type, int *oldtype);
+```
+- **`type`:**
+  1. `PTHREAD_CANCEL_DEFERRED` (Ritardata - Default): Il thread viene terminato solo quando raggiunge un *cancellation point*. Molte system call bloccanti (`sleep`, `wait`, `pthread_cond_wait`) fungono automaticamente da cancellation point. Nei calcoli intensivi (senza system call bloccanti), si usa `pthread_testcancel()` per creare dei checkpoint manuali in cui è sicuro interrompere l'esecuzione.
+  2. `PTHREAD_CANCEL_ASYNCHRONOUS` (Asincrona): Il thread può essere cancellato in **qualsiasi istante**. È molto pericolosa e sconsigliata, tranne per thread che non allocano risorse e non usano lock, perché rischia di interrompere il thread a metà di un'operazione critica lasciando lock presi o memoria pendente.
+- **`oldtype`:** Se non è `NULL`, vi viene salvato il tipo di cancellazione precedente.
 
 ---
 
@@ -2378,9 +2383,10 @@ pthread_mutex_t mutex;
 pthread_mutex_init(&mutex, NULL);
 
 // Operazioni
-pthread_mutex_lock(&mutex);     // acquisisce il lock (bloccante)
-pthread_mutex_unlock(&mutex);   // rilascia il lock
-pthread_mutex_destroy(&mutex);  // distrugge il mutex
+pthread_mutex_lock(&mutex);     // Acquisisce il lock. Se è già bloccato da un altro thread, il thread chiamante si sospende in attesa (bloccante).
+pthread_mutex_trylock(&mutex);  // Tenta di acquisire il lock. Se è già bloccato, NON si sospende ma ritorna immediatamente un errore (EBUSY).
+pthread_mutex_unlock(&mutex);   // Rilascia il lock, permettendo a uno dei thread in attesa di sbloccarsi e acquisirlo.
+pthread_mutex_destroy(&mutex);  // Distrugge il mutex
 ```
 
 **Esempio:**
@@ -2401,39 +2407,49 @@ void *thread_function(void *arg) {
 
 ### 15.3 Condition Variable — Variabili di Condizione
 
-Permettono a un thread di **attendere** che una condizione diventi vera, senza busy waiting.
+Permettono a un thread di **attendere** che una determinata condizione (definita dal programmatore tramite normali variabili condivise) diventi vera, senza fare **busy waiting** (il busy waiting è un ciclo infinito a vuoto, che tiene la CPU costantemente occupata al 100% per controllare ripetutamente una variabile). Le condition variables, invece, addormentano il thread (0% CPU) finché non viene esplicitamente "svegliato" da un altro.
 
 ```c
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
 // Attendi che la condizione sia vera
+// Viene sempre preceduto da `pthread_mutex_lock(&mutex)`
 pthread_cond_wait(&cond, &mutex);
 // ATOMICAMENTE: rilascia il mutex + si mette in attesa
-// Quando si risveglia, riacquisisce il mutex
+// Quando si risveglia, deve riacquisire il mutex prima di proseguire.
+// Se il mutex è tenuto da un altro thread, si blocca in attesa di poterlo prendere (come una normale lock)
 
-// Attendi con timeout
+// Attendi con timeout (simile a wait, ma con deadline assoluta)
 pthread_cond_timedwait(&cond, &mutex, &timeout);
 
-// Segnala un thread in attesa
+// Risveglia UN SOLO thread in attesa
 pthread_cond_signal(&cond);
 
-// Segnala tutti i thread in attesa
+// Risveglia TUTTI i thread in attesa
 pthread_cond_broadcast(&cond);
 
-// Distruzione
+// Distruzione della condition variable
 pthread_cond_destroy(&cond);
 ```
 
-> **Pattern fondamentale**: si usa **sempre** `while` (non `if`) per controllare la condizione:
+**Spiegazione delle Funzioni:**
+*   `pthread_cond_signal(&cond)`: Risveglia **uno solo** dei thread che sono in attesa. Si usa quando la modifica dei dati permette a un solo thread alla volta di poter lavorare (es. hai inserito 1 solo nuovo elemento in una coda).
+*   `pthread_cond_broadcast(&cond)`: Risveglia **tutti** i thread attualmente in attesa. Ognuno di essi proverà ad acquisire il mutex (uno alla volta). Si usa quando un evento cambia radicalmente lo stato e permette a più thread di sbloccarsi contemporaneamente (es. impostazione di una variabile "sistema_pronto = true").
+*   `pthread_cond_destroy(&cond)`: Elimina la condition variable liberando la memoria e le risorse allocate dal SO. Da chiamare solo alla fine, quando nessun thread è più in attesa su di essa.
+*   `pthread_cond_timedwait(&cond, ...)`: Fa esattamente la stessa cosa di `wait`, ma accetta un parametro aggiuntivo (`timeout` di tipo `timespec`) che rappresenta un orario assoluto (una "deadline"). Se il thread non riceve nessuna signal entro quell'orario esatto, si sveglia da solo e la funzione ritorna un codice d'errore speciale (`ETIMEDOUT`).
+
+> **Pattern fondamentale**: si usa **sempre**  `while` (mai `if` o nessuna condizione) attorno a `pthread_cond_wait`:
 > ```c
 > pthread_mutex_lock(&mtx);
-> while (!condizione_soddisfatta)
+> while (!condizione_soddisfatta) {
 >     pthread_cond_wait(&cond, &mtx);
+> }
 > // ... sezione critica ...
 > pthread_mutex_unlock(&mtx);
 > ```
-
-**`pthread_cond_timedwait` — attesa con timeout:**
+> **Perché si usa il `while`?**
+> 1. **Spurious Wakeups (Risvegli Spuri):** Le specifiche POSIX permettono al sistema operativo di risvegliare un thread in attesa anche se nessuno ha esplicitamente chiamato una signal/broadcast. Se non ci fosse il while, il thread proseguirebbe con la condizione non valida.
+> 2. **Competizione (Signal Stealing):** Tra il momento in cui un thread viene risvegliato (riceve la signal) e il momento in cui riesce effettivamente a ri-acquisire il mutex per procedere, un **altro** thread in esecuzione potrebbe aver acquisito il mutex e modificato di nuovo lo stato (falsificando la condizione). Il `while` garantisce che il thread proceda **solo** se la condizione è *effettivamente* vera al momento esatto in cui ha riottenuto il lock.
 
 ```c
 #include <time.h>
@@ -2445,6 +2461,7 @@ ts.tv_sec += 2;  // deadline tra 2 secondi
 
 pthread_mutex_lock(&mtx);
 int rc = 0;
+// 'ready' rappresenta la nostra condizione (es. una variabile bool globale)
 while (!ready && rc == 0) {
     rc = pthread_cond_timedwait(&cond, &mtx, &ts);
     // rc == 0        → segnalato prima della deadline (ricontrolla condizione)
@@ -2460,32 +2477,120 @@ pthread_mutex_unlock(&mtx);
 
 > Si usa comunque il `while` per proteggersi da **spurious wakeup** anche con `timedwait`.
 
+**Esempio Pratico (Produttore / Consumatore):**
+```c
+#include <pthread.h>
+#include <stdio.h>
+#include <unistd.h>
+
+// 1. LA NOSTRA CONDIZIONE VERA E PROPRIA (variabile condivisa)
+int dati_pronti = 0; 
+
+// 2. STRUMENTI DEL SO per la sincronizzazione
+pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+
+void* consumatore(void* arg) {
+    pthread_mutex_lock(&mtx);
+    
+    // Il consumatore controlla la condizione
+    while (dati_pronti == 0) {
+        printf("[Consumatore] Dati non pronti. Vado a dormire...\n");
+        // Come se si iscrivesse a una newsletter tramite la Condition Variable (cond)
+        // e si addormentasse e rilascia il mutex. Una volta che riceve la signal, si risveglia e deve riprendersi il mutex 
+        // per poter leggere la variabile condivisa (dati_pronti).
+        pthread_cond_wait(&cond, &mtx); 
+    }
+    
+    // Se siamo usciti dal while, significa che abbiamo ripreso il mutex 
+    // E che dati_pronti è diventato > 0
+    printf("[Consumatore] Risvegliato! Condizione soddisfatta. Consumo...\n");
+    dati_pronti = 0; // Consumiamo il dato, "falsificando" di nuovo la condizione
+    
+    pthread_mutex_unlock(&mtx);
+    return NULL;
+}
+
+void* produttore(void* arg) {
+    sleep(2); // Simula un lavoro lungo 2 secondi
+    
+    pthread_mutex_lock(&mtx);
+    
+    printf("[Produttore] Ho prodotto un dato! Modifico la variabile condivisa...\n");
+    dati_pronti = 1; // MODIFICHIAMO LA CONDIZIONE
+    
+    printf("[Produttore] Suono il campanello per svegliare un thread in attesa!\n");
+    // Come se mandasse una notifica su quella "newsletter" per risvegliare chi era in attesa
+    // in caso di signal solamente 1 thread viene risvegliato
+    // in caso di broadcast vengono risvegliati TUTTI i thread in attesa
+    pthread_cond_signal(&cond); // Sveglia il consumatore
+    
+    pthread_mutex_unlock(&mtx); // Rilascia il mutex permettendo al consumatore di prenderlo
+    return NULL;
+}
+```
+
 ### 15.4 Semafori POSIX
 
-Un **semaforo** è una variabile intera modificata con due operazioni atomiche: `wait()` (P) e `signal()` (V).
+Un **semaforo** è una variabile intera gestita dal kernel che rappresenta un numero di "gettoni" (o permessi) disponibili. Viene modificato unicamente tramite due operazioni **atomiche** sicure: `wait()` (tradizionalmente chiamata **P**) e `post()` (tradizionalmente chiamata **V** o `signal`).
+
+**Come funziona concettualmente?**
+Immagina un semaforo come un contenitore di gettoni:
+- **`sem_wait()` (P):** Il thread chiede un gettone. Se ce n'è almeno uno (> 0), lo prende (decrementa il contatore) e prosegue senza interruzioni. Se il contenitore è vuoto (0), il thread **si blocca e si addormenta** finché qualcuno non inserisce un gettone.
+- **`sem_post()` (V):** Il thread inserisce un gettone nel contenitore (incrementa il contatore). Se c'erano thread addormentati in attesa di un gettone, il sistema operativo ne **sveglia uno**, che prenderà il gettone appena inserito e riprenderà l'esecuzione.
 
 ```c
 #include <semaphore.h>
 
 sem_t sem;
-sem_init(&sem, 0, valore_iniziale);  // 0 = tra thread dello stesso processo
-sem_wait(&sem);    // decrementa; se S <= 0, blocca (P/wait)
-sem_post(&sem);    // incrementa; sveglia un thread bloccato (V/signal)
-sem_destroy(&sem);
+
+// 1. Inizializzazione: (semaforo, pshared, valore_iniziale)
+// pshared = 0 indica che il semaforo è condiviso tra i thread dello STESSO processo
+// pshared = 1 indica che è condiviso tra processi DIVERSI (memoria condivisa)
+sem_init(&sem, 0, valore_iniziale);
+
+// 2. Operazioni
+sem_wait(&sem);    // Decrementa (se = 0 si blocca in attesa)
+sem_post(&sem);    // Incrementa (e sveglia un thread in attesa, se c'è)
+
+// 3. Distruzione
+sem_destroy(&sem); // Libera le risorse
 ```
 
-**Tipi:**
-- **Semaforo binario** (valore 0 o 1): equivale a un mutex
-- **Semaforo contatore**: controlla accesso a N risorse
+**Tipi di Semaforo:**
+1. **Semaforo Contatore (Counting Semaphore):** Può assumere qualsiasi valore intero positivo (es. `valore_iniziale = 5`). È perfetto per controllare l'accesso a **N risorse identiche** (es. gestire un parcheggio con 5 posti auto, o un server che ammette massimo 5 connessioni simultanee).
+2. **Semaforo Binario:** Può valere solo `0` o `1`. Viene spesso usato per garantire la mutua esclusione come un Mutex, o per il coordinamento stretto (1-a-1).
 
-**Esempio — sincronizzazione di scheduling:**
+**Qual è la differenza logica tra un Mutex e un Semaforo Binario?**
+Anche se sembrano fare la stessa cosa (evitare l'accesso simultaneo), c'è una differenza architetturale fondamentale: **L'Ownership (proprietà)**.
+- Un **Mutex** ha il concetto di "proprietario": *solo* il thread che ha fatto `lock()` è autorizzato a fare l' `unlock()`.
+- Un **Semaforo** NON ha proprietari: il thread A può fare `sem_wait()`, e un thread B completamente diverso può fare `sem_post()`. Questa caratteristica lo rende lo strumento perfetto per la **sincronizzazione dell'ordine di eventi** (dove un thread deve sbloccarne un altro).
+
+**Esempio 1 — Sincronizzazione dell'ordine di esecuzione (Scheduling):**
+Vogliamo essere sicuri che l'istruzione `S2` del Thread 2 avvenga *sempre e solo dopo* l'istruzione `S1` del Thread 1.
 ```c
 sem_t synch;
-sem_init(&synch, 0, 0);
+sem_init(&synch, 0, 0); // Inizializzato a 0 gettoni (chi fa wait si bloccherà subito)
 
-// Thread 1                    // Thread 2
-S1;                            sem_wait(&synch);  // attende
-sem_post(&synch);              S2;                // esegue dopo S1
+// --- THREAD 1 ---            // --- THREAD 2 ---
+S1;                            sem_wait(&synch); // T2 arriva qui e si blocca (ci sono 0 gettoni)
+sem_post(&synch); // Sblocca   S2;               // T2 si sveglia ed esegue S2 SOLO DOPO S1
+```
+
+**Esempio 2 — Gestire risorse limitate (Counting):**
+Immaginiamo di avere 3 stampanti condivise.
+```c
+sem_t stampanti;
+sem_init(&stampanti, 0, 3); // Inizializziamo il semaforo con 3 gettoni (3 stampanti)
+
+void* usa_stampante(void* arg) {
+    sem_wait(&stampanti); // Prende 1 stampante. Il 4° thread che arriva qui in contemporanea si bloccherà.
+    
+    // ... Usa la stampante (stampa il documento) ...
+    
+    sem_post(&stampanti); // Ha finito di stampare, restituisce il gettone e sblocca l'eventuale 4° thread
+    return NULL;
+}
 ```
 
 ---
