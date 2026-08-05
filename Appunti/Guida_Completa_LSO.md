@@ -2347,6 +2347,8 @@ void pthread_testcancel(void);
 ```
 - **Scopo:** Crea esplicitamente un **cancellation point** (punto di cancellazione). Se c'è una richiesta di cancellazione in sospeso per il thread (e lo stato è `ENABLE`), chiamando questa funzione il thread terminerà in quel preciso istante.
 
+
+***EXTRA!!!***
 **Tipi di Cancellazione (quando abilitata):**
 Il tipo di cancellazione si imposta dall'interno del thread con la funzione:
 ```c
@@ -2384,9 +2386,11 @@ pthread_mutex_init(&mutex, NULL);
 
 // Operazioni
 pthread_mutex_lock(&mutex);     // Acquisisce il lock. Se è già bloccato da un altro thread, il thread chiamante si sospende in attesa (bloccante).
-pthread_mutex_trylock(&mutex);  // Tenta di acquisire il lock. Se è già bloccato, NON si sospende ma ritorna immediatamente un errore (EBUSY).
 pthread_mutex_unlock(&mutex);   // Rilascia il lock, permettendo a uno dei thread in attesa di sbloccarsi e acquisirlo.
 pthread_mutex_destroy(&mutex);  // Distrugge il mutex
+
+***EXTRA***
+pthread_mutex_trylock(&mutex);  // Tenta di acquisire il lock. Se è già bloccato, NON si sospende ma ritorna immediatamente un errore (EBUSY).
 ```
 
 **Esempio:**
@@ -2751,104 +2755,117 @@ pthread_mutex_unlock(&mutex);
 
 ### 17.1 Concetti Fondamentali
 
-Le **socket** sono endpoint di comunicazione. Permettono la comunicazione tra processi, sia sulla stessa macchina che in rete.
+Le **socket** sono lo strumento standard per far comunicare due processi, sia che si trovino sullo stesso computer, sia che si trovino in due continenti diversi tramite Internet.
 
-**Tipi di socket:**
+**Domini di comunicazione (Dove comunichiamo?):**
+- `AF_LOCAL` (o `AF_UNIX`): Comunicazione tra processi sullo stesso computer. Utilizza un percorso del file system come indirizzo (es. `/tmp/my-socket`).
+- `AF_INET`: Comunicazione tra processi su computer diversi tramite rete, utilizzando indirizzi IPv4 (es. `192.168.1.5`).
 
-| Tipo | Costante | Protocollo | Caratteristiche |
-|------|----------|-----------|-----------------|
-| Stream | `SOCK_STREAM` | TCP | Connessione, affidabile, flusso di byte |
-| Datagram | `SOCK_DGRAM` | UDP | Senza connessione, non affidabile, pacchetti |
+**Tipi di socket (Come comunichiamo?):**
+- `SOCK_STREAM` (Protocollo **TCP**): Si stabilisce prima una connessione, e finché non viene chiusa, c'è un flusso di dati bidirezionale **affidabile**.
+- `SOCK_DGRAM` (Protocollo **UDP**): Non c'è una connessione fissa, ogni messaggio viene inviato come un pacchetto isolato, con mittente e destinatario specificati ad ogni invio. È veloce, ma **non affidabile**: i pacchetti possono arrivare in disordine o andare persi durante la trasmissione.
 
-**Domini di comunicazione:**
+### 17.2 Le fasi di una connessione TCP (SOCK_STREAM)
 
-| Dominio | Costante | Uso |
-|---------|----------|-----|
-| Locale | `AF_LOCAL` / `AF_UNIX` | Processi sulla stessa macchina |
-| Internet IPv4 | `AF_INET` | Comunicazione in rete IPv4 |
-| Internet IPv6 | `AF_INET6` | Comunicazione in rete IPv6 |
+La connessione TCP segue un'architettura client-server ben definita, in cui il server si mette in ascolto di richieste di connessione e il client le avvia.
 
-### 17.2 Socket Locali (AF_LOCAL) — Stream
+**Il lato SERVER:**
+1. **`socket()`**: Crea l'endpoint di comunicazione, allocando le risorse necessarie nel kernel.
+2. **`bind()`**: Associa la socket appena creata a un indirizzo locale specifico (es. un Indirizzo IP e una Porta). Definisce dove il server sarà raggiungibile.
+3. **`listen()`**: Configura la socket in modalità "passiva" di ascolto. Indica al sistema operativo la volontà di accettare connessioni in ingresso, specificando la dimensione massima della coda delle connessioni in attesa (backlog).
+4. **`accept()`**: Estrae la prima richiesta di connessione dalla coda e la accetta. **Attenzione:** `accept` non usa la socket passiva creata all'inizio, ma crea *una nuova socket dedicata* alla comunicazione con quello specifico client. La socket originale (in ascolto) rimane attiva per accettare future connessioni.
 
-**Server:**
+**Il lato CLIENT:**
+1. **`socket()`**: Crea l'endpoint di comunicazione sul client.
+2. **`connect()`**: Invia una richiesta di connessione all'indirizzo del Server specificato, avviando il 3-way handshake del TCP. Se il server accetta, si instaura il canale di comunicazione.
+
+```text
+        SERVER                              CLIENT
+    ┌───────────────┐                  ┌───────────────┐
+    │ socket()      │                  │               │
+    │ bind()        │                  │ socket()      │
+    │ listen()      │                  │               │
+    │ accept()      │                  │               │
+    │ [si blocca]   │<── RICHIESTA ────│── connect()   │
+    │               │                  │               │
+    │ [crea socket  │                  │               │
+    │  dedicata]    │                  │               │
+    │ read() /      │                  │ read() /      │
+    │ write()       │◄── COMUNICANO ──►│ write()       │
+    │ close()       │                  │ close()       │
+    └───────────────┘                  └───────────────┘
+```
+
+### 17.3 Indirizzi e il problema del "Byte Order" (Endianness)
+
+Quando comunichiamo in rete usando `AF_INET`, dobbiamo specificare Indirizzo IP e Porta per la `bind` e la `connect` usando questa struct:
+```c
+struct sockaddr_in {
+    sa_family_t    sin_family;   // Sempre AF_INET
+    in_port_t      sin_port;     // Porta (in Network byte order)
+    struct in_addr sin_addr;     // Indirizzo IP (in Network byte order)
+};
+```
+
+**Cos'è il Byte Order?**
+I computer Intel/AMD (x86) leggono i numeri in formato **Little Endian** (il byte meno significativo precede gli altri). Tuttavia, i protocolli di rete di Internet sono stati standardizzati decenni fa per trasmettere i numeri in formato **Big Endian** (il byte più significativo precede gli altri).
+Se inviassimo il numero di porta "5200" sulla rete senza convertirla, i dispositivi di rete (che si aspettano Big Endian) la leggerebbero in modo inverso, causando il fallimento del routing.
+
+**La soluzione: Le funzioni di conversione universali:**
+È **sempre obbligatorio** convertire porte e IP in "Network byte order" (ordine di rete standard) prima di assegnarli alla struct:
+*   `htons(porta)`: **H**ost **TO** **N**etwork **S**hort (converte la porta a 16-bit)
+*   `htonl(ip)`: **H**ost **TO** **N**etwork **L**ong (converte l'indirizzo IP a 32-bit).
+
+*(Viceversa, per leggere un indirizzo ricevuto dalla rete nel formato dell'host locale, si usano `ntohs()` e `ntohl()`: Network TO Host).*
+
+**Conversione facilitata degli IP (stringa → numero):**
+Gli indirizzi IP sono comunemente espressi come stringhe (es. "127.0.0.1"), ma la struct richiede un valore numerico binario. Si usa `inet_pton` per eseguire la conversione sicura:
+
+```c
+#include <arpa/inet.h>
+struct sockaddr_in addr;
+// Converte da stringa (Presentation) a binario di rete (Network)
+inet_pton(AF_INET, "192.168.1.1", &addr.sin_addr); 
+```
+
+### 17.4 Socket Locali (AF_LOCAL / Unix Domain Sockets)
+
+Se i processi che devono comunicare si trovano sulla stessa macchina locale, lo stack TCP/IP introduce un overhead non necessario. In questo caso è preferibile usare `AF_LOCAL`.
+In questo dominio, l'indirizzo di comunicazione non è definito da un IP e una porta, ma dal **percorso di un file speciale** sul file system (es. `/tmp/mysock`), che funge da punto d'incontro per i processi.
+
+**Server (AF_LOCAL):**
 ```c
 #include <sys/socket.h>
 #include <sys/un.h>
 
 int listen_sd = socket(AF_LOCAL, SOCK_STREAM, 0);
 
-struct sockaddr_un my_addr;
-memset(&my_addr, 0, sizeof(my_addr));
+// Prepara l'indirizzo associato al percorso del file sul disco
+struct sockaddr_un my_addr = {0}; // Inizializza la struttura a 0
 my_addr.sun_family = AF_LOCAL;
 strncpy(my_addr.sun_path, "/tmp/mysock", sizeof(my_addr.sun_path) - 1);
 
-unlink("/tmp/mysock");  // rimuove socket precedente
-bind(listen_sd, (struct sockaddr*)&my_addr, sizeof(my_addr));
+unlink("/tmp/mysock");  // Rimuove eventuali socket orfane da esecuzioni precedenti
+bind(listen_sd, (struct sockaddr*)&my_addr, sizeof(my_addr)); // "Crea" fisicamente il file 
 listen(listen_sd, 5);
 
-int connect_sd = accept(listen_sd, NULL, NULL);
-// ... comunica con connect_sd via read/write ...
+int connect_sd = accept(listen_sd, NULL, NULL); // Attende la prima richiesta
+// ... comunica ...
 close(connect_sd);
 close(listen_sd);
-unlink("/tmp/mysock");
+unlink("/tmp/mysock"); // Pulisce il file alla chiusura
 ```
 
-**Client:**
+**Client (AF_LOCAL):**
 ```c
 int sd = socket(AF_LOCAL, SOCK_STREAM, 0);
-struct sockaddr_un srv_addr;
-memset(&srv_addr, 0, sizeof(srv_addr));
+struct sockaddr_un srv_addr = {0};
 srv_addr.sun_family = AF_LOCAL;
 strncpy(srv_addr.sun_path, "/tmp/mysock", sizeof(srv_addr.sun_path) - 1);
 
-connect(sd, (struct sockaddr*)&srv_addr, sizeof(srv_addr));
+connect(sd, (struct sockaddr*)&srv_addr, sizeof(srv_addr)); // Richiede la connessione
 // ... comunica ...
 close(sd);
-```
-
-### 17.3 Socket TCP (AF_INET) — Indirizzi e Byte Order
-
-**Struttura degli indirizzi IPv4:**
-```c
-struct sockaddr_in {
-    sa_family_t    sin_family;   // AF_INET
-    in_port_t      sin_port;     // porta (network byte order)
-    struct in_addr sin_addr;     // indirizzo IP (4 byte)
-};
-```
-
-**Conversione byte order:**
-- **Network byte order**: Big Endian (standard TCP/IP)
-- **Host byte order**: dipende dall'architettura (x86 = Little Endian)
-
-| Funzione | Conversione |
-|----------|-------------|
-| `htons()` | Host to Network (short, 16 bit) — per porte |
-| `htonl()` | Host to Network (long, 32 bit) — per indirizzi |
-| `ntohs()` | Network to Host (short) |
-| `ntohl()` | Network to Host (long) |
-
-**Conversione indirizzi IP:**
-```c
-#include <arpa/inet.h>
-int inet_pton(int af, const char *src, void *dst);  // stringa → binario
-const char *inet_ntop(int af, const void *src, char *dst, socklen_t size); // binario → stringa
-```
-
-### 17.4 Schema di Connessione TCP
-
-```
-        SERVER                              CLIENT
-    ┌──────────────┐                   ┌──────────────┐
-    │ socket()     │                   │ socket()     │
-    │ bind()       │                   │              │
-    │ listen()     │                   │              │
-    │ accept()  ←──│── 3-way handshake │── connect()  │
-    │              │                   │              │
-    │ recv/send    │ ←────────────────→│ recv/send    │
-    │              │                   │              │
-    │ close()      │                   │ close()      │
-    └──────────────┘                   └──────────────┘
 ```
 
 ### 17.5 Server TCP Completo
@@ -2917,13 +2934,15 @@ Senza flag, `send`/`recv` si comportano come `write`/`read`.
 
 ```c
 // Invio
+int s = socket(AF_INET, SOCK_STREAM, 0);
 uint32_t val = 42;
 uint32_t val_net = htonl(val);
-write(sd, &val_net, sizeof(val_net));
+write(s, &val_net, sizeof(val_net));
 
 // Ricezione
+int s = socket(AF_INET, SOCK_STREAM, 0);
 uint32_t val_net;
-read(sd, &val_net, sizeof(val_net));
+read(s, &val_net, sizeof(val_net));
 uint32_t val = ntohl(val_net);
 ```
 
