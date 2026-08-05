@@ -63,7 +63,7 @@
 
 ---
 
-## 1. Introduzione ai Sistemi Operativi e Unix <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 1. Introduzione ai Sistemi Operativi e Unix [Torna all'indice](#indice)
 
 ### 1.1 Cos'è un Sistema Operativo
 
@@ -140,7 +140,7 @@ Le **chiamate al sistema (system call)** sono l'interfaccia con cui i programmi 
 
 ---
 
-## 2. Il File System Unix <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 2. Il File System Unix [Torna all'indice](#indice)
 
 ### 2.1 Caratteristiche Generali
 
@@ -262,7 +262,7 @@ Mostra informazioni dettagliate di un file (metadati dall'inode):
 
 ---
 
-## 3. La Shell Bash <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 3. La Shell Bash [Torna all'indice](#indice)
 
 ### 3.1 Cos'è la Shell
 
@@ -384,7 +384,7 @@ ls | grep -v pluto | tail -3 | head -1
 
 ---
 
-## 4. Comandi Unix Fondamentali <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 4. Comandi Unix Fondamentali [Torna all'indice](#indice)
 
 ### 4.1 Gestione Directory
 
@@ -461,7 +461,7 @@ Esempio: `root:x:0:0:root:/root:/bin/bash`
 
 ---
 
-## 5. Grep e le Espressioni Regolari <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 5. Grep e le Espressioni Regolari [Torna all'indice](#indice)
 
 ### 5.1 Il Comando `grep`
 
@@ -539,7 +539,7 @@ find . -name "*.txt"
 
 ---
 
-## 6. Script Shell <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 6. Script Shell [Torna all'indice](#indice)
 
 ### 6.1 Struttura Base
 
@@ -678,7 +678,7 @@ Operatori: `+`, `-`, `/`, `*`, `%`, `**`, `<<`, `>>`, `&`, `|`, `~`, `<`, `<=`, 
 
 ---
 
-## 7. Sed e Awk <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 7. Sed e Awk [Torna all'indice](#indice)
 
 ### 7.1 Sed — Stream Editor
 
@@ -979,7 +979,7 @@ awk '{ print $1 | "sort -u" }' file.txt
 
 ---
 
-## 8. Funzioni in Bash <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 8. Funzioni in Bash [Torna all'indice](#indice)
 
 ### 8.1 Definizione e Chiamata
 
@@ -1038,7 +1038,7 @@ count_processes () {
 
 ---
 
-## 9. Compilazione C e GCC <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 9. Compilazione C e GCC [Torna all'indice](#indice)
 
 ### 9.0 Basi di Programmazione C (vs Java)
 
@@ -1160,7 +1160,7 @@ int main(int argc, char *argv[]) {
 
 ---
 
-## 10. I/O di Basso Livello (System Call) <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 10. I/O di Basso Livello (System Call) [Torna all'indice](#indice)
 
 ### 10.1 Concetti Fondamentali
 
@@ -1439,7 +1439,7 @@ int main(int argc, char **argv) {
 
 ---
 
-## 11. Processi Unix <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 11. Processi Unix [Torna all'indice](#indice)
 
 ### 11.1 Concetti Fondamentali
 
@@ -1901,7 +1901,7 @@ open("/etc/passwd", O_RDONLY);
 
 ---
 
-## 12. Segnali <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 12. Segnali [Torna all'indice](#indice)
 
 ### 12.1 Cos'è un Segnale
 
@@ -2089,7 +2089,7 @@ if (sigprocmask(SIG_BLOCK, &mask, &oldmask) == -1) {
 
 ---
 
-## 13. IPC: Pipe, FIFO e Memoria Condivisa (mmap) <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 13. IPC: Pipe, FIFO e Memoria Condivisa (mmap) [Torna all'indice](#indice)
 
 ### 13.1 Pipe Ordinarie
 
@@ -2259,7 +2259,7 @@ int msync(void *addr, size_t length, int flags); // Forza l'allineamento su disc
 
 ---
 
-## 14. Thread e Concorrenza <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 14. Thread e Concorrenza [Torna all'indice](#indice)
 
 ### 14.1 Motivazioni
 
@@ -2404,7 +2404,7 @@ int pthread_setcanceltype(int type, int *oldtype);
 
 ---
 
-## 15. Sincronizzazione: Mutex, Condition Variable, Semafori <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 15. Sincronizzazione: Mutex, Condition Variable, Semafori [Torna all'indice](#indice)
 
 ### 15.1 Il Problema della Sezione Critica
 
@@ -2642,7 +2642,7 @@ void* usa_stampante(void* arg) {
 
 ---
 
-## 16. Problemi Classici di Sincronizzazione <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 16. Problemi Classici di Sincronizzazione [Torna all'indice](#indice)
 
 Questi sono i classici problemi teorici e pratici che si affrontano studiando la programmazione concorrente.
 
@@ -2794,7 +2794,7 @@ pthread_mutex_unlock(&mutex);
 
 ---
 
-## 17. Socket — Comunicazione di Rete <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 17. Socket — Comunicazione di Rete [Torna all'indice](#indice)
 
 ### 17.1 Concetti Fondamentali
 
@@ -3259,7 +3259,7 @@ Vantaggi: filtraggio automatico del mittente, ricezione di errori ICMP (es. host
 
 ---
 
-## 18. I/O Multiplexing — `select()` <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 18. I/O Multiplexing — `select()` [Torna all'indice](#indice)
 
 ### 18.1 Problema
 
@@ -3338,7 +3338,7 @@ Un **unico thread** gestisce listening socket + tutti i socket dei client:
 
 ---
 
-## 19. Gestione Avanzata dei Segnali — `sigaction()` e SIGPIPE <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 19. Gestione Avanzata dei Segnali — `sigaction()` e SIGPIPE [Torna all'indice](#indice)
 
 ### 19.1 `sigaction()` vs `signal()`
 
@@ -3393,7 +3393,7 @@ if (n == 0) {
 
 ---
 
-## 20. Broadcast e Multicast UDP <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 20. Broadcast e Multicast UDP [Torna all'indice](#indice)
 
 ### 20.1 Broadcast
 
@@ -3482,7 +3482,7 @@ recv(sock, buf, sizeof(buf)-1, 0);
 
 ---
 
-## 21. Comandi di Rete e Risoluzione DNS <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 21. Comandi di Rete e Risoluzione DNS [Torna all'indice](#indice)
 
 ### 21.1 Comandi di Diagnostica
 
@@ -3584,7 +3584,7 @@ int main(int argc, char *argv[]) {
 
 ---
 
-## 22. Virtualizzazione <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 22. Virtualizzazione [Torna all'indice](#indice)
 
 ### 22.1 Concetti Base
 
@@ -3706,7 +3706,7 @@ L'hypervisor assegna **risorse virtuali** alle VM (vCPU, vRAM, vDisk, vNIC):
 
 ---
 
-## 23. Container: Namespace, Cgroups e OverlayFS <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 23. Container: Namespace, Cgroups e OverlayFS [Torna all'indice](#indice)
 
 ### 23.1 Architettura dei Container
 
@@ -3878,7 +3878,7 @@ cat lower/file.txt           # il file originale è ancora intatto
 
 ---
 
-## 24. Docker <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 24. Docker [Torna all'indice](#indice)
 
 ### 24.1 Cos'è Docker
 
@@ -4174,7 +4174,7 @@ docker compose down -v              # ferma e rimuove anche i volumi dichiarati
 
 ---
 
-## 25. Soluzioni Esercizi d'Esame <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 25. Soluzioni Esercizi d'Esame [Torna all'indice](#indice)
 
 Di seguito sono riportate le soluzioni agli esercizi d'esame mostrati nelle immagini, utili per verificare la propria preparazione e ripassare i concetti.
 
@@ -4264,7 +4264,7 @@ Visualizzerà la stringa **nodo2**. Passando flag `--hostname` si invoca il dist
 
 ---
 
-## 26. Guida Rapida alle Parole Chiave <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 26. Guida Rapida alle Parole Chiave [Torna all'indice](#indice)
 
 Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, contenente le parole chiave e i concetti fondamentali di LSO.
 
