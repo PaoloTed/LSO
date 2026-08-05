@@ -1014,6 +1014,15 @@ count_processes () {
 
 ## 9. Compilazione C e GCC
 
+### 9.0 Basi di Programmazione C (vs Java)
+
+Per chi proviene da linguaggi ad alto livello come Java, il C presenta alcune differenze architetturali critiche:
+- **Paradigma**: Il C è puramente procedurale. Non ha classi o oggetti nativi, solo funzioni e `struct` (record di dati).
+- **Gestione Memoria Manuale**: Non c'è il Garbage Collector. La memoria va allocata (`malloc`, `calloc`) e liberata (`free`) esplicitamente, pena memory leak.
+- **Puntatori**: Una variabile che memorizza l'indirizzo fisico di memoria di un'altra variabile (o funzione). 
+- **Array e Stringhe**: Gli array sono solo blocchi contigui di memoria, privi di controlli di limite (nessun "Index Out of Bounds" automatico; se sfori, corrompi la memoria). Le stringhe sono array di char terminati dal carattere nullo `'\0'`.
+- **Il Preprocessore**: Fase precedente alla compilazione in cui vengono risolte le macro e le inclusioni. Ad esempio, `#include <stdio.h>` copia e incolla letteralmente le firme delle funzioni, e `#define MAX 10` sostituisce testualmente ogni "MAX" con "10" prima ancora che il compilatore veda il codice.
+
 ### 9.1 Il Compilatore GCC
 
 GCC è il compilatore standard del progetto GNU. Supporta C, C++, Fortran, Ada, Go.
@@ -1571,6 +1580,14 @@ execvp("ls", args);
 char *env[] = {"HOME=/tmp", "PATH=/bin", NULL};
 execle("/bin/ls", "ls", "-l", (char *)NULL, env);
 ```
+
+**Le Variabili d'Ambiente (`envp`)**
+Oltre agli argomenti, un processo riceve un array di stringhe chiamato *ambiente* (environment), accessibile tramite la variabile globale `extern char **environ;` (o come terzo argomento del main `int main(int argc, char *argv[], char *envp[])`).
+Queste variabili sono nella forma `CHIAVE=VALORE` e configurano il comportamento dei programmi. Esempi chiave:
+- `PATH`: Lista di directory in cui la shell cerca i comandi eseguibili.
+- `HOME`: La directory personale dell'utente.
+- `TERM`: Il tipo di terminale (es. `xterm-256color`).
+Quando si usa una `exec()` senza il suffisso `e` (es. `execvp`), il nuovo programma *eredita* esattamente l'ambiente del programma chiamante. Usando `execle` o `execve`, lo sviluppatore inietta un ambiente completamente personalizzato.
 
 **Pattern completo fork + exec:**
 ```c
@@ -2828,10 +2845,24 @@ struct sockaddr_in addr;
 inet_pton(AF_INET, "192.168.1.1", &addr.sin_addr); 
 ```
 
+**Il Casting a `(struct sockaddr *)` (Polimorfismo)**
+Nei codici successivi noterai che chiamate come `bind` o `connect` prendono l'indirizzo tramite un puntatore castato a `(struct sockaddr *)`.
+Questo accade perché le librerie di rete in C sono nate *prima* dell'invenzione del puntatore generico `void *`. Per fare in modo che `bind()` potesse accettare indirizzi IPv4 (`sockaddr_in`), IPv6 (`sockaddr_in6`) o Locali (`sockaddr_un`), i progettisti idearono la struttura base `struct sockaddr` usandola come tipo jolly. È un rudimentale esempio di polimorfismo nel C.
+
 ### 17.4 Socket Locali (AF_LOCAL / Unix Domain Sockets)
 
 Se i processi che devono comunicare si trovano sulla stessa macchina locale, lo stack TCP/IP introduce un overhead non necessario. In questo caso è preferibile usare `AF_LOCAL`.
 In questo dominio, l'indirizzo di comunicazione non è definito da un IP e una porta, ma dal **percorso di un file speciale** sul file system (es. `/tmp/mysock`), che funge da punto d'incontro per i processi.
+
+**La struttura `sockaddr_un`**
+Per i socket locali, l'indirizzo viene definito tramite la struttura `sockaddr_un` (in `<sys/un.h>`), dove il suffisso `_un` sta storicamente per UNIX Domain.
+```c
+struct sockaddr_un {
+    sa_family_t sun_family;       /* AF_UNIX o AF_LOCAL */
+    char        sun_path[108];    /* Percorso del file socket */
+};
+```
+A differenza dei socket di rete, il campo vitale qui è `sun_path`. Quando il server invoca la `bind()`, il sistema operativo crea fisicamente un file in quel percorso. I client dovranno popolare una `sockaddr_un` identica per connettersi.
 
 **Server (AF_LOCAL):**
 ```c
@@ -3424,7 +3455,20 @@ recv(sock, buf, sizeof(buf)-1, 0);
 
 ### 21.2 Risoluzione DNS in C — `getaddrinfo()`
 
-Funzione moderna e portabile per risolvere nomi simbolici in indirizzi IP.
+Funzione moderna e portabile per risolvere nomi simbolici in indirizzi IP. A differenza di vecchie funzioni (come `gethostbyname`), restituisce una lista concatenata di strutture `addrinfo` già pronte per l'uso:
+
+```c
+struct addrinfo {
+    int              ai_flags;
+    int              ai_family;    // Es. AF_INET, AF_INET6, AF_UNSPEC
+    int              ai_socktype;  // Es. SOCK_STREAM, SOCK_DGRAM
+    int              ai_protocol;
+    socklen_t        ai_addrlen;   // Dimensione di ai_addr
+    struct sockaddr *ai_addr;      // L'indirizzo vero e proprio pronto per bind/connect
+    char            *ai_canonname; // Nome canonico
+    struct addrinfo *ai_next;      // Puntatore al prossimo risultato (linked list)
+};
+```
 
 ```c
 #include <netdb.h>
@@ -3454,6 +3498,42 @@ freeaddrinfo(res);
 ```
 
 > **Vantaggi**: supporta IPv4/IPv6 senza differenze per il programmatore, restituisce strutture pronte per `socket()` e `connect()`.
+
+**Esempio Pratico: Client WHOIS**
+Un uso classico di `getaddrinfo()` è interrogare server esterni. Questo frammento mostra come connettersi al server WHOIS IANA sulla porta 43 e inviare un nome a dominio (come spiegato nella Lezione 24):
+```c
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) return 1;
+    
+    struct addrinfo hints, *res;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_socktype = SOCK_STREAM; // TCP
+    getaddrinfo("whois.iana.org", "43", &hints, &res);
+    
+    int sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    connect(sock, res->ai_addr, res->ai_addrlen);
+    freeaddrinfo(res);
+    
+    char query[256];
+    snprintf(query, sizeof(query), "%s\r\n", argv[1]);
+    send(sock, query, strlen(query), 0);
+    
+    char buf[1024];
+    int n;
+    while ((n = recv(sock, buf, sizeof(buf)-1, 0)) > 0) {
+        buf[n] = '\0';
+        printf("%s", buf);
+    }
+    close(sock);
+    return 0;
+}
+```
 
 ---
 
