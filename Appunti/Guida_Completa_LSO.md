@@ -2788,13 +2788,34 @@ La connessione TCP segue un'architettura client-server ben definita, in cui il s
 
 **Il lato SERVER:**
 1. **`socket()`**: Crea l'endpoint di comunicazione, allocando le risorse necessarie nel kernel.
-2. **`bind()`**: Associa la socket appena creata a un indirizzo locale specifico (es. un Indirizzo IP e una Porta). Definisce dove il server sarà raggiungibile.
-3. **`listen()`**: Configura la socket in modalità "passiva" di ascolto. Indica al sistema operativo la volontà di accettare connessioni in ingresso, specificando la dimensione massima della coda delle connessioni in attesa (backlog).
-4. **`accept()`**: Estrae la prima richiesta di connessione dalla coda e la accetta. **Attenzione:** `accept` non usa la socket passiva creata all'inizio, ma crea *una nuova socket dedicata* alla comunicazione con quello specifico client. La socket originale (in ascolto) rimane attiva per accettare future connessioni.
+   `int socket(int domain, int type, int protocol);`
+   - `domain`: La famiglia di indirizzi (es. `AF_INET` per IPv4, `AF_LOCAL` per percorsi fisici).
+   - `type`: Il tipo (es. `SOCK_STREAM` per TCP, `SOCK_DGRAM` per UDP).
+   - `protocol`: Spesso `0` per far scegliere il protocollo di default in base al tipo.
+   - **Ritorna**: Il File Descriptor (FD) della socket o `-1` (errore).
+2. **`bind()`**: Associa la socket a un indirizzo locale specifico (IP e Porta). Definisce dove il server sarà raggiungibile.
+   `int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);`
+   - `sockfd`: Il FD della socket appena creata.
+   - `addr`: Puntatore alla struttura con l'indirizzo (es. `sockaddr_in`), castata genericamente.
+   - `addrlen`: La dimensione in byte della struttura (`sizeof(addr)`).
+3. **`listen()`**: Configura la socket in modalità "passiva" di ascolto, pronta ad accettare richieste.
+   `int listen(int sockfd, int backlog);`
+   - `sockfd`: La socket appena "bindata".
+   - `backlog`: Dimensione massima della coda delle connessioni in attesa di essere smaltite da `accept()`.
+4. **`accept()`**: Estrae la prima connessione dalla coda e la accetta. 
+   `int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);`
+   - `sockfd`: La socket in ascolto.
+   - `addr`: Struttura vuota che il kernel *riempirà* con i dati del client connesso (spesso `NULL` se non interessano).
+   - `addrlen`: Puntatore alla dimensione della struttura (spesso `NULL`).
+   - **Attenzione:** `accept` ritorna un **nuovo file descriptor** per una *nuova socket dedicata* unicamente a quel client. La socket originale continua solo ad ascoltare.
 
 **Il lato CLIENT:**
-1. **`socket()`**: Crea l'endpoint di comunicazione sul client.
-2. **`connect()`**: Invia una richiesta di connessione all'indirizzo del Server specificato, avviando il 3-way handshake del TCP. Se il server accetta, si instaura il canale di comunicazione.
+1. **`socket()`**: Crea l'endpoint di comunicazione (stessi parametri visti sopra).
+2. **`connect()`**: Avvia il 3-way handshake verso l'indirizzo del Server.
+   `int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);`
+   - `sockfd`: La socket del client.
+   - `addr`: La struttura con l'indirizzo IP e la porta del **server** a cui si vuole puntare.
+   - `addrlen`: La dimensione della struttura (`sizeof(addr)`).
 
 ```text
         SERVER                              CLIENT
