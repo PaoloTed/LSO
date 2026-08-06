@@ -708,7 +708,8 @@ Operatori: `+`, `-`, `/`, `*`, `%`, `**`, `<<`, `>>`, `&`, `|`, `~`, `<`, `<=`, 
 
 ### 7.1 Sed — Stream Editor
 
-**sed** è un editor non interattivo di file di testo. **Non modifica l'input** — l'output va allo stdout.
+**sed** è un editor non interattivo di file di testo. **NON MODIFICA L'INPUT** — l'output va allo stdout.
+Per modificare il file di testo si deve **reindirizzare l'output in un altro file ( > )** o usare il comando **`-i`**.
 
 **Sintassi:** `sed [opzioni] 'comando' [file]`
 
@@ -738,7 +739,7 @@ Operatori: `+`, `-`, `/`, `*`, `%`, `**`, `<<`, `>>`, `&`, `|`, `~`, `<`, `<=`, 
 **Indirizzamento:**
 - Nessun indirizzo → ogni linea
 - Numero di riga → `sed '1d' file` (cancella riga 1)
-- Range → `sed '2,4d' file` (cancella righe 2-4)
+- Range → `sed '2,4d' file` (cancella righe da 2 a 4)
 - Regex → `sed '/^#/d' file` (cancella righe che iniziano con #)
 - `$` → ultima riga
 
@@ -768,7 +769,7 @@ sed -e 's/erore/errore/g' -e 's/^/> /g' file
 # Cancella parola
 sed 's/parola//g' file
 
-# Aggiunge indentazione
+# Aggiunge indentazione, redirige l'output in file.indent
 sed 's/^/   /' file > file.indent
 
 # & ripete l'ultimo match
@@ -821,7 +822,7 @@ awk -F: '
 | `$1`, `$2`, ..., `$NF` | Il campo 1, 2, ..., ultimo |
 | `NF` | Numero di campi nella riga corrente |
 | `NR` | Numero di record (righe) letti finora (globale) |
-| `FNR` | Numero di record nel file corrente (si azzera ad ogni nuovo file) |
+| `FNR` | Numero del record (riga) lette nel file corrente (si azzera ad ogni nuovo file) |
 | `FS` | Field Separator in input (default: spazio/tab) |
 | `OFS` | Output Field Separator (default: spazio) |
 | `RS` | Record Separator in input (default: `\n`) |
@@ -835,9 +836,16 @@ awk -F: 'BEGIN { OFS=" -> " } { print $1, $3 }' /etc/passwd
 
 # NF: stampa solo l'ultimo campo di ogni riga
 awk '{ print $NF }' file.txt
+# output: stampa esclusivamente l'ultima parola di ogni riga
 
 # FNR vs NR con due file
 awk '{ print FILENAME, FNR, NR, $0 }' file1.txt file2.txt
+# output es:
+# file1.txt 1 1 prima_riga_di_file1
+# file1.txt 2 2 seconda_riga_di_file1
+# file2.txt 1 3 prima_riga_di_file2
+# file2.txt 2 4 seconda_riga_di_file2
+# (FNR si azzera a ogni nuovo file, NR è globale e cresce sempre)
 ```
 
 ---
@@ -1229,8 +1237,14 @@ int open(const char *pathname, int oflag, ... /* mode_t mode */);
 **Esempi:**
 ```c
 int fd = open("prova.txt", O_RDONLY);
+// Se prova.txt non esiste => errore (segnalato da errno)
+
 int fd = open("prova.txt", O_RDONLY | O_CREAT, S_IRWXU);
+// Se prova.txt non esiste => viene creato con permessi rwx all'owner
+
 int fd = open("prova.txt", O_RDWR | O_CREAT | O_EXCL, S_IRWXU);
+// Se prova.txt non esiste => viene creato con permessi rwx all'owner
+// Se prova.txt esiste => errore (segnalato da errno)
 ```
 
 #### `creat` — Creazione di un file
@@ -1241,6 +1255,7 @@ int creat(const char *pathname, mode_t mode);
 **Esempio:**
 ```c
 int fd = creat("prova.txt", S_IRWXU);
+// Crea il file con permessi rwx all'owner
 ```
 
 #### `close` — Chiusura di un file
