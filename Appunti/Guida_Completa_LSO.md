@@ -9,57 +9,57 @@
 ## Indice
 
 
-1. [Introduzione ai Sistemi Operativi e Unix](#1-introduzione-ai-sistemi-operativi-e-unix) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-1)
+1. [Introduzione ai Sistemi Operativi e Unix <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#1-introduzione-ai-sistemi-operativi-e-unix-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-1)
 
-2. [Il File System Unix](#2-il-file-system-unix) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-2)
+2. [Il File System Unix <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#2-il-file-system-unix-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-2)
 
-3. [La Shell Bash](#3-la-shell-bash) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-3)
+3. [La Shell Bash <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#3-la-shell-bash-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-3)
 
-4. [Comandi Unix Fondamentali](#4-comandi-unix-fondamentali) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-4)
+4. [Comandi Unix Fondamentali <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#4-comandi-unix-fondamentali-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-4)
 
-5. [Grep e le Espressioni Regolari](#5-grep-e-le-espressioni-regolari) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-5)
+5. [Grep e le Espressioni Regolari <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#5-grep-e-le-espressioni-regolari-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-5)
 
-6. [Script Shell](#6-script-shell) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-6)
+6. [Script Shell <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#6-script-shell-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-6)
 
-7. [Sed e Awk](#7-sed-e-awk) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-7)
+7. [Sed e Awk <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#7-sed-e-awk-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-7)
 
-8. [Funzioni in Bash](#8-funzioni-in-bash) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-8)
+8. [Funzioni in Bash <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#8-funzioni-in-bash-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-8)
 
-9. [Compilazione C e GCC](#9-compilazione-c-e-gcc) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-9)
+9. [Compilazione C e GCC <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#9-compilazione-c-e-gcc-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-9)
 
-10. [I/O di Basso Livello (System Call)](#10-io-di-basso-livello-system-call) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-10)
+10. [I/O di Basso Livello (System Call) <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#10-io-di-basso-livello-system-call-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-10)
 
-11. [Processi Unix](#11-processi-unix) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-11)
+11. [Processi Unix <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#11-processi-unix-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-11)
 
-12. [Segnali](#12-segnali) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-12)
+12. [Segnali <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#12-segnali-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-12)
 
-13. [IPC: Pipe, FIFO e Memoria Condivisa (mmap)](#13-ipc-pipe-fifo-e-memoria-condivisa-mmap) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-13)
+13. [IPC: Pipe, FIFO e Memoria Condivisa (mmap) <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#13-ipc-pipe-fifo-e-memoria-condivisa-mmap-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-13)
 
-14. [Thread e Concorrenza](#14-thread-e-concorrenza) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-14)
+14. [Thread e Concorrenza <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#14-thread-e-concorrenza-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-14)
 
-15. [Sincronizzazione: Mutex, Condition Variable, Semafori](#15-sincronizzazione-mutex-condition-variable-semafori) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-15)
+15. [Sincronizzazione: Mutex, Condition Variable, Semafori <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#15-sincronizzazione-mutex-condition-variable-semafori-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-15)
 
-16. [Problemi Classici di Sincronizzazione](#16-problemi-classici-di-sincronizzazione) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-16)
+16. [Problemi Classici di Sincronizzazione <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#16-problemi-classici-di-sincronizzazione-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-16)
 
-17. [Socket — Comunicazione di Rete](#17-socket--comunicazione-di-rete) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-17)
+17. [Socket — Comunicazione di Rete <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#17-socket--comunicazione-di-rete-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-17)
 
-18. [I/O Multiplexing — `select()`](#18-io-multiplexing--select) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-18)
+18. [I/O Multiplexing — `select()` <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#18-io-multiplexing--select-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-18)
 
-19. [Gestione Avanzata dei Segnali — `sigaction()` e SIGPIPE](#19-gestione-avanzata-dei-segnali--sigaction-e-sigpipe) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-19)
+19. [Gestione Avanzata dei Segnali — `sigaction()` e SIGPIPE <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#19-gestione-avanzata-dei-segnali--sigaction-e-sigpipe-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-19)
 
-20. [Broadcast e Multicast UDP](#20-broadcast-e-multicast-udp) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-20)
+20. [Broadcast e Multicast UDP <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#20-broadcast-e-multicast-udp-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-20)
 
-21. [Comandi di Rete e Risoluzione DNS](#21-comandi-di-rete-e-risoluzione-dns) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-21)
+21. [Comandi di Rete e Risoluzione DNS <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#21-comandi-di-rete-e-risoluzione-dns-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-21)
 
-22. [Virtualizzazione](#22-virtualizzazione) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-22)
+22. [Virtualizzazione <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#22-virtualizzazione-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-22)
 
-23. [Container: Namespace, Cgroups e OverlayFS](#23-container-namespace-cgroups-e-overlayfs) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-23)
+23. [Container: Namespace, Cgroups e OverlayFS <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#23-container-namespace-cgroups-e-overlayfs-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-23)
 
-24. [Docker](#24-docker) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-24)
+24. [Docker <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#24-docker-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-24)
 
-25. [Soluzioni Esercizi d'Esame](#25-soluzioni-esercizi-desame) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-25)
+25. [Soluzioni Esercizi d'Esame <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#25-soluzioni-esercizi-desame-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-25)
 
-26. [Guida Rapida alle Parole Chiave](#26-guida-rapida-alle-parole-chiave) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-26)
+26. [Guida Rapida alle Parole Chiave <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#26-guida-rapida-alle-parole-chiave-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-26)
 
 ---
 
@@ -361,7 +361,7 @@ La **pipe** (`|`) collega l'output di un comando all'input del successivo:
 ```bash
 cat file | sort          # ordina il contenuto del file
 ls | less                # pagina la lista dei file
-ls | grep -v pluto | tail -3 | head -1
+ls | grep -v pluto | tail -3 | head -1  # come funziona e cosa fa verra' spiegato successivamente
 ```
 
 ### 3.7 Metacaratteri e Wildcard
@@ -390,13 +390,13 @@ ls | grep -v pluto | tail -3 | head -1
 
 | Comando | Funzione |
 |---------|----------|
-| `mkdir [-p] [-m mode] dir` | Crea directory (`-p` crea percorsi intermedi) |
-| `rmdir [-p] dir` | Rimuove directory vuota |
-| `pwd` | Stampa la working directory |
+| `mkdir [-p] [-m mode] dir` | Crea directory (`-p`: crea percorsi intermedi se mancanti, `-m`: imposta permessi iniziali) |
+| `rmdir [-p] dir` | Rimuove directory vuota (`-p`: rimuove anche i percorsi genitori se vuoti) |
+| `pwd` | Stampa la working directory attuale |
 | `cd [dir]` | Cambia directory (senza argomenti → home) |
 | `ls [opzioni] [dir]` | Elenca contenuto directory |
-| `du [-s] [-k] file` | Mostra spazio disco utilizzato |
-
+| `du [-s] [-k] file` | Mostra spazio disco utilizzato (`-s`: solo totale/sommario, `-k`: mostra taglia in Kilobytes) |
+ve
 **Opzioni di `ls`:**
 - `-a` → anche file nascosti (dotfiles)
 - `-l` → formato esteso
@@ -410,28 +410,28 @@ ls | grep -v pluto | tail -3 | head -1
 
 | Comando | Funzione |
 |---------|----------|
-| `cp [-r] [-i] source target` | Copia file/directory |
-| `mv [-i] source dest` | Sposta/rinomina file |
-| `rm [-i] [-R] file` | Rimuove file/directory |
-| `touch [-a] [-c] [-m] file` | Aggiorna timestamp (o crea file vuoto) |
+| `cp [-r] [-i] source target` | Copia file/dir (`-r`: ricorsivo, `-i`: chiedi conferma prima di sovrascrivere) |
+| `mv [-i] source dest` | Sposta/rinomina file (`-i`: chiedi conferma) |
+| `rm [-i] [-R] file` | Rimuove file/dir (`-i`: chiedi conferma, `-R` o `-r`: rimuovi dir e contenuto) |
+| `touch [-a] [-c] [-m] file` | Aggiorna timestamp o crea vuoto (`-a`: solo accesso, `-m`: solo modifica, `-c`: non creare nuovo) |
 | `file filename` | Determina il tipo di file |
-| `ln [-s] name1 name2` | Crea link (hard o simbolico con `-s`) |
+| `ln [-s] name1 name2` | Crea link (hard di default, `-s`: crea link simbolico) |
 | `chmod permissions file` | Cambia permessi |
 | `chown user[:group] file` | Cambia proprietario/gruppo |
 | `find path -name pattern` | Cerca file ricorsivamente |
 
-### 4.3 Comandi di Utilità su Testo
+### 4.3 Comandi di Utilità su Testo <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 | Comando | Funzione |
 |---------|----------|
-| `cat [-n] [-b] file` | Concatena e visualizza file |
-| `wc [-l] [-w] [-c] file` | Conta righe, parole, caratteri |
-| `cut -d: -f1,5 file` | Estrae colonne |
+| `cat [-n] [-b] file` | Concatena e visualizza (`-n`: numera tutte le righe, `-b`: numera solo righe non vuote) |
+| `wc [-l] [-w] [-c] file` | Conta: righe (`-l`), parole (`-w`), caratteri (`-c`) |
+| `cut -d: -f1,5 file` | Estrae colonne (`-d:`: definisce delimitatore, `-f`: indica quali campi/colonne estrarre) |
 | `paste file1 file2` | Compone file affiancandoli |
-| `sort [-n] [-r] [-t:] [-k] file` | Ordina righe |
+| `sort [-n] [-r] [-t:] [-k] file` | Ordina righe (`-n`: numerico, `-r`: inverso, `-t:`: delimitatore, `-k`: colonna da usare) |
 | `diff file1 file2` | Mostra differenze tra file |
-| `head [-n N] file` | Prime N righe |
-| `tail [-n N] file` | Ultime N righe |
+| `head [-n N] file` | Visualizza le prime N righe |
+| `tail [-n N] file` | Visualizza le ultime N righe |
 
 ### 4.4 Listing di Processi
 
@@ -1503,6 +1503,40 @@ if (pid < 0) {
 }
 ```
 
+### 11.3.1 `vfork()`
+
+Simile a `fork()`, ma:
+- **Non copia** lo spazio di indirizzamento
+- Il figlio esegue nello spazio del padre
+- Il figlio esegue **per primo** fino a `exec()` o `_exit()`
+- Usato tipicamente prima di `exec()` per efficienza
+
+**Esempio vfork vs fork:**
+
+```c
+// Esempio fork (copia memoria)
+int variabile_condivisa = 10;
+pid_t pid = fork();
+if (pid == 0) {
+    printf("Figlio (fork): modifica variabile...");
+    variabile_condivisa = 100; // modifica locale, non impatta il padre
+    _exit(0);
+}
+wait(NULL);
+printf("Padre (fork): variabile=%d\n", variabile_condivisa); // sempre 10
+
+// Esempio vfork (condivide memoria finché non c'è exec)
+int variabile_condivisa = 10;
+pid_t pid = vfork();
+if (pid == 0) {
+    printf("Figlio (vfork): modifica variabile...");
+    variabile_condivisa = 100; // modifica VISIBILE al padre!
+    _exit(0);
+}
+wait(NULL);
+printf("Padre (vfork): variabile=%d\n", variabile_condivisa); // vedrà 100
+```
+
 ### 11.4 Terminazione di Processi
 
 **Terminazione normale:**
@@ -1573,6 +1607,7 @@ pid_t pid = wait(&status);  // il kernel riempie 'status'
 > Se `exec` ha successo, **non ritorna mai**: il vecchio codice è stato cancellato. Il codice dopo `exec()` viene eseguito solo in caso di errore.
 
 ```c
+// Ogni exec deve essere PRECEDUTA da una fork() o vfork(), viene chiamato dal figlio generato da fork()
 int execl(char *pathname, char *arg0, ... );            // lista argomenti, percorso esatto
 int execv(char *pathname, char *argv[]);                // array argomenti, percorso esatto
 int execlp(char *filename, char *arg0, ... );           // lista argomenti, cerca nel PATH
@@ -1660,39 +1695,6 @@ int main() {
 - File descriptor con flag `FD_CLOEXEC` → vengono chiusi automaticamente al momento di exec
 - Handler dei segnali personalizzati → tornano a `SIG_DFL`
 
-### 11.8 `vfork()`
-
-Simile a `fork()`, ma:
-- **Non copia** lo spazio di indirizzamento
-- Il figlio esegue nello spazio del padre
-- Il figlio esegue **per primo** fino a `exec()` o `_exit()`
-- Usato tipicamente prima di `exec()` per efficienza
-
-**Esempio vfork vs fork:**
-
-```c
-// Esempio fork (copia memoria)
-int variabile_condivisa = 10;
-pid_t pid = fork();
-if (pid == 0) {
-    printf("Figlio (fork): modifica variabile...");
-    variabile_condivisa = 100; // modifica locale, non impatta il padre
-    _exit(0);
-}
-wait(NULL);
-printf("Padre (fork): variabile=%d\n", variabile_condivisa); // sempre 10
-
-// Esempio vfork (condivide memoria finché non c'è exec)
-int variabile_condivisa = 10;
-pid_t pid = vfork();
-if (pid == 0) {
-    printf("Figlio (vfork): modifica variabile...");
-    variabile_condivisa = 100; // modifica VISIBILE al padre!
-    _exit(0);
-}
-wait(NULL);
-printf("Padre (vfork): variabile=%d\n", variabile_condivisa); // vedrà 100
-```
 
 ### 11.9 La funzione `system()`
 
@@ -4330,6 +4332,65 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 ## Indice Dettagliato delle Sottosezioni
 
 
+1. [Introduzione ai Sistemi Operativi e Unix <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#1-introduzione-ai-sistemi-operativi-e-unix-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-1)
+
+2. [Il File System Unix <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#2-il-file-system-unix-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-2)
+
+3. [La Shell Bash <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#3-la-shell-bash-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-3)
+
+4. [Comandi Unix Fondamentali <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#4-comandi-unix-fondamentali-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-4)
+
+5. [Grep e le Espressioni Regolari <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#5-grep-e-le-espressioni-regolari-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-5)
+
+6. [Script Shell <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#6-script-shell-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-6)
+
+7. [Sed e Awk <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#7-sed-e-awk-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-7)
+
+8. [Funzioni in Bash <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#8-funzioni-in-bash-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-8)
+
+9. [Compilazione C e GCC <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#9-compilazione-c-e-gcc-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-9)
+
+10. [I/O di Basso Livello (System Call) <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#10-io-di-basso-livello-system-call-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-10)
+
+11. [Processi Unix <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#11-processi-unix-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-11)
+
+12. [Segnali <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#12-segnali-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-12)
+
+13. [IPC: Pipe, FIFO e Memoria Condivisa (mmap) <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#13-ipc-pipe-fifo-e-memoria-condivisa-mmap-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-13)
+
+14. [Thread e Concorrenza <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#14-thread-e-concorrenza-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-14)
+
+15. [Sincronizzazione: Mutex, Condition Variable, Semafori <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#15-sincronizzazione-mutex-condition-variable-semafori-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-15)
+
+16. [Problemi Classici di Sincronizzazione <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#16-problemi-classici-di-sincronizzazione-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-16)
+
+17. [Socket — Comunicazione di Rete <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#17-socket--comunicazione-di-rete-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-17)
+
+18. [I/O Multiplexing — `select()` <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#18-io-multiplexing--select-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-18)
+
+19. [Gestione Avanzata dei Segnali — `sigaction()` e SIGPIPE <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#19-gestione-avanzata-dei-segnali--sigaction-e-sigpipe-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-19)
+
+20. [Broadcast e Multicast UDP <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#20-broadcast-e-multicast-udp-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-20)
+
+21. [Comandi di Rete e Risoluzione DNS <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#21-comandi-di-rete-e-risoluzione-dns-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-21)
+
+22. [Virtualizzazione <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#22-virtualizzazione-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-22)
+
+23. [Container: Namespace, Cgroups e OverlayFS <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#23-container-namespace-cgroups-e-overlayfs-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-23)
+
+24. [Docker <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#24-docker-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-24)
+
+25. [Soluzioni Esercizi d'Esame <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#25-soluzioni-esercizi-desame-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-25)
+
+26. [Guida Rapida alle Parole Chiave <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#26-guida-rapida-alle-parole-chiave-span-stylefloatright-font-size-06emtorna-allindiceindicespan) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-26)
+
+
+
+---
+
+## Indice Dettagliato delle Sottosezioni
+
+
 ### Indice delle Sottosezioni - Capitolo 1
 
 - [1.1 Cos'è un Sistema Operativo](#11-cos-un-sistema-operativo)
@@ -4398,7 +4459,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 
 - [4.2 Gestione File](#42-gestione-file)
 
-- [4.3 Comandi di Utilità su Testo](#43-comandi-di-utilit-su-testo)
+- [4.3 Comandi di Utilità su Testo <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>](#43-comandi-di-utilit-su-testo-span-stylefloatright-font-size-06emtorna-allindiceindicespan)
 
 - [4.4 Listing di Processi](#44-listing-di-processi)
 
@@ -4498,6 +4559,8 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 
 - [11.3 Creazione di Processi — `fork()`](#113-creazione-di-processi--fork)
 
+- [11.3.1 `vfork()`](#1131-vfork)
+
 - [11.4 Terminazione di Processi](#114-terminazione-di-processi)
 
 - [11.5 Processi Zombie e Orfani](#115-processi-zombie-e-orfani)
@@ -4505,8 +4568,6 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [11.6 `wait()` e `waitpid()`](#116-wait-e-waitpid)
 
 - [11.7 La Famiglia `exec`](#117-la-famiglia-exec)
-
-- [11.8 `vfork()`](#118-vfork)
 
 - [11.9 La funzione `system()`](#119-la-funzione-system)
 

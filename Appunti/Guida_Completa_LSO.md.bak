@@ -8,36 +8,62 @@
 
 ## Indice
 
-1. [Introduzione ai Sistemi Operativi e Unix](#1-introduzione-ai-sistemi-operativi-e-unix)
-2. [Il File System Unix](#2-il-file-system-unix)
-3. [La Shell Bash](#3-la-shell-bash)
-4. [Comandi Unix Fondamentali](#4-comandi-unix-fondamentali)
-5. [Grep e le Espressioni Regolari](#5-grep-e-le-espressioni-regolari)
-6. [Script Shell](#6-script-shell)
-7. [Sed e Awk](#7-sed-e-awk)
-8. [Funzioni in Bash](#8-funzioni-in-bash)
-9. [Compilazione C e GCC](#9-compilazione-c-e-gcc)
-10. [I/O di Basso Livello (System Call)](#10-io-di-basso-livello-system-call)
-11. [Processi Unix](#11-processi-unix)
-12. [Segnali](#12-segnali)
-13. [IPC: Pipe, FIFO e Memoria Condivisa (mmap)](#13-ipc-pipe-fifo-e-memoria-condivisa-mmap)
-14. [Thread e Concorrenza](#14-thread-e-concorrenza)
-15. [Sincronizzazione: Mutex, Condition Variable, Semafori](#15-sincronizzazione-mutex-condition-variable-semafori)
-16. [Problemi Classici di Sincronizzazione](#16-problemi-classici-di-sincronizzazione)
-17. [Socket — Comunicazione di Rete](#17-socket--comunicazione-di-rete)
-18. [I/O Multiplexing - `select()`](#18-io-multiplexing---select)
-19. [Gestione Avanzata dei Segnali - `sigaction()` e SIGPIPE](#19-gestione-avanzata-dei-segnali---sigaction-e-sigpipe)
-20. [Broadcast e Multicast UDP](#20-broadcast-e-multicast-udp)
-21. [Comandi di Rete e Risoluzione DNS](#21-comandi-di-rete-e-risoluzione-dns)
-22. [Virtualizzazione](#22-virtualizzazione)
-23. [Container: Namespace, Cgroups e OverlayFS](#23-container-namespace-cgroups-e-overlayfs)
-24. [Docker](#24-docker)
-25. [Soluzioni Esercizi d'Esame](#25-soluzioni-esercizi-desame)
-26. [Guida Rapida alle Parole Chiave](#26-guida-rapida-alle-parole-chiave)
+
+1. [Introduzione ai Sistemi Operativi e Unix](#1-introduzione-ai-sistemi-operativi-e-unix) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-1)
+
+2. [Il File System Unix](#2-il-file-system-unix) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-2)
+
+3. [La Shell Bash](#3-la-shell-bash) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-3)
+
+4. [Comandi Unix Fondamentali](#4-comandi-unix-fondamentali) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-4)
+
+5. [Grep e le Espressioni Regolari](#5-grep-e-le-espressioni-regolari) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-5)
+
+6. [Script Shell](#6-script-shell) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-6)
+
+7. [Sed e Awk](#7-sed-e-awk) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-7)
+
+8. [Funzioni in Bash](#8-funzioni-in-bash) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-8)
+
+9. [Compilazione C e GCC](#9-compilazione-c-e-gcc) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-9)
+
+10. [I/O di Basso Livello (System Call)](#10-io-di-basso-livello-system-call) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-10)
+
+11. [Processi Unix](#11-processi-unix) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-11)
+
+12. [Segnali](#12-segnali) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-12)
+
+13. [IPC: Pipe, FIFO e Memoria Condivisa (mmap)](#13-ipc-pipe-fifo-e-memoria-condivisa-mmap) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-13)
+
+14. [Thread e Concorrenza](#14-thread-e-concorrenza) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-14)
+
+15. [Sincronizzazione: Mutex, Condition Variable, Semafori](#15-sincronizzazione-mutex-condition-variable-semafori) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-15)
+
+16. [Problemi Classici di Sincronizzazione](#16-problemi-classici-di-sincronizzazione) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-16)
+
+17. [Socket — Comunicazione di Rete](#17-socket--comunicazione-di-rete) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-17)
+
+18. [I/O Multiplexing — `select()`](#18-io-multiplexing--select) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-18)
+
+19. [Gestione Avanzata dei Segnali — `sigaction()` e SIGPIPE](#19-gestione-avanzata-dei-segnali--sigaction-e-sigpipe) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-19)
+
+20. [Broadcast e Multicast UDP](#20-broadcast-e-multicast-udp) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-20)
+
+21. [Comandi di Rete e Risoluzione DNS](#21-comandi-di-rete-e-risoluzione-dns) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-21)
+
+22. [Virtualizzazione](#22-virtualizzazione) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-22)
+
+23. [Container: Namespace, Cgroups e OverlayFS](#23-container-namespace-cgroups-e-overlayfs) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-23)
+
+24. [Docker](#24-docker) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-24)
+
+25. [Soluzioni Esercizi d'Esame](#25-soluzioni-esercizi-desame) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-25)
+
+26. [Guida Rapida alle Parole Chiave](#26-guida-rapida-alle-parole-chiave) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-26)
 
 ---
 
-## 1. Introduzione ai Sistemi Operativi e Unix
+## 1. Introduzione ai Sistemi Operativi e Unix <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 1.1 Cos'è un Sistema Operativo
 
@@ -114,7 +140,7 @@ Le **chiamate al sistema (system call)** sono l'interfaccia con cui i programmi 
 
 ---
 
-## 2. Il File System Unix
+## 2. Il File System Unix <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 2.1 Caratteristiche Generali
 
@@ -236,7 +262,7 @@ Mostra informazioni dettagliate di un file (metadati dall'inode):
 
 ---
 
-## 3. La Shell Bash
+## 3. La Shell Bash <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 3.1 Cos'è la Shell
 
@@ -335,7 +361,7 @@ La **pipe** (`|`) collega l'output di un comando all'input del successivo:
 ```bash
 cat file | sort          # ordina il contenuto del file
 ls | less                # pagina la lista dei file
-ls | grep -v pluto | tail -3 | head -1
+ls | grep -v pluto | tail -3 | head -1  # come funziona e cosa fa verra' spiegato successivamente
 ```
 
 ### 3.7 Metacaratteri e Wildcard
@@ -358,19 +384,19 @@ ls | grep -v pluto | tail -3 | head -1
 
 ---
 
-## 4. Comandi Unix Fondamentali
+## 4. Comandi Unix Fondamentali <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 4.1 Gestione Directory
 
 | Comando | Funzione |
 |---------|----------|
-| `mkdir [-p] [-m mode] dir` | Crea directory (`-p` crea percorsi intermedi) |
-| `rmdir [-p] dir` | Rimuove directory vuota |
-| `pwd` | Stampa la working directory |
+| `mkdir [-p] [-m mode] dir` | Crea directory (`-p`: crea percorsi intermedi se mancanti, `-m`: imposta permessi iniziali) |
+| `rmdir [-p] dir` | Rimuove directory vuota (`-p`: rimuove anche i percorsi genitori se vuoti) |
+| `pwd` | Stampa la working directory attuale |
 | `cd [dir]` | Cambia directory (senza argomenti → home) |
 | `ls [opzioni] [dir]` | Elenca contenuto directory |
-| `du [-s] [-k] file` | Mostra spazio disco utilizzato |
-
+| `du [-s] [-k] file` | Mostra spazio disco utilizzato (`-s`: solo totale/sommario, `-k`: mostra taglia in Kilobytes) |
+ve
 **Opzioni di `ls`:**
 - `-a` → anche file nascosti (dotfiles)
 - `-l` → formato esteso
@@ -384,28 +410,28 @@ ls | grep -v pluto | tail -3 | head -1
 
 | Comando | Funzione |
 |---------|----------|
-| `cp [-r] [-i] source target` | Copia file/directory |
-| `mv [-i] source dest` | Sposta/rinomina file |
-| `rm [-i] [-R] file` | Rimuove file/directory |
-| `touch [-a] [-c] [-m] file` | Aggiorna timestamp (o crea file vuoto) |
+| `cp [-r] [-i] source target` | Copia file/dir (`-r`: ricorsivo, `-i`: chiedi conferma prima di sovrascrivere) |
+| `mv [-i] source dest` | Sposta/rinomina file (`-i`: chiedi conferma) |
+| `rm [-i] [-R] file` | Rimuove file/dir (`-i`: chiedi conferma, `-R` o `-r`: rimuovi dir e contenuto) |
+| `touch [-a] [-c] [-m] file` | Aggiorna timestamp o crea vuoto (`-a`: solo accesso, `-m`: solo modifica, `-c`: non creare nuovo) |
 | `file filename` | Determina il tipo di file |
-| `ln [-s] name1 name2` | Crea link (hard o simbolico con `-s`) |
+| `ln [-s] name1 name2` | Crea link (hard di default, `-s`: crea link simbolico) |
 | `chmod permissions file` | Cambia permessi |
 | `chown user[:group] file` | Cambia proprietario/gruppo |
 | `find path -name pattern` | Cerca file ricorsivamente |
 
-### 4.3 Comandi di Utilità su Testo
+### 4.3 Comandi di Utilità su Testo <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 | Comando | Funzione |
 |---------|----------|
-| `cat [-n] [-b] file` | Concatena e visualizza file |
-| `wc [-l] [-w] [-c] file` | Conta righe, parole, caratteri |
-| `cut -d: -f1,5 file` | Estrae colonne |
+| `cat [-n] [-b] file` | Concatena e visualizza (`-n`: numera tutte le righe, `-b`: numera solo righe non vuote) |
+| `wc [-l] [-w] [-c] file` | Conta: righe (`-l`), parole (`-w`), caratteri (`-c`) |
+| `cut -d: -f1,5 file` | Estrae colonne (`-d:`: definisce delimitatore, `-f`: indica quali campi/colonne estrarre) |
 | `paste file1 file2` | Compone file affiancandoli |
-| `sort [-n] [-r] [-t:] [-k] file` | Ordina righe |
+| `sort [-n] [-r] [-t:] [-k] file` | Ordina righe (`-n`: numerico, `-r`: inverso, `-t:`: delimitatore, `-k`: colonna da usare) |
 | `diff file1 file2` | Mostra differenze tra file |
-| `head [-n N] file` | Prime N righe |
-| `tail [-n N] file` | Ultime N righe |
+| `head [-n N] file` | Visualizza le prime N righe |
+| `tail [-n N] file` | Visualizza le ultime N righe |
 
 ### 4.4 Listing di Processi
 
@@ -435,7 +461,7 @@ Esempio: `root:x:0:0:root:/root:/bin/bash`
 
 ---
 
-## 5. Grep e le Espressioni Regolari
+## 5. Grep e le Espressioni Regolari <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 5.1 Il Comando `grep`
 
@@ -513,7 +539,7 @@ find . -name "*.txt"
 
 ---
 
-## 6. Script Shell
+## 6. Script Shell <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 6.1 Struttura Base
 
@@ -652,7 +678,7 @@ Operatori: `+`, `-`, `/`, `*`, `%`, `**`, `<<`, `>>`, `&`, `|`, `~`, `<`, `<=`, 
 
 ---
 
-## 7. Sed e Awk
+## 7. Sed e Awk <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 7.1 Sed — Stream Editor
 
@@ -953,7 +979,7 @@ awk '{ print $1 | "sort -u" }' file.txt
 
 ---
 
-## 8. Funzioni in Bash
+## 8. Funzioni in Bash <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 8.1 Definizione e Chiamata
 
@@ -1012,7 +1038,7 @@ count_processes () {
 
 ---
 
-## 9. Compilazione C e GCC
+## 9. Compilazione C e GCC <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 9.0 Basi di Programmazione C (vs Java)
 
@@ -1134,7 +1160,7 @@ int main(int argc, char *argv[]) {
 
 ---
 
-## 10. I/O di Basso Livello (System Call)
+## 10. I/O di Basso Livello (System Call) <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 10.1 Concetti Fondamentali
 
@@ -1413,7 +1439,7 @@ int main(int argc, char **argv) {
 
 ---
 
-## 11. Processi Unix
+## 11. Processi Unix <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 11.1 Concetti Fondamentali
 
@@ -1475,6 +1501,40 @@ if (pid < 0) {
     printf("Sono il PADRE, ho appena creato il figlio PID=%d\n", pid);
     wait(NULL);  // Il padre si mette in pausa e aspetta la terminazione del figlio
 }
+```
+
+### 11.3.1 `vfork()`
+
+Simile a `fork()`, ma:
+- **Non copia** lo spazio di indirizzamento
+- Il figlio esegue nello spazio del padre
+- Il figlio esegue **per primo** fino a `exec()` o `_exit()`
+- Usato tipicamente prima di `exec()` per efficienza
+
+**Esempio vfork vs fork:**
+
+```c
+// Esempio fork (copia memoria)
+int variabile_condivisa = 10;
+pid_t pid = fork();
+if (pid == 0) {
+    printf("Figlio (fork): modifica variabile...");
+    variabile_condivisa = 100; // modifica locale, non impatta il padre
+    _exit(0);
+}
+wait(NULL);
+printf("Padre (fork): variabile=%d\n", variabile_condivisa); // sempre 10
+
+// Esempio vfork (condivide memoria finché non c'è exec)
+int variabile_condivisa = 10;
+pid_t pid = vfork();
+if (pid == 0) {
+    printf("Figlio (vfork): modifica variabile...");
+    variabile_condivisa = 100; // modifica VISIBILE al padre!
+    _exit(0);
+}
+wait(NULL);
+printf("Padre (vfork): variabile=%d\n", variabile_condivisa); // vedrà 100
 ```
 
 ### 11.4 Terminazione di Processi
@@ -1547,6 +1607,7 @@ pid_t pid = wait(&status);  // il kernel riempie 'status'
 > Se `exec` ha successo, **non ritorna mai**: il vecchio codice è stato cancellato. Il codice dopo `exec()` viene eseguito solo in caso di errore.
 
 ```c
+// Ogni exec deve essere PRECEDUTA da una fork() o vfork(), viene chiamato dal figlio generato da fork()
 int execl(char *pathname, char *arg0, ... );            // lista argomenti, percorso esatto
 int execv(char *pathname, char *argv[]);                // array argomenti, percorso esatto
 int execlp(char *filename, char *arg0, ... );           // lista argomenti, cerca nel PATH
@@ -1634,39 +1695,6 @@ int main() {
 - File descriptor con flag `FD_CLOEXEC` → vengono chiusi automaticamente al momento di exec
 - Handler dei segnali personalizzati → tornano a `SIG_DFL`
 
-### 11.8 `vfork()`
-
-Simile a `fork()`, ma:
-- **Non copia** lo spazio di indirizzamento
-- Il figlio esegue nello spazio del padre
-- Il figlio esegue **per primo** fino a `exec()` o `_exit()`
-- Usato tipicamente prima di `exec()` per efficienza
-
-**Esempio vfork vs fork:**
-
-```c
-// Esempio fork (copia memoria)
-int variabile_condivisa = 10;
-pid_t pid = fork();
-if (pid == 0) {
-    printf("Figlio (fork): modifica variabile...");
-    variabile_condivisa = 100; // modifica locale, non impatta il padre
-    _exit(0);
-}
-wait(NULL);
-printf("Padre (fork): variabile=%d\n", variabile_condivisa); // sempre 10
-
-// Esempio vfork (condivide memoria finché non c'è exec)
-int variabile_condivisa = 10;
-pid_t pid = vfork();
-if (pid == 0) {
-    printf("Figlio (vfork): modifica variabile...");
-    variabile_condivisa = 100; // modifica VISIBILE al padre!
-    _exit(0);
-}
-wait(NULL);
-printf("Padre (vfork): variabile=%d\n", variabile_condivisa); // vedrà 100
-```
 
 ### 11.9 La funzione `system()`
 
@@ -1875,7 +1903,7 @@ open("/etc/passwd", O_RDONLY);
 
 ---
 
-## 12. Segnali
+## 12. Segnali <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 12.1 Cos'è un Segnale
 
@@ -2063,7 +2091,7 @@ if (sigprocmask(SIG_BLOCK, &mask, &oldmask) == -1) {
 
 ---
 
-## 13. IPC: Pipe, FIFO e Memoria Condivisa (mmap)
+## 13. IPC: Pipe, FIFO e Memoria Condivisa (mmap) <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 13.1 Pipe Ordinarie
 
@@ -2233,7 +2261,7 @@ int msync(void *addr, size_t length, int flags); // Forza l'allineamento su disc
 
 ---
 
-## 14. Thread e Concorrenza
+## 14. Thread e Concorrenza <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 14.1 Motivazioni
 
@@ -2378,7 +2406,7 @@ int pthread_setcanceltype(int type, int *oldtype);
 
 ---
 
-## 15. Sincronizzazione: Mutex, Condition Variable, Semafori
+## 15. Sincronizzazione: Mutex, Condition Variable, Semafori <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 15.1 Il Problema della Sezione Critica
 
@@ -2616,7 +2644,7 @@ void* usa_stampante(void* arg) {
 
 ---
 
-## 16. Problemi Classici di Sincronizzazione
+## 16. Problemi Classici di Sincronizzazione <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 Questi sono i classici problemi teorici e pratici che si affrontano studiando la programmazione concorrente.
 
@@ -2768,7 +2796,7 @@ pthread_mutex_unlock(&mutex);
 
 ---
 
-## 17. Socket — Comunicazione di Rete
+## 17. Socket — Comunicazione di Rete <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 17.1 Concetti Fondamentali
 
@@ -3233,7 +3261,7 @@ Vantaggi: filtraggio automatico del mittente, ricezione di errori ICMP (es. host
 
 ---
 
-## 18. I/O Multiplexing — `select()`
+## 18. I/O Multiplexing — `select()` <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 18.1 Problema
 
@@ -3312,7 +3340,7 @@ Un **unico thread** gestisce listening socket + tutti i socket dei client:
 
 ---
 
-## 19. Gestione Avanzata dei Segnali — `sigaction()` e SIGPIPE
+## 19. Gestione Avanzata dei Segnali — `sigaction()` e SIGPIPE <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 19.1 `sigaction()` vs `signal()`
 
@@ -3367,7 +3395,7 @@ if (n == 0) {
 
 ---
 
-## 20. Broadcast e Multicast UDP
+## 20. Broadcast e Multicast UDP <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 20.1 Broadcast
 
@@ -3456,7 +3484,7 @@ recv(sock, buf, sizeof(buf)-1, 0);
 
 ---
 
-## 21. Comandi di Rete e Risoluzione DNS
+## 21. Comandi di Rete e Risoluzione DNS <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 21.1 Comandi di Diagnostica
 
@@ -3558,7 +3586,7 @@ int main(int argc, char *argv[]) {
 
 ---
 
-## 22. Virtualizzazione
+## 22. Virtualizzazione <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 22.1 Concetti Base
 
@@ -3680,7 +3708,7 @@ L'hypervisor assegna **risorse virtuali** alle VM (vCPU, vRAM, vDisk, vNIC):
 
 ---
 
-## 23. Container: Namespace, Cgroups e OverlayFS
+## 23. Container: Namespace, Cgroups e OverlayFS <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 23.1 Architettura dei Container
 
@@ -3852,7 +3880,7 @@ cat lower/file.txt           # il file originale è ancora intatto
 
 ---
 
-## 24. Docker
+## 24. Docker <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 ### 24.1 Cos'è Docker
 
@@ -4148,7 +4176,7 @@ docker compose down -v              # ferma e rimuove anche i volumi dichiarati
 
 ---
 
-## 25. Soluzioni Esercizi d'Esame
+## 25. Soluzioni Esercizi d'Esame <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 Di seguito sono riportate le soluzioni agli esercizi d'esame mostrati nelle immagini, utili per verificare la propria preparazione e ripassare i concetti.
 
@@ -4238,7 +4266,7 @@ Visualizzerà la stringa **nodo2**. Passando flag `--hostname` si invoca il dist
 
 ---
 
-## 26. Guida Rapida alle Parole Chiave
+## 26. Guida Rapida alle Parole Chiave <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
 Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, contenente le parole chiave e i concetti fondamentali di LSO.
 
@@ -4297,3 +4325,395 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 * **Cgroups (Control Groups)**: Sotto-Sistema di Linux volto a contingentarne le capienze (limitare RAM, soglie cicli CPU, massimali I/O disco).
 * **OverlayFS**: Union file system stratificato. Genera il paradigma dei Container disponendo l'immagine originaria Docker in un layer *ReadOnly* (`lowerdir`) ponendovi sopra lo strato transitorio *Writable* in cui salvare modifiche (`upperdir`).
 * **Docker**: Piattaforma standard per confezionare ed eseguire container; automatizza tramite `Dockerfile` le build e coordina networking nativo e persistenza via `Volumes`.
+
+
+---
+
+## Indice Dettagliato delle Sottosezioni
+
+
+### Indice delle Sottosezioni - Capitolo 1
+
+- [1.1 Cos'è un Sistema Operativo](#11-cos-un-sistema-operativo)
+
+- [1.2 Il Kernel](#12-il-kernel)
+
+- [1.3 Storia di Unix](#13-storia-di-unix)
+
+- [1.4 Architettura di Sistema Unix](#14-architettura-di-sistema-unix)
+
+- [1.5 System Call e Libreria Standard C](#15-system-call-e-libreria-standard-c)
+
+- [1.6 Sistema Multi-utente](#16-sistema-multi-utente)
+
+
+
+### Indice delle Sottosezioni - Capitolo 2
+
+- [2.1 Caratteristiche Generali](#21-caratteristiche-generali)
+
+- [2.2 Tipi di File](#22-tipi-di-file)
+
+- [2.3 i-node e Metadati](#23-i-node-e-metadati)
+
+- [2.4 Directory](#24-directory)
+
+- [2.5 Pathname](#25-pathname)
+
+- [2.6 Directory Tipiche](#26-directory-tipiche)
+
+- [2.7 Home e Working Directory](#27-home-e-working-directory)
+
+- [2.8 Permessi dei File](#28-permessi-dei-file)
+
+- [2.9 Link](#29-link)
+
+- [2.10 File System Montabile](#210-file-system-montabile)
+
+- [2.11 Comando `stat`](#211-comando-stat)
+
+
+
+### Indice delle Sottosezioni - Capitolo 3
+
+- [3.1 Cos'è la Shell](#31-cos-la-shell)
+
+- [3.2 File di Inizializzazione](#32-file-di-inizializzazione)
+
+- [3.3 Variabili di Shell](#33-variabili-di-shell)
+
+- [3.4 Formato dei Comandi](#34-formato-dei-comandi)
+
+- [3.5 Redirezione I/O](#35-redirezione-io)
+
+- [3.6 Pipe](#36-pipe)
+
+- [3.7 Metacaratteri e Wildcard](#37-metacaratteri-e-wildcard)
+
+- [3.8 Quoting](#38-quoting)
+
+
+
+### Indice delle Sottosezioni - Capitolo 4
+
+- [4.1 Gestione Directory](#41-gestione-directory)
+
+- [4.2 Gestione File](#42-gestione-file)
+
+- [4.3 Comandi di Utilità su Testo](#43-comandi-di-utilit-su-testo)
+
+- [4.4 Listing di Processi](#44-listing-di-processi)
+
+- [4.5 Il file `/etc/passwd`](#45-il-file-etcpasswd)
+
+
+
+### Indice delle Sottosezioni - Capitolo 5
+
+- [5.1 Il Comando `grep`](#51-il-comando-grep)
+
+- [5.2 Espressioni Regolari Base (BRE)](#52-espressioni-regolari-base-bre)
+
+- [5.3 Espressioni Regolari Estese (ERE)](#53-espressioni-regolari-estese-ere)
+
+- [5.4 Esempi Pratici](#54-esempi-pratici)
+
+
+
+### Indice delle Sottosezioni - Capitolo 6
+
+- [6.1 Struttura Base](#61-struttura-base)
+
+- [6.2 Variabili Predefinite negli Script](#62-variabili-predefinite-negli-script)
+
+- [6.3 Exit Status](#63-exit-status)
+
+- [6.4 Operatori su Comandi](#64-operatori-su-comandi)
+
+- [6.5 Strutture di Controllo](#65-strutture-di-controllo)
+
+- [6.6 Sostituzione Aritmetica](#66-sostituzione-aritmetica)
+
+
+
+### Indice delle Sottosezioni - Capitolo 7
+
+- [7.1 Sed — Stream Editor](#71-sed--stream-editor)
+
+- [7.2 Awk — Linguaggio di Elaborazione Testuale](#72-awk--linguaggio-di-elaborazione-testuale)
+
+
+
+### Indice delle Sottosezioni - Capitolo 8
+
+- [8.1 Definizione e Chiamata](#81-definizione-e-chiamata)
+
+- [8.2 Parametri Interni](#82-parametri-interni)
+
+- [8.3 Esempi](#83-esempi)
+
+
+
+### Indice delle Sottosezioni - Capitolo 9
+
+- [9.0 Basi di Programmazione C (vs Java)](#90-basi-di-programmazione-c-vs-java)
+
+- [9.1 Il Compilatore GCC](#91-il-compilatore-gcc)
+
+- [9.2 Opzioni di GCC](#92-opzioni-di-gcc)
+
+- [9.3 Debug con GDB](#93-debug-con-gdb)
+
+- [9.4 Funzione Main in C](#94-funzione-main-in-c)
+
+- [9.5 Layout di Memoria di un Processo](#95-layout-di-memoria-di-un-processo)
+
+- [9.6 Formato ELF e Linking](#96-formato-elf-e-linking)
+
+
+
+### Indice delle Sottosezioni - Capitolo 10
+
+- [10.1 Concetti Fondamentali](#101-concetti-fondamentali)
+
+- [10.2 Le Cinque System Call Fondamentali](#102-le-cinque-system-call-fondamentali)
+
+- [10.3 Offset e `lseek`](#103-offset-e-lseek)
+
+- [10.4 Gestione Errori con `errno` e `perror`](#104-gestione-errori-con-errno-e-perror)
+
+- [10.5 Implementazione nel Kernel](#105-implementazione-nel-kernel)
+
+- [10.6 Duplicazione File Descriptor — `dup` e `dup2`](#106-duplicazione-file-descriptor--dup-e-dup2)
+
+- [10.7 Struttura `stat`](#107-struttura-stat)
+
+- [10.8 Esempio Completo: Copia tra File](#108-esempio-completo-copia-tra-file)
+
+
+
+### Indice delle Sottosezioni - Capitolo 11
+
+- [11.1 Concetti Fondamentali](#111-concetti-fondamentali)
+
+- [11.2 Ottenere PID](#112-ottenere-pid)
+
+- [11.3 Creazione di Processi — `fork()`](#113-creazione-di-processi--fork)
+
+- [11.4 Terminazione di Processi](#114-terminazione-di-processi)
+
+- [11.5 Processi Zombie e Orfani](#115-processi-zombie-e-orfani)
+
+- [11.6 `wait()` e `waitpid()`](#116-wait-e-waitpid)
+
+- [11.7 La Famiglia `exec`](#117-la-famiglia-exec)
+
+- [11.8 `vfork()`](#118-vfork)
+
+- [11.9 La funzione `system()`](#119-la-funzione-system)
+
+- [11.10 Ambiente di un Processo: `getenv` e `putenv`](#1110-ambiente-di-un-processo-getenv-e-putenv)
+
+- [11.11 `chdir` e `chroot` — Cambiare directory e root](#1111-chdir-e-chroot--cambiare-directory-e-root)
+
+
+
+### Indice delle Sottosezioni - Capitolo 12
+
+- [12.1 Cos'è un Segnale](#121-cos-un-segnale)
+
+- [12.2 Segnali Principali](#122-segnali-principali)
+
+- [12.3 Azioni Possibili](#123-azioni-possibili)
+
+- [12.4 Catturare un Segnale — `signal()`](#124-catturare-un-segnale--signal)
+
+- [12.4.2 Azione di Default — `signal()`](#1242-azione-di-default--signal)
+
+- [12.5 Inviare Segnali](#125-inviare-segnali)
+
+- [12.6 Alarm — Sveglia](#126-alarm--sveglia)
+
+- [12.7 Insiemi di Segnali e Maschere](#127-insiemi-di-segnali-e-maschere)
+
+
+
+### Indice delle Sottosezioni - Capitolo 13
+
+- [13.1 Pipe Ordinarie](#131-pipe-ordinarie)
+
+- [13.2 Pipe con Nome (FIFO)](#132-pipe-con-nome-fifo)
+
+- [13.3 Memoria Condivisa con `mmap`](#133-memoria-condivisa-con-mmap)
+
+
+
+### Indice delle Sottosezioni - Capitolo 14
+
+- [14.1 Motivazioni](#141-motivazioni)
+
+- [14.2 Concorrenza vs Parallelismo](#142-concorrenza-vs-parallelismo)
+
+- [14.3 Modelli di Multithreading](#143-modelli-di-multithreading)
+
+- [14.4 API POSIX Pthreads](#144-api-posix-pthreads)
+
+- [14.5 Thread in Linux](#145-thread-in-linux)
+
+- [14.6 Cancellazione Thread](#146-cancellazione-thread)
+
+
+
+### Indice delle Sottosezioni - Capitolo 15
+
+- [15.1 Il Problema della Sezione Critica](#151-il-problema-della-sezione-critica)
+
+- [15.2 Mutex — Mutua Esclusione](#152-mutex--mutua-esclusione)
+
+- [15.3 Condition Variable — Variabili di Condizione](#153-condition-variable--variabili-di-condizione)
+
+- [15.4 Semafori POSIX](#154-semafori-posix)
+
+
+
+### Indice delle Sottosezioni - Capitolo 16
+
+- [16.1 Bounded-Buffer (Produttore-Consumatore)](#161-bounded-buffer-produttore-consumatore)
+
+- [16.2 Readers-Writers (Lettori-Scrittori)](#162-readers-writers-lettori-scrittori)
+
+
+
+### Indice delle Sottosezioni - Capitolo 17
+
+- [17.1 Concetti Fondamentali](#171-concetti-fondamentali)
+
+- [17.2 Le fasi di una connessione TCP (SOCK_STREAM)](#172-le-fasi-di-una-connessione-tcp-sockstream)
+
+- [17.3 Indirizzi e il problema del "Byte Order" (Endianness)](#173-indirizzi-e-il-problema-del-byte-order-endianness)
+
+- [17.4 Socket Locali (AF_LOCAL / Unix Domain Sockets)](#174-socket-locali-aflocal--unix-domain-sockets)
+
+- [17.5 Server TCP Completo](#175-server-tcp-completo)
+
+- [17.6 Client TCP Completo](#176-client-tcp-completo)
+
+- [17.7 `send()` e `recv()`](#177-send-e-recv)
+
+- [17.8 Scambio Dati Binari — Network Byte Order](#178-scambio-dati-binari--network-byte-order)
+
+- [17.9 Lettura e Scrittura Safe](#179-lettura-e-scrittura-safe)
+
+- [17.10 Socket UDP](#1710-socket-udp)
+
+- [17.11 Server Concorrente](#1711-server-concorrente)
+
+- [17.12 Opzioni Socket (`setsockopt`)](#1712-opzioni-socket-setsockopt)
+
+- [17.13 Socket Non Bloccante](#1713-socket-non-bloccante)
+
+- [17.14 Pattern `recv_all` / `send_all` (lettura/scrittura safe)](#1714-pattern-recvall--sendall-letturascrittura-safe)
+
+- [17.15 Server Concorrente — Anti-Zombie con SIGCHLD](#1715-server-concorrente--anti-zombie-con-sigchld)
+
+- [17.16 `connect()` con UDP](#1716-connect-con-udp)
+
+
+
+### Indice delle Sottosezioni - Capitolo 18
+
+- [18.1 Problema](#181-problema)
+
+- [18.2 La Funzione `select()`](#182-la-funzione-select)
+
+- [18.3 Macro per `fd_set`](#183-macro-per-fdset)
+
+- [18.4 Quando un fd è "pronto"](#184-quando-un-fd--pronto)
+
+- [18.5 Esempio — Select su stdin con timeout](#185-esempio--select-su-stdin-con-timeout)
+
+- [18.6 Server Multiplexing con `select()`](#186-server-multiplexing-con-select)
+
+
+
+### Indice delle Sottosezioni - Capitolo 19
+
+- [19.1 `sigaction()` vs `signal()`](#191-sigaction-vs-signal)
+
+- [19.2 Gestione di `EINTR` manuale](#192-gestione-di-eintr-manuale)
+
+- [19.3 Gestione di `SIGPIPE`](#193-gestione-di-sigpipe)
+
+
+
+### Indice delle Sottosezioni - Capitolo 20
+
+- [20.1 Broadcast](#201-broadcast)
+
+- [20.2 Multicast](#202-multicast)
+
+- [20.3 Protocolli di Rete per il Multicast](#203-protocolli-di-rete-per-il-multicast)
+
+
+
+### Indice delle Sottosezioni - Capitolo 21
+
+- [21.1 Comandi di Diagnostica](#211-comandi-di-diagnostica)
+
+- [21.2 Risoluzione DNS in C — `getaddrinfo()`](#212-risoluzione-dns-in-c--getaddrinfo)
+
+
+
+### Indice delle Sottosezioni - Capitolo 22
+
+- [22.1 Concetti Base](#221-concetti-base)
+
+- [22.2 Simulazione, Emulazione, Virtualizzazione](#222-simulazione-emulazione-virtualizzazione)
+
+- [22.3 Tipi di Hypervisor](#223-tipi-di-hypervisor)
+
+- [22.4 Tecniche di Virtualizzazione](#224-tecniche-di-virtualizzazione)
+
+- [22.5 Virtualizzazione HW-Assisted](#225-virtualizzazione-hw-assisted)
+
+- [22.6 KVM (Linux), Hyper-V (Windows), macOS](#226-kvm-linux-hyper-v-windows-macos)
+
+- [22.7 VM vs Container](#227-vm-vs-container)
+
+- [22.8 Gestione delle Risorse nell'Hypervisor](#228-gestione-delle-risorse-nellhypervisor)
+
+- [22.9 Confronto WSL2 vs VMware Workstation](#229-confronto-wsl2-vs-vmware-workstation)
+
+
+
+### Indice delle Sottosezioni - Capitolo 23
+
+- [23.1 Architettura dei Container](#231-architettura-dei-container)
+
+- [23.2 Namespace](#232-namespace)
+
+- [23.3 PID Namespace — Gerarchia](#233-pid-namespace--gerarchia)
+
+- [23.4 Cgroups (Control Groups)](#234-cgroups-control-groups)
+
+- [23.5 OverlayFS — Filesystem a Strati](#235-overlayfs--filesystem-a-strati)
+
+
+
+### Indice delle Sottosezioni - Capitolo 24
+
+- [24.1 Cos'è Docker](#241-cos-docker)
+
+- [24.2 Comandi Base](#242-comandi-base)
+
+- [24.3 Networking Docker](#243-networking-docker)
+
+- [24.4 Dockerfile](#244-dockerfile)
+
+- [24.5 Docker Compose](#245-docker-compose)
+
+- [24.6 Limiti sulle Risorse (cgroups in Docker)](#246-limiti-sulle-risorse-cgroups-in-docker)
+
+- [24.7 Volumi — Persistenza dei Dati](#247-volumi--persistenza-dei-dati)
+
+
