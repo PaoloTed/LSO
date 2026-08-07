@@ -518,13 +518,22 @@ Sintassi usabili solamente in `egrep`:
 |----------|-------------|
 | `exp+` | Una o più occorrenze |
 | `exp?` | Zero o una occorrenza |
+| `exp{n,m}` | Da n a m occorrenze |
 | `exp1 \| exp2` | exp1 oppure exp2 |
-| `\( exp \)` | Raggruppamento |
+| `( exp )` | Raggruppamento |
 
 ### 5.4 Esempi Pratici
 
+> [!NOTE]
+> **Attenzione alla Brace Expansion in Bash con `{n,m}`**:
+> Quando usi il moltiplicatore numerico, è **obbligatorio** racchiudere l'intera espressione in apici singoli (es. `egrep '1{1,2}'`). Se lasci le parentesi graffe fuori (es. `egrep '1'{1,2}`), Bash le espanderà prima di eseguire il comando (diventando `egrep 11 12`), causando errori come `grep: 12: File non trovato`.
+> 
+> Inoltre `grep` cerca **sottostringhe** nell'intera riga: `egrep 'P{1,2}'`, cerca se è presente almeno una sottostringa di 'P' composta da 1 a 2 volte consecutive (il che significa che cercherà 'P' e 'PP'), non una riga che contiene esattamente due 'P'.
+
+
 ```bash
-# Righe che iniziano con 'a' e finiscono con 'b'
+# Righe che iniziano con 'a' e
+ finiscono con 'b'
 grep '^a.*b$' file
 
 # File con permesso di esecuzione per il proprietario
@@ -576,9 +585,18 @@ echo "Hello world!"
 ls
 ```
 
-### 6.2 Variabili Predefinite negli Script
+### 6.2 Variabili negli Script
 
-| Variabile | Significato |
+In Bash, le variabili si assegnano **senza spazi attorno al segno di uguale (`=`)**. 
+Se si inseriscono spazi, Bash interpreterà la prima parola come un comando da eseguire.
+
+> [!WARNING]
+> **Corretto:** `ris=$(somma 4 7)` oppure `nome="Paolo"`
+> **Sbagliato:** `ris = $(somma 4 7)` *(restituisce l'errore `comando non trovato`)*
+
+#### Variabili Predefinite
+
+| Variabile | Significato |\
 |-----------|-------------|
 | `$0` | Nome dello script (argv[0]) |
 | `$1` … `$9` | Parametri da riga di comando |

@@ -7,3 +7,9 @@ if [ $# -lt 1 ]; then
 else
 	echo "$1"
 fi
+
+somma() {
+	echo $(($1 + $2))
+}
+ris = $(somma 4 7)
+echo "Risultato: $ris"
