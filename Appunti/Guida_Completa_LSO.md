@@ -9,87 +9,88 @@
 ## Indice
 
 
-1. [Introduzione ai Sistemi Operativi e Unix](#1-introduzione-ai-sistemi-operativi-e-unix) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-1)
+1. [Introduzione ai Sistemi Operativi e Unix](#1-introduzione-ai-sistemi-operativi-e-unix) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-1)
 
 
-2. [Il File System Unix](#2-il-file-system-unix) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-2)
+2. [Il File System Unix](#2-il-file-system-unix) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-2)
 
 
-3. [La Shell Bash](#3-la-shell-bash) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-3)
+3. [La Shell Bash](#3-la-shell-bash) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-3)
 
 
-4. [Comandi Unix Fondamentali](#4-comandi-unix-fondamentali) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-4)
+4. [Comandi Unix Fondamentali](#4-comandi-unix-fondamentali) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-4)
 
 
-5. [Grep e le Espressioni Regolari](#5-grep-e-le-espressioni-regolari) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-5)
+5. [Grep e le Espressioni Regolari](#5-grep-e-le-espressioni-regolari) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-5)
 
 
-6. [Script Shell](#6-script-shell) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-6)
+6. [Script Shell](#6-script-shell) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-6)
 
 
-7. [Sed e Awk](#7-sed-e-awk) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-7)
+7. [Sed e Awk](#7-sed-e-awk) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-7)
 
 
-8. [Funzioni in Bash](#8-funzioni-in-bash) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-8)
+8. [Funzioni in Bash](#8-funzioni-in-bash) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-8)
 
 
-9. [Compilazione C e GCC](#9-compilazione-c-e-gcc) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-9)
+9. [Compilazione C e GCC](#9-compilazione-c-e-gcc) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-9)
 
 
-10. [I/O di Basso Livello (System Call)](#10-io-di-basso-livello-system-call) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-10)
+10. [I/O di Basso Livello (System Call)](#10-io-di-basso-livello-system-call) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-10)
 
 
-11. [Processi Unix](#11-processi-unix) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-11)
+11. [Processi Unix](#11-processi-unix) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-11)
 
 
-12. [Segnali](#12-segnali) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-12)
+12. [Segnali](#12-segnali) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-12)
 
 
-13. [IPC: Pipe, FIFO e Memoria Condivisa (mmap)](#13-ipc-pipe-fifo-e-memoria-condivisa-mmap) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-13)
+13. [IPC: Pipe, FIFO e Memoria Condivisa (mmap)](#13-ipc-pipe-fifo-e-memoria-condivisa-mmap) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-13)
 
 
-14. [Thread e Concorrenza](#14-thread-e-concorrenza) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-14)
+14. [Thread e Concorrenza](#14-thread-e-concorrenza) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-14)
 
 
-15. [Sincronizzazione: Mutex, Condition Variable, Semafori](#15-sincronizzazione-mutex-condition-variable-semafori) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-15)
+15. [Sincronizzazione: Mutex, Condition Variable, Semafori](#15-sincronizzazione-mutex-condition-variable-semafori) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-15)
 
 
-16. [Problemi Classici di Sincronizzazione](#16-problemi-classici-di-sincronizzazione) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-16)
+16. [Problemi Classici di Sincronizzazione](#16-problemi-classici-di-sincronizzazione) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-16)
 
 
-17. [Socket — Comunicazione di Rete](#17-socket--comunicazione-di-rete) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-17)
+17. [Socket — Comunicazione di Rete](#17-socket--comunicazione-di-rete) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-17)
 
 
-18. [I/O Multiplexing — `select()`](#18-io-multiplexing--select) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-18)
+18. [I/O Multiplexing — `select()`](#18-io-multiplexing--select) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-18)
 
 
-19. [Gestione Avanzata dei Segnali — `sigaction()` e SIGPIPE](#19-gestione-avanzata-dei-segnali--sigaction-e-sigpipe) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-19)
+19. [Gestione Avanzata dei Segnali — `sigaction()` e SIGPIPE](#19-gestione-avanzata-dei-segnali--sigaction-e-sigpipe) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-19)
 
 
-20. [Broadcast e Multicast UDP](#20-broadcast-e-multicast-udp) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-20)
+20. [Broadcast e Multicast UDP](#20-broadcast-e-multicast-udp) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-20)
 
 
-21. [Comandi di Rete e Risoluzione DNS](#21-comandi-di-rete-e-risoluzione-dns) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-21)
+21. [Comandi di Rete e Risoluzione DNS](#21-comandi-di-rete-e-risoluzione-dns) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-21)
 
 
-22. [Virtualizzazione](#22-virtualizzazione) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-22)
+22. [Virtualizzazione](#22-virtualizzazione) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-22)
 
 
-23. [Container: Namespace, Cgroups e OverlayFS](#23-container-namespace-cgroups-e-overlayfs) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-23)
+23. [Container: Namespace, Cgroups e OverlayFS](#23-container-namespace-cgroups-e-overlayfs) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-23)
 
 
-24. [Docker](#24-docker) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-24)
+24. [Docker](#24-docker) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-24)
 
 
-25. [Soluzioni Esercizi d'Esame](#25-soluzioni-esercizi-desame) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-25)
+25. [Soluzioni Esercizi d'Esame](#25-soluzioni-esercizi-desame) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-25)
 
 
-26. [Guida Rapida alle Parole Chiave](#26-guida-rapida-alle-parole-chiave) — [Sottosezioni](#indice-delle-sottosezioni---capitolo-26)
+26. [Guida Rapida alle Parole Chiave](#26-guida-rapida-alle-parole-chiave) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-26)
 
 
 ---
 
-## 1. Introduzione ai Sistemi Operativi e Unix <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 1. Introduzione ai Sistemi Operativi e Unix
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 1.1 Cos'è un Sistema Operativo
 
@@ -166,7 +167,8 @@ Le **chiamate al sistema (system call)** sono l'interfaccia con cui i programmi 
 
 ---
 
-## 2. Il File System Unix <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 2. Il File System Unix
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 2.1 Caratteristiche Generali
 
@@ -288,7 +290,8 @@ Mostra informazioni dettagliate di un file (metadati dall'inode):
 
 ---
 
-## 3. La Shell Bash <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 3. La Shell Bash
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 3.1 Cos'è la Shell
 
@@ -410,7 +413,8 @@ ls | grep -v pluto | tail -3 | head -1  # come funziona e cosa fa verra' spiegat
 
 ---
 
-## 4. Comandi Unix Fondamentali <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 4. Comandi Unix Fondamentali
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 4.1 Gestione Directory
 
@@ -487,7 +491,8 @@ Esempio: `root:x:0:0:root:/root:/bin/bash`
 
 ---
 
-## 5. Grep e le Espressioni Regolari <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 5. Grep e le Espressioni Regolari
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 5.1 Il Comando `grep`
 
@@ -565,7 +570,8 @@ find . -name "*.txt"
 
 ---
 
-## 6. Script Shell <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 6. Script Shell
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 6.1 Struttura Base
 
@@ -704,7 +710,8 @@ Operatori: `+`, `-`, `/`, `*`, `%`, `**`, `<<`, `>>`, `&`, `|`, `~`, `<`, `<=`, 
 
 ---
 
-## 7. Sed e Awk <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 7. Sed e Awk
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 7.1 Sed — Stream Editor
 
@@ -1013,7 +1020,8 @@ awk '{ print $1 | "sort -u" }' file.txt
 
 ---
 
-## 8. Funzioni in Bash <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 8. Funzioni in Bash
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 8.1 Definizione e Chiamata
 
@@ -1072,7 +1080,8 @@ count_processes () {
 
 ---
 
-## 9. Compilazione C e GCC <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 9. Compilazione C e GCC
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 9.0 Basi di Programmazione C (vs Java)
 
@@ -1194,7 +1203,8 @@ int main(int argc, char *argv[]) {
 
 ---
 
-## 10. I/O di Basso Livello (System Call) <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 10. I/O di Basso Livello (System Call)
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 10.1 Concetti Fondamentali
 
@@ -1480,7 +1490,8 @@ int main(int argc, char **argv) {
 
 ---
 
-## 11. Processi Unix <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 11. Processi Unix
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 11.1 Concetti Fondamentali
 
@@ -1944,7 +1955,8 @@ open("/etc/passwd", O_RDONLY);
 
 ---
 
-## 12. Segnali <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 12. Segnali
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 12.1 Cos'è un Segnale
 
@@ -2132,7 +2144,8 @@ if (sigprocmask(SIG_BLOCK, &mask, &oldmask) == -1) {
 
 ---
 
-## 13. IPC: Pipe, FIFO e Memoria Condivisa (mmap) <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 13. IPC: Pipe, FIFO e Memoria Condivisa (mmap)
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 13.1 Pipe Ordinarie
 
@@ -2302,7 +2315,8 @@ int msync(void *addr, size_t length, int flags); // Forza l'allineamento su disc
 
 ---
 
-## 14. Thread e Concorrenza <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 14. Thread e Concorrenza
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 14.1 Motivazioni
 
@@ -2447,7 +2461,8 @@ int pthread_setcanceltype(int type, int *oldtype);
 
 ---
 
-## 15. Sincronizzazione: Mutex, Condition Variable, Semafori <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 15. Sincronizzazione: Mutex, Condition Variable, Semafori
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 15.1 Il Problema della Sezione Critica
 
@@ -2685,7 +2700,8 @@ void* usa_stampante(void* arg) {
 
 ---
 
-## 16. Problemi Classici di Sincronizzazione <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 16. Problemi Classici di Sincronizzazione
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 Questi sono i classici problemi teorici e pratici che si affrontano studiando la programmazione concorrente.
 
@@ -2837,7 +2853,8 @@ pthread_mutex_unlock(&mutex);
 
 ---
 
-## 17. Socket — Comunicazione di Rete <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 17. Socket — Comunicazione di Rete
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 17.1 Concetti Fondamentali
 
@@ -3302,7 +3319,8 @@ Vantaggi: filtraggio automatico del mittente, ricezione di errori ICMP (es. host
 
 ---
 
-## 18. I/O Multiplexing — `select()` <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 18. I/O Multiplexing — `select()`
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 18.1 Problema
 
@@ -3381,7 +3399,8 @@ Un **unico thread** gestisce listening socket + tutti i socket dei client:
 
 ---
 
-## 19. Gestione Avanzata dei Segnali — `sigaction()` e SIGPIPE <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 19. Gestione Avanzata dei Segnali — `sigaction()` e SIGPIPE
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 19.1 `sigaction()` vs `signal()`
 
@@ -3436,7 +3455,8 @@ if (n == 0) {
 
 ---
 
-## 20. Broadcast e Multicast UDP <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 20. Broadcast e Multicast UDP
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 20.1 Broadcast
 
@@ -3525,7 +3545,8 @@ recv(sock, buf, sizeof(buf)-1, 0);
 
 ---
 
-## 21. Comandi di Rete e Risoluzione DNS <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 21. Comandi di Rete e Risoluzione DNS
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 21.1 Comandi di Diagnostica
 
@@ -3627,7 +3648,8 @@ int main(int argc, char *argv[]) {
 
 ---
 
-## 22. Virtualizzazione <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 22. Virtualizzazione
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 22.1 Concetti Base
 
@@ -3749,7 +3771,8 @@ L'hypervisor assegna **risorse virtuali** alle VM (vCPU, vRAM, vDisk, vNIC):
 
 ---
 
-## 23. Container: Namespace, Cgroups e OverlayFS <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 23. Container: Namespace, Cgroups e OverlayFS
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 23.1 Architettura dei Container
 
@@ -3921,7 +3944,8 @@ cat lower/file.txt           # il file originale è ancora intatto
 
 ---
 
-## 24. Docker <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 24. Docker
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 ### 24.1 Cos'è Docker
 
@@ -4217,7 +4241,8 @@ docker compose down -v              # ferma e rimuove anche i volumi dichiarati
 
 ---
 
-## 25. Soluzioni Esercizi d'Esame <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 25. Soluzioni Esercizi d'Esame
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 Di seguito sono riportate le soluzioni agli esercizi d'esame mostrati nelle immagini, utili per verificare la propria preparazione e ripassare i concetti.
 
@@ -4307,7 +4332,8 @@ Visualizzerà la stringa **nodo2**. Passando flag `--hostname` si invoca il dist
 
 ---
 
-## 26. Guida Rapida alle Parole Chiave <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+## 26. Guida Rapida alle Parole Chiave
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, contenente le parole chiave e i concetti fondamentali di LSO.
 
@@ -4376,7 +4402,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 ## Indice Dettagliato delle Sottosezioni
 
 
-### Indice delle Sottosezioni - Capitolo 1
+### Indice delle Sottosezioni Capitolo 1
 
 
 - [1.1 Cos'è un Sistema Operativo](#11-cos-un-sistema-operativo)
@@ -4397,7 +4423,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [1.6 Sistema Multi-utente](#16-sistema-multi-utente)
 
 
-### Indice delle Sottosezioni - Capitolo 2
+### Indice delle Sottosezioni Capitolo 2
 
 
 - [2.1 Caratteristiche Generali](#21-caratteristiche-generali)
@@ -4433,7 +4459,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [2.11 Comando `stat`](#211-comando-stat)
 
 
-### Indice delle Sottosezioni - Capitolo 3
+### Indice delle Sottosezioni Capitolo 3
 
 
 - [3.1 Cos'è la Shell](#31-cos-la-shell)
@@ -4460,7 +4486,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [3.8 Quoting](#38-quoting)
 
 
-### Indice delle Sottosezioni - Capitolo 4
+### Indice delle Sottosezioni Capitolo 4
 
 
 - [4.1 Gestione Directory](#41-gestione-directory)
@@ -4478,7 +4504,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [4.5 Il file `/etc/passwd`](#45-il-file-etcpasswd)
 
 
-### Indice delle Sottosezioni - Capitolo 5
+### Indice delle Sottosezioni Capitolo 5
 
 
 - [5.1 Il Comando `grep`](#51-il-comando-grep)
@@ -4493,7 +4519,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [5.4 Esempi Pratici](#54-esempi-pratici)
 
 
-### Indice delle Sottosezioni - Capitolo 6
+### Indice delle Sottosezioni Capitolo 6
 
 
 - [6.1 Struttura Base](#61-struttura-base)
@@ -4514,7 +4540,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [6.6 Sostituzione Aritmetica](#66-sostituzione-aritmetica)
 
 
-### Indice delle Sottosezioni - Capitolo 7
+### Indice delle Sottosezioni Capitolo 7
 
 
 - [7.1 Sed — Stream Editor](#71-sed--stream-editor)
@@ -4523,7 +4549,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [7.2 Awk — Linguaggio di Elaborazione Testuale](#72-awk--linguaggio-di-elaborazione-testuale)
 
 
-### Indice delle Sottosezioni - Capitolo 8
+### Indice delle Sottosezioni Capitolo 8
 
 
 - [8.1 Definizione e Chiamata](#81-definizione-e-chiamata)
@@ -4535,7 +4561,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [8.3 Esempi](#83-esempi)
 
 
-### Indice delle Sottosezioni - Capitolo 9
+### Indice delle Sottosezioni Capitolo 9
 
 
 - [9.0 Basi di Programmazione C (vs Java)](#90-basi-di-programmazione-c-vs-java)
@@ -4559,7 +4585,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [9.6 Formato ELF e Linking](#96-formato-elf-e-linking)
 
 
-### Indice delle Sottosezioni - Capitolo 10
+### Indice delle Sottosezioni Capitolo 10
 
 
 - [10.1 Concetti Fondamentali](#101-concetti-fondamentali)
@@ -4586,7 +4612,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [10.8 Esempio Completo: Copia tra File](#108-esempio-completo-copia-tra-file)
 
 
-### Indice delle Sottosezioni - Capitolo 11
+### Indice delle Sottosezioni Capitolo 11
 
 
 - [11.1 Concetti Fondamentali](#111-concetti-fondamentali)
@@ -4622,7 +4648,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [11.11 `chdir` e `chroot` — Cambiare directory e root](#1111-chdir-e-chroot--cambiare-directory-e-root)
 
 
-### Indice delle Sottosezioni - Capitolo 12
+### Indice delle Sottosezioni Capitolo 12
 
 
 - [12.1 Cos'è un Segnale](#121-cos-un-segnale)
@@ -4652,7 +4678,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [12.7 Insiemi di Segnali e Maschere](#127-insiemi-di-segnali-e-maschere)
 
 
-### Indice delle Sottosezioni - Capitolo 13
+### Indice delle Sottosezioni Capitolo 13
 
 
 - [13.1 Pipe Ordinarie](#131-pipe-ordinarie)
@@ -4664,7 +4690,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [13.3 Memoria Condivisa con `mmap`](#133-memoria-condivisa-con-mmap)
 
 
-### Indice delle Sottosezioni - Capitolo 14
+### Indice delle Sottosezioni Capitolo 14
 
 
 - [14.1 Motivazioni](#141-motivazioni)
@@ -4685,7 +4711,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [14.6 Cancellazione Thread](#146-cancellazione-thread)
 
 
-### Indice delle Sottosezioni - Capitolo 15
+### Indice delle Sottosezioni Capitolo 15
 
 
 - [15.1 Il Problema della Sezione Critica](#151-il-problema-della-sezione-critica)
@@ -4700,7 +4726,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [15.4 Semafori POSIX](#154-semafori-posix)
 
 
-### Indice delle Sottosezioni - Capitolo 16
+### Indice delle Sottosezioni Capitolo 16
 
 
 - [16.1 Bounded-Buffer (Produttore-Consumatore)](#161-bounded-buffer-produttore-consumatore)
@@ -4709,7 +4735,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [16.2 Readers-Writers (Lettori-Scrittori)](#162-readers-writers-lettori-scrittori)
 
 
-### Indice delle Sottosezioni - Capitolo 17
+### Indice delle Sottosezioni Capitolo 17
 
 
 - [17.1 Concetti Fondamentali](#171-concetti-fondamentali)
@@ -4760,7 +4786,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [17.16 `connect()` con UDP](#1716-connect-con-udp)
 
 
-### Indice delle Sottosezioni - Capitolo 18
+### Indice delle Sottosezioni Capitolo 18
 
 
 - [18.1 Problema](#181-problema)
@@ -4781,7 +4807,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [18.6 Server Multiplexing con `select()`](#186-server-multiplexing-con-select)
 
 
-### Indice delle Sottosezioni - Capitolo 19
+### Indice delle Sottosezioni Capitolo 19
 
 
 - [19.1 `sigaction()` vs `signal()`](#191-sigaction-vs-signal)
@@ -4793,7 +4819,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [19.3 Gestione di `SIGPIPE`](#193-gestione-di-sigpipe)
 
 
-### Indice delle Sottosezioni - Capitolo 20
+### Indice delle Sottosezioni Capitolo 20
 
 
 - [20.1 Broadcast](#201-broadcast)
@@ -4805,7 +4831,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [20.3 Protocolli di Rete per il Multicast](#203-protocolli-di-rete-per-il-multicast)
 
 
-### Indice delle Sottosezioni - Capitolo 21
+### Indice delle Sottosezioni Capitolo 21
 
 
 - [21.1 Comandi di Diagnostica](#211-comandi-di-diagnostica)
@@ -4814,7 +4840,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [21.2 Risoluzione DNS in C — `getaddrinfo()`](#212-risoluzione-dns-in-c--getaddrinfo)
 
 
-### Indice delle Sottosezioni - Capitolo 22
+### Indice delle Sottosezioni Capitolo 22
 
 
 - [22.1 Concetti Base](#221-concetti-base)
@@ -4844,7 +4870,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [22.9 Confronto WSL2 vs VMware Workstation](#229-confronto-wsl2-vs-vmware-workstation)
 
 
-### Indice delle Sottosezioni - Capitolo 23
+### Indice delle Sottosezioni Capitolo 23
 
 
 - [23.1 Architettura dei Container](#231-architettura-dei-container)
@@ -4862,7 +4888,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [23.5 OverlayFS — Filesystem a Strati](#235-overlayfs--filesystem-a-strati)
 
 
-### Indice delle Sottosezioni - Capitolo 24
+### Indice delle Sottosezioni Capitolo 24
 
 
 - [24.1 Cos'è Docker](#241-cos-docker)
@@ -4886,3 +4912,22 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [24.7 Volumi — Persistenza dei Dati](#247-volumi--persistenza-dei-dati)
 
 
+
+
+### Indice delle Sottosezioni Capitolo 25
+
+- [Esercizio 1 (Pipeline Bash)](#esercizio-1-pipeline-bash)
+- [Esercizio 2 (Pipeline ls, grep, awk)](#esercizio-2-pipeline-ls-grep-awk)
+- [Esercizio 3 (Thread e Sincronizzazione C)](#esercizio-3-thread-e-sincronizzazione-c)
+- [Esercizio 4 (Pipe, Fork, Select in C)](#esercizio-4-pipe-fork-select-in-c)
+- [Esercizio 5 (Namespace e Docker)](#esercizio-5-namespace-e-docker)
+
+### Indice delle Sottosezioni Capitolo 26
+
+- [Concetti Generali e SO](#concetti-generali-e-so)
+- [Shell, Comandi e Scripting](#shell-comandi-e-scripting)
+- [Processi e Segnali](#processi-e-segnali)
+- [Thread e Sincronizzazione (Pthreads)](#thread-e-sincronizzazione-pthreads)
+- [IPC (Inter-Process Communication)](#ipc-inter-process-communication)
+- [Reti e Socket](#reti-e-socket)
+- [Virtualizzazione e Container](#virtualizzazione-e-container)
