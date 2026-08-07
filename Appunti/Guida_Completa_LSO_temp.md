@@ -541,13 +541,29 @@ find . -name "*.txt"
 
 ## 6. Script Shell [Torna all'indice](#indice)
 
-### 6.1 Struttura Base
+### 6.1 Struttura Base ed Esecuzione
 
 Uno script Bash è un file di testo che:
-1. Inizia con `#!/bin/bash` (shebang)
-2. Ha il **permesso di esecuzione** (`chmod +x script.sh`)
-3. Contiene comandi di shell
+1. Inizia con la **shebang** (`#!/bin/bash`). Questa riga dice al sistema quale interprete usare.
+2. Ha il **permesso di esecuzione**, che si aggiunge con il comando `chmod +x script.sh`.
+3. Contiene comandi di shell.
 
+**Estensione del file:**
+Nei sistemi Unix/Linux i file bash non hanno un'estensione obbligatoria per funzionare, poiché il sistema si basa sulla shebang e sui permessi. Tuttavia, per convenzione si utilizza quasi sempre l'estensione **`.sh`**
+
+**Come eseguire uno script:**
+Se ti trovi nella stessa cartella dello script e questo ha i permessi di esecuzione, devi usare `./` prima del nome:
+```bash
+./script.sh
+```
+*(Il `./` indica al sistema di cercare l'eseguibile esattamente nella cartella corrente).*
+
+Se invece non hai impostato i permessi di esecuzione, puoi passarlo direttamente all'interprete `bash`:
+```bash
+bash script.sh
+```
+
+**Esempio di script base:**
 ```bash
 #!/bin/bash
 echo "Hello world!"
