@@ -1457,15 +1457,19 @@ struct stat {
 ```
 
 **Esempio pratico**
+
+> [!WARNING]
+> I campi della struttura `stat`, in particolare `st_mode`, sono **tipi interi**. Non usare **mai** lo specificatore `%s` con `printf` su questi campi, altrimenti otterrai un **Segmentation Fault**. Usa `%o` (base ottale, formato standard per i permessi Unix) o `%d` (decimale).
+
 ```c
-struct stat filestat;     // dichiariamo una variabile di tipo stat
+struct stat filestat;        // dichiariamo una variabile di tipo stat
 stat("file.txt", &filestat); // eseguiamo la stat
-printf("file: %s\n", filestat.st_mode);
+printf("permessi: %o\n", filestat.st_mode); // %o per stamparlo in ottale!
 
 int fd = open("file.txt", O_RDONLY);
-struct stat filestat;        // dichiariamo una variabile di tipo stat
-fstat(fd, &filestat);    // eseguiamo la stat sul file descriptor
-printf("file: %s\n", filestat.st_mode);
+struct stat filestat_fd;     // dichiariamo una variabile di tipo stat
+fstat(fd, &filestat_fd);     // eseguiamo la stat sul file descriptor
+printf("permessi: %o\n", filestat_fd.st_mode);
 ```
 
 ### 10.8 Esempio Completo: Copia tra File
@@ -1658,7 +1662,11 @@ pid_t pid = wait(&status);  // il kernel riempie 'status'
 - `pid == 0` → figlio con stesso process group
 - `pid < -1` → figlio con process group ID = |pid|
 
-**Opzione `WNOHANG`**: non si blocca se nessun figlio ha terminato.
+**Opzione `WNOHANG`**:
+Normalmente `waitpid` è bloccante: se si invoca su un figlio che è ancora in esecuzione, il processo padre viene "addormentato" dal sistema finché quel figlio non termina.
+Passando la costante `WNOHANG` come opzione, si ordina alla system call di comportarsi in modo **non bloccante** (polling). La `waitpid` controllerà lo stato del figlio:
+- Se il figlio è terminato, restituisce il suo PID (come al solito).
+- Se il figlio sta ancora lavorando, **non si blocca**, ma restituisce immediatamente `0`, permettendo al padre di continuare a eseguire altre operazioni nel frattempo.
 
 **Macro per ispezionare status:**
 - `WIFEXITED(status)` → terminazione normale
