@@ -3240,20 +3240,20 @@ La connessione TCP segue un'architettura client-server ben definita, in cui il s
    - `addrlen`: La dimensione della struttura (`sizeof(addr)`).
 
 ```text
-        SERVER                              CLIENT
-    ┌───────────────┐                  ┌───────────────┐
+    SERVER                               CLIENT
+    -----------------                  ----------------
     │ socket()      │                  │               │
     │ bind()        │                  │ socket()      │
     │ listen()      │                  │               │
     │ accept()      │                  │               │
-    │ [si blocca]   │<── RICHIESTA ────│── connect()   │
+    │ [si blocca]   │ <-- RICHIESTA -->│ connect()     │
     │               │                  │               │
     │ [crea socket  │                  │               │
     │  dedicata]    │                  │               │
     │ read() /      │                  │ read() /      │
-    │ write()       │◄── COMUNICANO ──►│ write()       │
+    │ write()       │ <-- COMUNICANO-->│ write()       │
     │ close()       │                  │ close()       │
-    └───────────────┘                  └───────────────┘
+    -----------------                  -----------------
 ```
 
 ### 17.3 Indirizzi e il problema del "Byte Order" (Endianness)
