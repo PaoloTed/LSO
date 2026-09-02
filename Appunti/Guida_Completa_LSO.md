@@ -2371,6 +2371,26 @@ if (sigprocmask(SIG_BLOCK, &mask, &oldmask) == -1) {
 ## 13. IPC: Pipe, FIFO e Memoria Condivisa (mmap)
 <div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
+### 13.0 Cos'è l'IPC (Inter-Process Communication)
+
+L'acronimo **IPC** sta per **Inter-Process Communication** (*Comunicazione Inter-Processo* o *tra Processi*).
+
+> **Definizione e Motivazione:**  
+> Nei sistemi operativi moderni, ogni processo viene eseguito all'interno di uno **spazio di memoria virtuale protetto e isolato**. Per ragioni di sicurezza e stabilità, un processo non può accedere arbitrariamente alla memoria di un altro processo.  
+> L'**IPC** è l'insieme dei meccanismi forniti dal kernel che permettono a due o più processi distinti di:
+> 1. **Scambiarsi informazioni e dati** (mediante *Message Passing* o *Shared Memory*).
+> 2. **Sincronizzare** la propria esecuzione e l'accesso alle risorse.
+
+**Principali Meccanismi IPC in Unix/Linux:**
+* **Pipe Ordinarie (Anonime):** Canali unidirezionali in RAM tra processi imparentati (`pipe()`).
+* **FIFO (Named Pipes):** Canali unidirezionali rappresentati come file speciali nel filesystem per processi indipendenti (`mkfifo()`).
+* **Memoria Condivisa (`mmap` / `shm_open`):** Spazio di memoria comune mappato direttamente negli indirizzi virtuali (il più veloce, zero-copy).
+* **Segnali:** Notifiche asincrone di eventi software (`signal()`, `kill()`).
+* **Code di Messaggi (Message Queues):** Scambio di messaggi discreti e strutturati.
+* **Socket:** Comunicazione bidirezionale locale (Unix domain) o remota in rete (TCP/UDP).
+
+---
+
 ### 13.1 Pipe Ordinarie
 
 Le **pipe** sono canali di comunicazione **unidirezionali** tra processi con relazione parentale.
@@ -2539,8 +2559,12 @@ Ogni chiamata a `mmap()` deve contenere **obbligatoriamente** o `MAP_SHARED` o `
 
 La funzione `msync(addr, length, flags)` forza il flush immediato delle pagine modificate dalla RAM al disco:
 
-* **Su `MAP_SHARED`:** `msync()` scrive correttamente tutti i byte modificati nel file su disco.
-* **Su `MAP_PRIVATE`:** Se chiami `msync()` su una mappatura privata, la chiamata **ritorna 0 (successo) ma è una No-Op (non fa nulla)**. Le pagine modificate sono state clonate via Copy-on-Write e sono totalmente disconnesse dal file di origine; il file su disco **rimane al 100% inalterato**.
+* **Su `MAP_SHARED`:**  
+  - Le normali scritture in memoria (`*map = ...`, `strcpy()`) modificano istantaneamente la **RAM (Page Cache)** e marcano le pagine come *dirty* (visibili subito agli altri processi).  
+  - Il kernel trasferisce i dati sul supporto fisico in modo **asincrono** (in background).  
+  - Invocare `msync(..., MS_SYNC)` **forza la scrittura fisica immediata** sul disco/SSD, bloccando il processo finché l'I/O non è completato.
+* **Su `MAP_PRIVATE`:**  
+  - Se chiami `msync()` su una mappatura privata, la chiamata **ritorna 0 (successo) ma è una No-Op (non fa nulla)**. Le pagine modificate sono state clonate via Copy-on-Write e sono totalmente disconnesse dal file di origine; il file su disco **rimane al 100% inalterato**.
 
 ---
 
@@ -2593,10 +2617,11 @@ int main() {
     char *map = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     close(fd); // Il descrittore può essere chiuso subito dopo mmap
 
-    // Scrive direttamente nel file attraverso la memoria
-    strcpy(map, "Questo testo viene scritto direttamente su disco!");
+    // 1. Modifica la pagina in RAM (nella Page Cache del kernel).
+    // NOTA: Non scrive fisicamente su disco in questo istante!
+    strcpy(map, "Testo modificato nella memoria condivisa");
 
-    // Sincronizza esplicitamente la memoria col filesystem
+    // 2. È msync() che riversa fisicamente e subito i byte dalla RAM al disco:
     msync(map, 4096, MS_SYNC);
     munmap(map, 4096);
     return 0;
@@ -2695,13 +2720,14 @@ La funzione `pthread_detach()` scollega il thread in modo che, al momento della 
 #include <stdio.h>
 #include <stdlib.h>
 
+// Corpo del thread, ossia la funzione che verrà eseguita dal thread
 void *tbody(void *arg) {
     int *pi = (int *)arg;
     printf("Thread: valore ricevuto = %d\n", *pi);
     *pi = 10;  // modifica dato condiviso
-    int *ret = malloc(sizeof(int));
+    int *ret = malloc(sizeof(int)); // alloco memoria per il valore di ritorno
     *ret = 50;
-    pthread_exit((void *)ret);
+    pthread_exit((void *)ret); // si deve fare il cast a void * in quanto pthread_exit accetta solo void *
 }
 
 int main(void) {
@@ -2710,8 +2736,12 @@ int main(void) {
     void *result;
     pthread_create(&mythread, NULL, tbody, (void *)&i);
     pthread_join(mythread, &result);
+    // *(int *)result fa il cast a puntatore a int del puntatore result e ne dereferenzia il valore
+    // Serve in quanto pthread_exit accetta solo void * e in main vogliamo stampare un int
     printf("Main: i = %d, thread restituito %d\n", i, *(int *)result);
-    free(result);
+    // Stampa: "Main: i = 10, thread restituito 50" 
+    // (l'iniziale 0 è stato modificato dal thread in 10 e il thread ha restituito 50)
+    free(result); // libero la memoria allocata dal thread
     return 0;
 }
 ```
@@ -2860,23 +2890,28 @@ pthread_cond_destroy(&cond);
 ```c
 #include <time.h>
 
-// Calcola deadline: ora + N secondi
+// Variabile di stato condivisa (predicato booleano: 0 = non pronto, 1 = pronto)
+// Le condition variable non hanno memoria interna, serve sempre una variabile di stato!
+int ready = 0; 
+
+// Calcola deadline: orario assoluto attuale + N secondi
 struct timespec ts;
 clock_gettime(CLOCK_REALTIME, &ts);
 ts.tv_sec += 2;  // deadline tra 2 secondi
 
 pthread_mutex_lock(&mtx);
 int rc = 0;
-// 'ready' rappresenta la nostra condizione (es. una variabile bool globale)
+// Ciclo di attesa: continua a dormire finché 'ready' è 0 E il tempo non è scaduto (rc == 0)
 while (!ready && rc == 0) {
     rc = pthread_cond_timedwait(&cond, &mtx, &ts);
-    // rc == 0        → segnalato prima della deadline (ricontrolla condizione)
-    // rc == ETIMEDOUT → deadline scaduta
+    // rc == 0        → svegliato da signal/broadcast prima della deadline
+    // rc == ETIMEDOUT → tempo massimo scaduto
 }
+
 if (ready) {
-    printf("Evento ricevuto entro la deadline\n");
+    printf("Evento completato con successo entro la deadline (ready = 1)\n");
 } else if (rc == ETIMEDOUT) {
-    printf("Timeout scaduto\n");
+    printf("Timeout scaduto: il dato non è diventato pronto in tempo\n");
 }
 pthread_mutex_unlock(&mtx);
 ```
