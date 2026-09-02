@@ -1603,7 +1603,7 @@ if (pid == 0) {
     variabile_condivisa = 100; // modifica locale, non impatta il padre
     _exit(0);
 }
-wait(NULL);
+wait(NULL); // Non ci interessa il valore del figlio
 printf("Padre (fork): variabile=%d\n", variabile_condivisa); // sempre 10
 
 // Esempio vfork (condivide memoria finché non c'è exec)
@@ -1620,19 +1620,40 @@ printf("Padre (vfork): variabile=%d\n", variabile_condivisa); // vedrà 100
 
 ### 11.4 Terminazione di Processi
 
+Un processo può terminare in due modalità:
+
 **Terminazione normale:**
-- `return` da main (equivale a `exit`)
-- `exit(int status)` — chiude stream I/O, invoca exit handler
-- `_exit(int status)` — ritorna al kernel immediatamente
+- `return <status>` da `main()` (equivale a invocare `exit(status)`).
+- `exit(int status)` — funzione di libreria standard C (`<stdlib.h>`).
+- `_exit(int status)` — system call POSIX (`<unistd.h>`).
+- `_Exit(int status)` — funzione standard ISO C99 (`<stdlib.h>`, equivalente a `_exit`).
 
 **Terminazione anormale:**
-- Ricezione di certi segnali (SIGKILL, SIGSEGV, ecc.)
-- `abort()` — genera SIGABRT
+- Ricezione di un segnale di terminazione non gestito o fatale (es. `SIGKILL`, `SIGSEGV`, `SIGINT`).
+- Chiamata esplicita ad `abort()` — genera il segnale `SIGABRT` con creazione del file di core dump.
 
 **Azioni del kernel alla terminazione:**
-- Rimozione della memoria del processo
-- Chiusura dei descrittori aperti
-- Notifica al padre tramite SIGCHLD
+1. Deallocazione della memoria virtuale del processo (text, data, heap, stack).
+2. Chiusura automatica di tutti i File Descriptor aperti.
+3. Invio del segnale `SIGCHLD` al processo padre.
+4. Mantenimento del PCB (Process Control Block) e del PID nella Process Table finché il padre non chiama `wait()`/`waitpid()` (stato zombie).
+
+---
+
+#### Confronto: `exit()` vs `_exit()`
+
+| Proprietà | `exit(status)` | `_exit(status)` / `_Exit(status)` |
+| :--- | :--- | :--- |
+| **Tipo** | Funzione di libreria C (`<stdlib.h>`) | System Call diretta (`<unistd.h>`) / C99 (`<stdlib.h>`) |
+| **Livello** | Spazio Utente (User-space) | Spazio Kernel (Kernel-space) |
+| **Exit Handlers** | Esegue le funzioni registrate con `atexit()` e `on_exit()` | **Non esegue** alcun handler |
+| **Buffer I/O (`FILE*`)** | Esegue il **flush** (`fflush`) e chiude tutti gli stream `stdio` | **Nessun flush**: termina immediatamente |
+| **File temporanei** | Cancella i file aperti con `tmpfile()` | Non cancella i file temporanei |
+
+>  **Regola fondamentale dopo `fork()`:**  
+> Nei processi figli creati con `fork()` (o `vfork()`) si deve usare **`_exit()`** (e **MAI** `exit()`) nei percorsi di errore o prima di `exec()`:
+> - Con la `fork()`, il figlio eredita una **copia** dei buffer I/O dello spazio utente del padre (es. stringhe stampate con `printf` ma non ancora inviate al terminale perché prive di `\n`).
+> - Se il figlio chiamasse `exit()`, fluscerebbe anche lui questi buffer duplicati, causando **doppie stampe o scritture duplicate** su file condivisi.
 
 ### 11.5 Processi Zombie e Orfani
 
@@ -1655,13 +1676,19 @@ pid_t wait(int *status);
 
 pid_t waitpid(pid_t pid, int *status, int options);
 // Può attendere un figlio specifico
+
 ```
-*status* è un puntatore a intero che wait() usa come parametro di output: tu gli passi l'indirizzo di una variabile intera, e il kernel ci scrive informazioni su come il figlio è terminato.
+*status* è un puntatore a intero che wait() usa come parametro di output: tu gli passi l'indirizzo di una variabile intera, e il kernel ci scrive informazioni su come il figlio è terminato,
 
 **Esempio**
 ```c
 int status;                 // variabile dove il kernel scriverà le info
 pid_t pid = wait(&status);  // il kernel riempie 'status'
+pid_t pid2 = waitpid(123, &status, 0); // Attende il figlio con PID=123 e memorizza lo stato in &status
+
+pid_t pid3 = wait(NULL); // Attende qualsiasi figlio senza salvare il valore di ritorno
+pid_t pid4 = waitpid(-1, NULL, 0); // Idem (attende qualsiasi figlio senza salvare lo stato)
+
 ```
 
 **Argomento `pid` di `waitpid`:**
@@ -1733,7 +1760,79 @@ Queste variabili sono nella forma `CHIAVE=VALORE` e configurano il comportamento
 - `PATH`: Lista di directory in cui la shell cerca i comandi eseguibili.
 - `HOME`: La directory personale dell'utente.
 - `TERM`: Il tipo di terminale (es. `xterm-256color`).
-Quando si usa una `exec()` senza il suffisso `e` (es. `execvp`), il nuovo programma *eredita* esattamente l'ambiente del programma chiamante. Usando `execle` o `execve`, lo sviluppatore inietta un ambiente completamente personalizzato.
+Quando si usa una `exec()` senza il suffisso `e` (es. `execl`, `execvp`), il nuovo programma *eredita* automaticamente l'ambiente del programma chiamante. Usando `execle` o `execve`, lo sviluppatore inietta un ambiente (`envp`) completamente personalizzato.
+
+#### Esempio di Utilizzo di `envp` (`execve` + lettura)
+
+**1. Il programma target (`stampa_env.c`) che riceve e legge `envp`:**
+```c
+#include <stdio.h>
+#include <stdlib.h>
+
+// envp è un array di puntatori a stringhe terminato da NULL
+int main(int argc, char *argv[], char *envp[]) {
+    printf("=== Variabili d'ambiente ricevute via envp ===\n");
+    for (int i = 0; envp[i] != NULL; i++) {
+        printf("envp[%d] = %s\n", i, envp[i]);
+        // Stampa le variabili d'ambiente:
+        // envp[0] = UTENTE_APP=Paolo
+        // envp[1] = MODALITA=DEBUG
+        // envp[2] = VERSIONE=2.0
+        // envp[3] = PATH=/bin:/usr/bin
+        // envp[4] = (NULL)
+    }
+
+    // Le variabili passate in envp sono leggibili anche tramite getenv()!
+    char *user = getenv("UTENTE_APP");
+    char *mode = getenv("MODALITA");
+    printf("\nValori letti con getenv():\n");
+    printf("UTENTE_APP: %s\n", user ? user : "NON DEFINITA");
+    printf("MODALITA:   %s\n", mode ? mode : "NON DEFINITA");
+    return 0;
+}
+```
+
+**2. Il programma chiamante (`main_execve.c`) che costruisce `envp` e invoca `execve`:**
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
+int main() {
+    pid_t pid = fork();
+
+    if (pid < 0) {
+        perror("fork fallita");
+        exit(1);
+    }
+
+    if (pid == 0) {
+        // 1. Argomenti da passare (argv): terminati obbligatoriamente da NULL
+        char *my_argv[] = {"./stampa_env", "argomento1", "argomento2", NULL};
+
+        // 2. Ambiente personalizzato (envp): formato "CHIAVE=VALORE", terminato da NULL
+        char *my_envp[] = {"UTENTE_APP=Paolo", "MODALITA=DEBUG", "VERSIONE=2.0",
+                           "PATH=/bin:/usr/bin", NULL};
+
+        printf("[Figlio] Invoco execve passando argv ed envp custom...\n");
+        // execve(pathname, argv, envp)
+        execve("./stampa_env", my_argv, my_envp);
+
+        // Questa riga viene eseguita SOLO se execve fallisce
+        perror("execve fallita");
+        exit(1);
+    } else {
+        // Il padre attende la terminazione del figlio
+        wait(NULL);
+        printf("[Padre] Processo figlio terminato con successo.\n");
+    }
+
+    return 0;
+}
+```
+
+---
 
 **Pattern completo fork + exec:**
 ```c
@@ -1783,26 +1882,98 @@ int main() {
 
 ### 11.9 La funzione `system()`
 
-`system()` è una scorciatoia che fa internamente `fork()` + `exec("/bin/sh -c command")` + `wait()` in un'unica chiamata. Comoda, ma meno efficiente e meno sicura (mai usarla in programmi setuid).
+`system()` è una funzione di libreria (`stdlib.h`) che esegue un comando di sistema invocando la shell (`/bin/sh -c <comando>`). Internamente incapsula le chiamate fondamentali: **`fork()` + `execl("/bin/sh", ...)` + `waitpid()`**.
 
 ```c
 #include <stdlib.h>
 int system(const char *command);
-// Ritorna: exit status del comando, -1 se fork fallisce
+// Ritorna: exit status del comando, -1 se fork/wait fallisce
 ```
+
+#### Esempio Base con `system()`
+```c
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/wait.h>
+
+int main() {
+    // Esecuzione diretta con system():
+    int ret = system("ls -l /tmp");
+    if (ret == -1) {
+        perror("system");
+    }
+    return 0;
+}
+```
+
+#### Implementazione Equivalente con `fork()`, `execl()` e `waitpid()`
 
 ```c
-// Equivalente a scrivere "ls -l" nel terminale
-int ret = system("ls -l");
-if (ret == -1) perror("system");
-printf("Comando terminato con status %d\n", WEXITSTATUS(ret));
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <errno.h>
 
-// Utile per operazioni rapide senza gestire fork/exec manualmente
-system("mkdir -p /tmp/mydir");
-system("cp file.txt /tmp/mydir/");
+int my_system(const char *command) {
+    // Se il comando è NULL, verifica se la shell è presente nel sistema
+    if (command == NULL) {
+        return 1;
+    }
+
+    pid_t pid = fork();
+
+    if (pid < 0) {
+        // Errore nella creazione del processo figlio
+        return -1;
+    }
+
+    if (pid == 0) {
+        // --- PROCESSO FIGLIO ---
+        // Invoca la shell /bin/sh passando il flag "-c" e il comando come stringa
+        execl("/bin/sh", "sh", "-c", command, (char *)NULL);
+
+        // Se execl fallisce (es. /bin/sh inesistente), esce con codice 127 (standard POSIX)
+        _exit(127);
+    }
+
+    // --- PROCESSO PADRE ---
+    int status;
+    // Attende specificamente la terminazione del figlio generato
+    while (waitpid(pid, &status, 0) < 0) {
+        if (errno != EINTR) {
+            // Errore diverso da un segnale di interruzione
+            return -1;
+        }
+        // Se interrotto da un segnale (EINTR), ripete la waitpid
+    }
+
+    return status; // Restituisce lo stato grezzo (ispezionabile con WIFEXITED, WEXITSTATUS, ecc.)
+}
+
+int main() {
+    printf("=== Test implementazione equivalente di system() ===\n");
+
+    int ret = my_system("ls -l | grep .c");
+
+    if (ret == -1) {
+        perror("my_system fallita");
+    } else if (WIFEXITED(ret)) {
+        printf("Comando completato con successo (exit code: %d)\n", WEXITSTATUS(ret));
+    } else if (WIFSIGNALED(ret)) {
+        printf("Comando terminato dal segnale %d\n", WTERMSIG(ret));
+    }
+
+    return 0;
+}
 ```
 
-> ⚠️ **Non usare `system()` in programmi con privilegi elevati** (setuid). Un attaccante potrebbe modificare il `PATH` o le variabili d'ambiente per eseguire comandi arbitrari.
+#### Note su `system()`
+1. **Perché passa attraverso `/bin/sh -c`?**  
+   Permette di interpretare automaticamente costrutti della shell come pipe (`|`), ridirezioni (`>`, `<`), wildcard (`*`) e variabili d'ambiente.
+2. **Efficienza e Sicurezza:**
+   - Meno efficiente: crea due processi (la shell `/bin/sh` + il comando effettivo).
+   - >  **Non usare `system()` in programmi con privilegi elevati (setuid):** Un utente malintenzionato potrebbe alterare `PATH` o altre variabili d'ambiente per eseguire codice arbitrario con privilegi di root.
 
 ### 11.10 Ambiente di un Processo: `getenv` e `putenv`
 
@@ -1966,25 +2137,26 @@ Filesystem reale:          Dopo chroot("/jail"):
 ```
 
 ```c
-// Richede di essere root (UID 0)
+// Richiede privilegi di root (UID 0 o capability CAP_SYS_CHROOT)
 if (chroot("/var/jail") == -1) {
-    perror("chroot"); exit(1);
+    perror("chroot");
+    exit(1);
 }
-// Da qui in poi, il processo non può uscire da /var/jail
-chdir("/");  // importante: spostarsi nella nuova root dopo chroot!
 
-// Questo ora cerca /var/jail/etc/passwd
+// OBBLIGATORIO: Spostarsi all'interno della nuova root!
+if (chdir("/") == -1) {
+    perror("chdir");
+    exit(1);
+}
+
+// Da qui in poi, il processo è bloccato dentro /var/jail
+// Questo cercherà /var/jail/etc/passwd nel filesystem reale:
 open("/etc/passwd", O_RDONLY);
 ```
 
-**`exit()` vs `_exit()`:**
-
-| Funzione | Comportamento |
-|----------|---------------|
-| `exit(status)` | Invoca exit handlers registrati, chiude stream I/O (flush), poi chiama `_exit()` |
-| `_exit(status)` | Ritorna immediatamente al kernel senza flush dei buffer |
-
-> Nei processi figli dopo `fork()` si usa `_exit()` (mai `exit()`) per evitare di fluscare i buffer I/O del padre (che il figlio ha ereditato come copia).
+> **Perché dopo `chroot()` bisogna fare SEMPRE `chdir("/")`?**  
+> La system call `chroot(path)` modifica **solo** il riferimento alla root directory (`/`) del processo, ma **NON tocca la directory di lavoro corrente (CWD)**!  
+> Se non si esegue subito `chdir("/")`, la CWD del processo rimane la cartella in cui si trovava prima della chiamata (che ora è *esterna* alla jail). Un attaccante potrebbe risalire l'albero con percorsi relativi (`../../`) ed **evadere dal sandbox** (*chroot escape / jailbreak*).
 
 ---
 
@@ -2019,9 +2191,26 @@ Un **segnale** è un **interrupt software** che consente la comunicazione **asin
 
 ### 12.3 Azioni Possibili
 
-1. **Ignorare** il segnale: `signal(SIGINT, SIG_IGN)`
-2. **Catturare** il segnale: `signal(SIGINT, handler_function)`
-3. **Azione di default**: `signal(SIGINT, SIG_DFL)`
+Quando un processo riceve un segnale, può reagire in uno dei seguenti tre modi:
+
+1. **Ignorare il segnale (`SIG_IGN`):**  
+   Il segnale viene scartato immediatamente; l'esecuzione del programma continua indisturbata.  
+   ```c
+   signal(SIGINT, SIG_IGN); // Ignora Ctrl+C
+   ```
+
+2. **Catturare il segnale (Custom Handler):**  
+   L'esecuzione ordinaria viene temporaneamente sospesa per eseguire una funzione personalizzata definita dall'utente (*signal handler*).  
+   ```c
+   signal(SIGINT, mio_handler); // Esegue la funzione 'mio_handler' su Ctrl+C
+   ```
+
+3. **Azione di Default (`SIG_DFL`):**  
+   Ripristina il comportamento predefinito del sistema operativo per quel segnale (es. per `SIGINT` il default è la terminazione del processo). Serve ad annullare un precedente handler o una `SIG_IGN`.  
+   ```c
+   signal(SIGINT, SIG_DFL); // Ripristina il default (terminazione immediata su Ctrl+C)
+   ```
+
 
 ### 12.4 Catturare un Segnale — `signal()`
 
@@ -2042,6 +2231,8 @@ void foo(int num_segnale) {
 }
 
 int main(void) {
+    // SIGUSR1 e SIGUSR2 sono segnali generici definiti dall'utente
+    // SIGINT viene inviato dal terminale premendo Ctrl+C e di default termina il processo.
     signal(SIGUSR1, foo);
     signal(SIGUSR2, foo);
     signal(SIGINT, foo);
@@ -2282,60 +2473,137 @@ La system call `mmap` mappa file, dispositivi o memoria anonima nello spazio di 
 #include <sys/mman.h>
 
 void *mmap(void *address, size_t length, int protect, int flags, int filedes, off_t offset);
-int munmap(void *addr, size_t length);  // Rilascia la memoria mappata
-int msync(void *addr, size_t length, int flags); // Forza l'allineamento su disco
+int munmap(void *addr, size_t length);              // Rilascia la memoria mappata
+int msync(void *addr, size_t length, int flags);     // Sincronizza la memoria su disco
 ```
 
 | Parametro | Significato |
 |-----------|-------------|
-| `address` | Indirizzo di memoria suggerito per il mapping. Solitamente si passa `NULL` per far decidere al kernel. |
-| `length`  | Dimensione dell'area di memoria da mappare (in byte). |
-| `protect` | Permessi sulla pagina: `PROT_READ` (lettura), `PROT_WRITE` (scrittura), `PROT_EXEC` (esecuzione), `PROT_NONE` (nessun accesso). |
-| `flags`   | Visibilità: `MAP_SHARED` (le modifiche sono condivise/visibili ad altri processi e aggiornano l'eventuale file), `MAP_PRIVATE` (Copy-on-Write: modifiche private). Può includere `MAP_ANONYMOUS` (per memoria RAM non associata a file). |
-| `filedes` | File descriptor del file da mappare in memoria (o `-1` se si usa `MAP_ANONYMOUS`). |
-| `offset`  | Punto di partenza nel file da cui iniziare la mappatura (deve essere multiplo della page size del sistema). |
+| `address` | Indirizzo virtuale suggerito per il mapping. Solitamente si passa `NULL` per far decidere liberamente al kernel. |
+| `length`  | Dimensione dell'area di memoria da mappare in byte (il kernel allocherà multipli della *page size*, es. 4096 byte). |
+| `protect` | Permessi di accesso della CPU/MMU sulle pagine (`PROT_READ`, `PROT_WRITE`, `PROT_EXEC`, `PROT_NONE`). |
+| `flags`   | Tipo di mapping e condivisione (`MAP_SHARED`, `MAP_PRIVATE`, combinabili con `MAP_ANONYMOUS`). |
+| `filedes` | File descriptor del file da mappare (oppure `-1` se si usa `MAP_ANONYMOUS`). |
+| `offset`  | Punto di partenza all'interno del file (deve essere rigorosamente multiplo della page size del sistema). |
 
-#### Tipi di Mapping con `mmap`:
+---
 
-1. **Mapping Anonimo (`MAP_ANONYMOUS`)**
-   Non utilizza alcun file di supporto. Serve ad allocare memoria RAM condivisa esclusivamente tra processi con una relazione di parentela (es. creati con `fork()` *dopo* la chiamata a `mmap`).
+#### 1. I Flag di Protezione (`protect` / `PROT_*`)
 
-   **Esempio — mmap anonima tra padre e figlio:**
-   ```c
-   char *shared = mmap(NULL, 256,
-       PROT_READ | PROT_WRITE,
-       MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+Il parametro `protect` imposta i bit di protezione nella tabella delle pagine del processo. Se la CPU/processo tenta un'operazione non consentita, la **MMU** (Memory Management Unit) solleva un'eccezione hardware che il kernel converte nel segnale **`SIGSEGV`** (*Segmentation Fault*).
 
-   pid_t pid = fork();
-   if (pid == 0) {
-       strcpy(shared, "Ciao dal figlio via mmap anonima!");
-       _exit(0);
-   }
-   waitpid(pid, NULL, 0);
-   printf("[Padre] Letto in memoria: \"%s\"\n", shared);
-   munmap(shared, 256);
-   ```
+I flag possono essere combinati con l'operatore OR bit a bit (`|`):
 
-2. **Mapping basato su File (File-backed Mapping)**
-   Associa direttamente un file esistente su disco alla memoria. Scrivere nella memoria equivale a scrivere nel file. Permette la condivisione tra **processi non correlati**.
-   *Attenzione:* Il file deve essere aperto in precedenza e deve essere sufficientemente grande (spesso lo si ridimensiona prima con `ftruncate()`).
+| Flag | Significato | Dettagli Tecnici / Casi d'Uso |
+| :--- | :--- | :--- |
+| **`PROT_READ`** | **Lettura** | Il processo può leggere byte dall'area di memoria. |
+| **`PROT_WRITE`** | **Scrittura** | Il processo può modificare l'area di memoria. *(Nota: per mappare un file con `PROT_WRITE`, il file deve essere aperto in modalità scrittura come `O_RDWR`, a meno di non usare `MAP_PRIVATE`).* |
+| **`PROT_EXEC`** | **Esecuzione** | La CPU può eseguire istruzioni macchina presenti in quell'area (usato per caricare codice da binari ELF e librerie condivise `.so`, o nei compilatori JIT). |
+| **`PROT_NONE`** | **Nessun Accesso** | La pagina non può essere letta, scritta o eseguita. |
 
-   **Esempio — mmap su file:**
-   ```c
-   int fd = open("file_condiviso.txt", O_RDWR | O_CREAT, 0666);
-   ftruncate(fd, 4096); // Estende il file a 4KB
+> **A cosa serve `PROT_NONE`?**
+> 1. **Guard Pages (Pagine Sentinella):** Creare una pagina inaccessibile ai margini di uno stack o di un buffer. Se un buffer overflow sconfina nella guard page, il kernel invia istantaneamente un `SIGSEGV`, bloccando l'attacco prima della corruzione di altri dati.
+> 2. **Prenotazione di Indirizzi Virtuali:** Riservare un intervallo contiguo nello spazio di indirizzamento virtuale senza consumare RAM fisica fino all'effettivo utilizzo.
 
-   // Mappa il file in memoria
-   char *data = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-   close(fd); // Il fd può essere chiuso dopo aver mappato il file
+---
 
-   // Scrive direttamente "nel" file attraverso la RAM
-   sprintf(data, "Messaggio visibile agli altri processi che mappano il file!");
+#### 2. I Flag di Mappatura (`flags`)
 
-   // Sincronizza esplicitamente la memoria col disco prima di rimuovere il mapping
-   msync(data, 4096, MS_SYNC);
-   munmap(data, 4096);
-   ```
+Ogni chiamata a `mmap()` deve contenere **obbligatoriamente** o `MAP_SHARED` o `MAP_PRIVATE`:
+
+* **`MAP_SHARED` (Condivisione Reale):**  
+  - Le modifiche apportate alla memoria sono **visibili a tutti gli altri processi** che mappano la stessa area.  
+  - Se la mappatura è associata a un file (`fd >= 0`), le scritture in RAM vengono **salvate nel file su disco** (dal kernel o tramite `msync()`).
+
+* **`MAP_PRIVATE` (Copy-on-Write / Isolamento):**  
+  - L'area di memoria è **privata** del processo chiamante.  
+  - Le modifiche **NON sono visibili** agli altri processi e **NON vengono riversate nel file sottostante**.  
+  - **Meccanismo Copy-on-Write (CoW):** Inizialmente i processi condividono le stesse pagine fisiche in sola lettura. Appena un processo prova a scrivere, la MMU intercetta l'operazione, il kernel **duplica solo quella specifica pagina di 4KB** in RAM e permette la scrittura sulla copia privata isolata.
+
+* **`MAP_ANONYMOUS` (o `MAP_ANON` — Memoria RAM Anonima):**  
+  - La mappatura **non è associata ad alcun file** (`filedes` deve essere posto a `-1` e `offset` a `0`).  
+  - Alloca blocchi di RAM vergine direttamente dal kernel, garantendo che siano **completamente azzerati** (tutti i byte a `0`) per motivi di sicurezza.
+
+---
+
+#### 3. Matrice delle 4 Combinazioni Fondamentali
+
+| Tipo di Mapping | `MAP_SHARED` | `MAP_PRIVATE` |
+| :--- | :--- | :--- |
+| **File-backed**<br>(con `fd` valido) | **IPC tra processi indipendenti + Persistenza:**<br>Modifiche condivise tra processi e salvate permanentemente sul file su disco. | **Caricamento Codice / CoW:**<br>Modifica il file in RAM senza alterare il file su disco (es. caricamento del segmento dati/testo delle librerie `.so`). |
+| **`MAP_ANONYMOUS`**<br>(con `fd = -1`) | **IPC tra Padre e Figlio (RAM):**<br>Memoria condivisa in RAM tra processi imparentati generati con `fork()`. | **Allocazione Pura di RAM:**<br>Memoria privata e azzerata. È il meccanismo usato internamente da `malloc()` per blocchi grandi (>128 KB). |
+
+---
+
+#### 4. `msync()` su `MAP_PRIVATE` vs `MAP_SHARED`
+
+La funzione `msync(addr, length, flags)` forza il flush immediato delle pagine modificate dalla RAM al disco:
+
+* **Su `MAP_SHARED`:** `msync()` scrive correttamente tutti i byte modificati nel file su disco.
+* **Su `MAP_PRIVATE`:** Se chiami `msync()` su una mappatura privata, la chiamata **ritorna 0 (successo) ma è una No-Op (non fa nulla)**. Le pagine modificate sono state clonate via Copy-on-Write e sono totalmente disconnesse dal file di origine; il file su disco **rimane al 100% inalterato**.
+
+---
+
+#### 5. Esempi Pratici di Codice
+
+**Esempio A — `MAP_SHARED | MAP_ANONYMOUS` (IPC Padre-Figlio in RAM):**
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
+#include <string.h>
+
+int main() {
+    // Alloca 4KB di RAM condivisa tra padre e figlio (nessun file su disco)
+    char *shared_mem = mmap(NULL, 4096,
+                            PROT_READ | PROT_WRITE,
+                            MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
+    strcpy(shared_mem, "Valore iniziale del Padre");
+
+    if (fork() == 0) {
+        // FIGLIO: modifica la memoria condivisa
+        sprintf(shared_mem, "Saluti dal Figlio (PID %d)!", getpid());
+        _exit(0);
+    }
+
+    wait(NULL); // Attende il figlio
+    printf("[Padre] Letto dalla memoria condivisa: \"%s\"\n", shared_mem);
+    munmap(shared_mem, 4096);
+    return 0;
+}
+```
+
+**Esempio B — `MAP_SHARED` su File (Persistenza su disco):**
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <string.h>
+
+int main() {
+    int fd = open("dati.bin", O_RDWR | O_CREAT, 0666);
+    ftruncate(fd, 4096); // Estende il file a 4096 byte
+
+    // Mappa il file in modalità SHARED
+    char *map = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    close(fd); // Il descrittore può essere chiuso subito dopo mmap
+
+    // Scrive direttamente nel file attraverso la memoria
+    strcpy(map, "Questo testo viene scritto direttamente su disco!");
+
+    // Sincronizza esplicitamente la memoria col filesystem
+    msync(map, 4096, MS_SYNC);
+    munmap(map, 4096);
+    return 0;
+}
+```
+
+---
 
 **Confronto IPC: Pipe / FIFO vs Memoria Condivisa (`mmap`)**
 
@@ -2344,7 +2612,7 @@ int msync(void *addr, size_t length, int flags); // Forza l'allineamento su disc
 | **Velocità** | Più lenta (ogni I/O richiede `read()`/`write()` e un context switch nel kernel) | Molto più veloce (accesso diretto in RAM, zero-copy IPC) |
 | **Coordinazione** | Sincronizzazione automatica gestita dal kernel (lettore attende se vuoto, ecc.) | **Responsabilità dello sviluppatore!** Occorre usare meccanismi come semafori o mutex per evitare race conditions |
 | **Formato Dati** | Flusso di byte non strutturato (stream unidirezionale) | Spazio di memoria indirizzabile, ideale per strutture dati complesse |
-| Complessità | Più semplice | Richiede sincronizzazione |
+| **Complessità** | Più semplice | Richiede sincronizzazione esplicita |
 
 ---
 
