@@ -390,21 +390,12 @@ ls | grep -v pluto | tail -3 | head -1
 
 | Comando | Funzione |
 |---------|----------|
-| `mkdir [-p] [-m mode] dir` | Crea directory (`-p` crea percorsi intermedi) |
-| `rmdir [-p] dir` | Rimuove directory vuota |
-| `pwd` | Stampa la working directory |
+| `mkdir [-p] [-m mode] dir` | Crea directory (`-p`: crea percorsi intermedi se mancanti, `-m`: imposta permessi iniziali) |
+| `rmdir [-p] dir` | Rimuove directory vuota (`-p`: rimuove anche i percorsi genitori se vuoti) |
+| `pwd` | Stampa la working directory attuale |
 | `cd [dir]` | Cambia directory (senza argomenti → home) |
-| `ls [opzioni] [dir]` | Elenca contenuto directory |
-| `du [-s] [-k] file` | Mostra spazio disco utilizzato |
-
-**Opzioni di `ls`:**
-- `-a` → anche file nascosti (dotfiles)
-- `-l` → formato esteso
-- `-s` → dimensione in blocchi
-- `-t` → ordine per data modifica
-- `-R` → ricorsivo
-- `-F` → aggiunge `/` alle directory e `*` agli eseguibili
-- `-i` → mostra i-number
+| `ls [opzioni] [dir]` | Elenca contenuto directory (`-a`: file nascosti, `-l`: formato esteso, `-s`: dimensione in blocchi, `-t`: ordine per data modifica, `-R`: ricorsivo, `-F`: aggiunge `/` a dir e `*` ad eseguibili, `-i`: mostra i-number) |
+| `du [-s] [-k] file` | Mostra spazio disco utilizzato (`-s`: solo totale/sommario, `-k`: mostra taglia in Kilobytes) |
 
 ### 4.2 Gestione File
 
@@ -605,6 +596,9 @@ fi
 | Stringhe | `==`, `!=`, `-z` (stringa vuota) |
 | Interi | `-lt`, `-le`, `-eq`, `-ne`, `-ge`, `-gt` |
 | File | `-e` (esiste), `-f` (file regolare), `-d` (directory), `-r`, `-w`, `-x` (permessi) |
+| Logici / Negazione | `!` (NOT / negazione logica), `-a` (AND), `-o` (OR) |
+
+> **Nota sull'operatore di negazione (`!`):** Inverte il valore di verità della condizione successiva (es. `[ ! -e "$1" ]` risulta vero se il file `$1` **non** esiste).
 
 ```bash
 if [ $# -lt 4 ]; then

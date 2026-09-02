@@ -420,17 +420,8 @@ ls | grep -v pluto | tail -3 | head -1  # come funziona e cosa fa verra' spiegat
 | `rmdir [-p] dir` | Rimuove directory vuota (`-p`: rimuove anche i percorsi genitori se vuoti) |
 | `pwd` | Stampa la working directory attuale |
 | `cd [dir]` | Cambia directory (senza argomenti → home) |
-| `ls [opzioni] [dir]` | Elenca contenuto directory |
+| `ls [opzioni] [dir]` | Elenca contenuto directory (`-a`: file nascosti, `-l`: formato esteso, `-s`: dimensione in blocchi, `-t`: ordine per data modifica, `-R`: ricorsivo, `-F`: aggiunge `/` a dir e `*` ad eseguibili, `-i`: mostra i-number) |
 | `du [-s] [-k] file` | Mostra spazio disco utilizzato (`-s`: solo totale/sommario, `-k`: mostra taglia in Kilobytes) |
-ve
-**Opzioni di `ls`:**
-- `-a` → anche file nascosti (dotfiles)
-- `-l` → formato esteso
-- `-s` → dimensione in blocchi
-- `-t` → ordine per data modifica
-- `-R` → ricorsivo
-- `-F` → aggiunge `/` alle directory e `*` agli eseguibili
-- `-i` → mostra i-number
 
 ### 4.2 Gestione File
 
@@ -631,6 +622,9 @@ fi
 | Stringhe | `==`, `!=`, `-z` (stringa vuota) |
 | Interi | `-lt`, `-le`, `-eq`, `-ne`, `-ge`, `-gt` |
 | File | `-e` (esiste), `-f` (file regolare), `-d` (directory), `-r`, `-w`, `-x` (permessi) |
+| Logici / Negazione | `!` (NOT / negazione logica), `-a` (AND), `-o` (OR) |
+
+> **Nota sull'operatore di negazione (`!`):** Inverte il valore di verità della condizione successiva (es. `[ ! -e "$1" ]` risulta vero se il file `$1` **non** esiste).
 
 ```bash
 if [ $# -lt 4 ]; then
@@ -935,6 +929,7 @@ Awk include molte funzioni predefinite. Ecco le più importanti:
 
 ```bash
 # length: lunghezza di ogni riga
+# Stampa il numero di riga, la lunghezza della riga e la riga stessa
 awk '{ print NR, length($0), $0 }' file.txt
 
 # substr: estrai i primi 5 caratteri
@@ -998,6 +993,19 @@ function fattoriale(n,    risultato) {
 
 { print $1, "! =", fattoriale($1) }
 ' numeri.txt
+```
+
+Esempio di funzionamento: 
+Se il file numeri.txt contiene:
+```bash
+3
+5
+```
+allora l'output prodotto a terminale sarà:
+
+```bash
+3! = 6  
+5! = 120
 ```
 
 ---
