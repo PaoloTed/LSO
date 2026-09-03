@@ -63,7 +63,7 @@
 18. [I/O Multiplexing — `select()`](#18-io-multiplexing--select) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-18)
 
 
-19. [Gestione Avanzata dei Segnali — `sigaction()` e SIGPIPE](#19-gestione-avanzata-dei-segnali--sigaction-e-sigpipe) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-19)
+19. [Segnali nelle Socket di Rete — SIGPIPE ed EINTR](#19-segnali-nelle-socket-di-rete--sigpipe-ed-eintr) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-19)
 
 
 20. [Broadcast e Multicast UDP](#20-broadcast-e-multicast-udp) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-20)
@@ -2350,7 +2350,7 @@ I parametri fondamentali sono:
 
 **Esempio:**
 ```c
-sigset_t mask oldmask;
+sigset_t mask, oldmask;
 
 // 1. Inizializzo la maschera a "vuota"
 sigemptyset(&mask);  // mask ora non contiene nessun segnale
@@ -2365,6 +2365,116 @@ if (sigprocmask(SIG_BLOCK, &mask, &oldmask) == -1) {
 // Ora "mask" contiene solo SIGINT. Qualsiasi invio di SIGINT al processo
 // verrà bloccato fino a quando non rimuoverò SIGINT dalla maschera.
 ```
+
+> **Nota fondamentale sull'ambito di `sigprocmask`:**  
+> La funzione `sigprocmask()` modifica la maschera del processo in modo **permanente** durante il normale flusso di esecuzione (il blocco dura finché non invochi esplicitamente `SIG_UNBLOCK` o `SIG_SETMASK`).  
+> Se invece vuoi bloccare dei segnali in modo **temporaneo e atomico solo durante l'esecuzione di un handler**, non si usa `sigprocmask`, ma il campo `sa_mask` di **`sigaction()`** (spiegato subito nella sezione successiva [12.8](#128-gestione-moderna-dei-segnali--sigaction)).
+
+### 12.8 Gestione Moderna dei Segnali — `sigaction()`
+
+Sebbene `signal()` (introdotta al [Capitolo 12.4](#124-catturare-un-segnale--signal)) sia la funzione storica del C per catturare i segnali, nei moderni sistemi operativi e nelle applicazioni concorrenti/di rete è considerata **obsoleta e inaffidabile**. Lo standard **POSIX** ha introdotto **`sigaction()`** per risolvere tutti i problemi di sincronizzazione e non-determinismo della vecchia interfaccia.
+
+> **L'intuizione chiave:**  
+> In un certo senso, **`sigaction()` combina `signal()` e `sigprocmask()` in un'unica operazione atomica**:
+> 1. Specifica quale funzione eseguire all'arrivo del segnale (`sa_handler` $\rightarrow$ il compito di `signal`).
+> 2. Definisce un insieme di segnali da **bloccare temporaneamente** mentre l'handler è in esecuzione (`sa_mask` $\rightarrow$ il compito di `sigprocmask`).
+> 3. Il kernel applica la maschera **istantaneamente e atomicamente** appena salta all'handler, e la ripristina da solo all'uscita, eliminando qualsiasi finestra di vulnerabilità (*race condition*).
+
+#### I 4 Problemi Critici di `signal()` risolti da `sigaction()`
+
+1. **Reset Automatico a `SIG_DFL` (Comportamento One-Shot e Race Condition):**  
+   Nei vecchi sistemi Unix (System V), quando un segnale veniva ricevuto, il kernel resettava immediatamente l'azione al valore di default (`SIG_DFL`) prima di chiamare l'handler. Per continuare a gestirlo, il programmatore doveva richiamare `signal()` dentro l'handler stesso. Se un secondo segnale arrivava nella finestra temporale prima della re-installazione, il processo veniva terminato in modo anomalo!  
+   *Con `sigaction()`:* L'handler rimane registrato in modo **permanente e affidabile** finché non viene esplicitamente modificato.
+
+2. **Mascheramento Atomico dei Segnali Concorrenti (`sa_mask`):**  
+   Con `signal()`, se arrivava un altro segnale mentre l'handler era in esecuzione, l'handler veniva interrotto nel mezzo con conseguente corruzione di dati o deadlock.  
+   *Con `sigaction()`:* Il campo `sa_mask` consente di elencare quali segnali il kernel deve **bloccare automaticamente** per tutta la durata dell'handler. Inoltre, il segnale stesso che ha scatenato l'handler viene bloccato di default (evitando ricorsioni non volute).
+
+3. **Controllo delle System Call Interrotte (`SA_RESTART` vs `EINTR`):**  
+   Se il processo si trova bloccato su una chiamata lenta di I/O (es. `read()`, `write()`, `accept()`, `recv()`) e arriva un segnale:
+   - Con `signal()`, il comportamento dipendeva dall'implementazione (alcuni Unix riavviavano, altri restituivano errore `EINTR`).
+   - Con `sigaction()`, il programmatore ha il pieno controllo tramite i flag:
+     - **Con `SA_RESTART`**: il kernel riavvia automaticamente la system call non appena l'handler termina.
+     - **Senza `SA_RESTART`**: la system call fallisce restituendo `-1` e impostando `errno = EINTR`, permettendo al programma di gestire manualmente l'interruzione.
+
+4. **Metadati Avanzati sul Mittente (`SA_SIGINFO`):**  
+   `signal()` passa all'handler solo un intero (`int signum`). Con `sigaction()`, abilitando il flag `SA_SIGINFO`, si può usare la firma estesa `sa_sigaction(int sig, siginfo_t *info, void *ucontext)`, potendo così ispezionare il **PID del processo mittente** (`info->si_pid`), l'UID, o la causa del segnale.
+
+---
+
+#### Struttura e Configurazione di `sigaction`
+
+```c
+#include <signal.h>
+
+struct sigaction {
+    void     (*sa_handler)(int);                  // Handler standard (come signal)
+    void     (*sa_sigaction)(int, siginfo_t *, void *); // Handler avanzato (con SA_SIGINFO)
+    sigset_t sa_mask;                             // Segnali bloccati DURANTE l'handler
+    int      sa_flags;                            // Flag (es. SA_RESTART, SA_SIGINFO)
+    void     (*sa_restorer)(void);                // Riservato / obsoleto
+};
+
+int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
+// Restituisce: 0 in caso di successo, -1 in caso di errore
+```
+
+#### Esempio Completo e Robusto
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+
+void gestore_sigint(int sig) {
+    printf("\n[Handler] Ricevuto SIGINT (%d). Gestione sicura in corso...\n", sig);
+    sleep(1);
+    printf("[Handler] Fine gestione.\n");
+}
+
+int main(void) {
+    struct sigaction sa = {0};
+
+    // 1. Azione da eseguire (funzione gestore)
+    sa.sa_handler = gestore_sigint;
+
+    // 2. Maschera atomica: blocca temporaneamente anche SIGQUIT e SIGUSR1
+    //    mentre questo handler è in esecuzione
+    sigemptyset(&sa.sa_mask);
+    sigaddset(&sa.sa_mask, SIGQUIT);
+    sigaddset(&sa.sa_mask, SIGUSR1);
+
+    // 3. Flag: riavvia le chiamate bloccanti lente senza farle fallire con EINTR
+    sa.sa_flags = SA_RESTART;
+
+    // 4. Registrazione sicura su SIGINT (Ctrl+C)
+    if (sigaction(SIGINT, &sa, NULL) == -1) {
+        perror("sigaction");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("In attesa di segnali (premi Ctrl+C per testare, o Ctrl+\\ per uscire)...\n");
+    while (1) {
+        pause(); // Attende un segnale
+    }
+
+    return 0;
+}
+```
+
+---
+
+#### Confronto Riassuntivo per l'Esame
+
+| Caratteristica | `signal()` (Vecchio Stile) | `sigaction()` (Standard POSIX) |
+| :--- | :--- | :--- |
+| **Portabilità** | Scarsa (differenze storiche BSD vs System V) | **Universale e deterministica** (standard POSIX) |
+| **Persistenza** | Rischio di reset a `SIG_DFL` (One-shot) | **Permanente** per default |
+| **Race Conditions** | Frequenti per finestre critiche di ri-registrazione | **Assenti** (gestione atomica da parte del kernel) |
+| **Mascheramento** | Nessun controllo sui segnali durante l'handler | **Atomico tramite `sa_mask`** (solo per la durata dell'handler) |
+| **Syscall bloccanti** | Comportamento imprevedibile o dipendente dal SO | **Configurabile** con o senza il flag `SA_RESTART` |
+| **Info mittente** | Riceve solo il numero `int sig` | Può ricevere metadati dettagliati (`siginfo_t`, PID mittente) con `SA_SIGINFO` |
 
 ---
 
@@ -3721,6 +3831,91 @@ if (n == 0) {
 }
 ```
 
+#### Esempio Completo — Loop con `select()`, Rigenerazione del Set e Lettura da `stdin`
+
+In un'applicazione reale con ciclo `while (1)`, bisogna ricordare che `select()` è **distruttiva**:
+- Sovrascrive il set passato lasciandovi **soltanto** i file descriptor che risultano pronti.
+- Su sistemi Linux, decrementa anche la `struct timeval` indicando il tempo residuo.
+
+Di conseguenza, sia la macro `FD_ZERO`/`FD_SET` sia la reimpostazione del timeout **devono trovarsi all'interno del ciclo ad ogni iterazione**.
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/select.h>
+#include <sys/time.h>
+#include <string.h>
+
+#define BUF_SIZE 256
+
+int main(void) {
+    char buffer[BUF_SIZE];
+    fd_set readfds;
+    struct timeval tv;
+    int giro = 1;
+
+    printf("=== Programma avviato ===\n");
+    printf("Digita del testo e premi INVIO (premi Ctrl+D per inviare EOF e terminare):\n\n");
+
+    while (1) {
+        // ==========================================================
+        // 1. RIGENERAZIONE DEL SET (OBBLIGATORIO AD OGNI ITERAZIONE)
+        // ==========================================================
+        FD_ZERO(&readfds);               // Svuota l'insieme
+        FD_SET(STDIN_FILENO, &readfds);  // Reinserisce lo standard input (fd 0)
+
+        // ==========================================================
+        // 2. REIMPOSTAZIONE DEL TIMEOUT (5 secondi)
+        // ==========================================================
+        tv.tv_sec = 5;
+        tv.tv_usec = 0;
+
+        printf("[Ciclo %d] In attesa su select (timeout: 5s)...\n", giro++);
+
+        // ==========================================================
+        // 3. CHIAMATA A SELECT
+        // numfds = massimo fd da controllare + 1 (STDIN_FILENO è 0 -> 0 + 1 = 1)
+        // ==========================================================
+        int ready = select(STDIN_FILENO + 1, &readfds, NULL, NULL, &tv);
+
+        // ==========================================================
+        // 4. GESTIONE DELL'ESITO
+        // ==========================================================
+        if (ready == -1) {
+            perror("select");
+            break;
+        } 
+        else if (ready == 0) {
+            // Timeout scaduto: nessun dato inserito prima dei 5 secondi
+            printf("--> [TIMEOUT] Nessun dato inserito negli ultimi 5 secondi.\n\n");
+        } 
+        else {
+            // Un descrittore è pronto: controlliamo se è stdin
+            if (FD_ISSET(STDIN_FILENO, &readfds)) {
+                ssize_t n = read(STDIN_FILENO, buffer, sizeof(buffer) - 1);
+
+                if (n == -1) {
+                    perror("read");
+                    break;
+                } 
+                else if (n == 0) {
+                    // read() restituisce 0 su EOF (es. Ctrl+D da tastiera)
+                    printf("\n--> [EOF] Ricevuto EOF su stdin. Uscita dal ciclo.\n");
+                    break;
+                } 
+                else {
+                    buffer[n] = '\0'; // Terminatore stringa C
+                    printf("--> [LETTO] %zd byte ricevuti: %s", n, buffer);
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+```
+
 ### 18.6 Server Multiplexing con `select()`
 
 Un **unico thread** gestisce listening socket + tutti i socket dei client:
@@ -3731,60 +3926,97 @@ Un **unico thread** gestisce listening socket + tutti i socket dei client:
 4. Se un client socket è pronto → `recv()` / `send()`
 5. Se `recv()` restituisce 0 → client disconnesso → `close()` + `FD_CLR()`
 
-> **Importante**: `select()` modifica i set passati. Bisogna **ricreare** il set ad ogni iterazione.
+> **Importante — Pattern Master Set vs Working Set**:  
+> Poiché `select()` modifica i set in-place, nei server con molti client non si reinseriscono manualmente tutti i descrittori a ogni giro con un ciclo. Si mantiene un **`master_set`** permanente e lo si copia nel set di lavoro temporaneo prima di invocare `select()`:
+> ```c
+> fd_set master_set, read_set;
+> FD_ZERO(&master_set);
+> FD_SET(server_fd, &master_set);
+> int max_fd = server_fd;
+> 
+> while (1) {
+>     read_set = master_set; // Copia veloce: read_set viene consumato da select(), master_set resta integro!
+>     int n = select(max_fd + 1, &read_set, NULL, NULL, NULL);
+>     
+>     // Se server_fd è pronto -> accept e aggiunta al master_set:
+>     // FD_SET(new_client_fd, &master_set);
+>     // if (new_client_fd > max_fd) max_fd = new_client_fd;
+>     
+>     // Se un client si disconnette -> chiusura e rimozione dal master_set:
+>     // close(client_fd);
+>     // FD_CLR(client_fd, &master_set);
+> }
+> ```
 
 ---
 
-## 19. Gestione Avanzata dei Segnali — `sigaction()` e SIGPIPE
+## 19. Segnali nelle Socket di Rete — SIGPIPE ed EINTR
 <div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
-### 19.1 `sigaction()` vs `signal()`
+Nello sviluppo di applicazioni di rete (server concorrenti e client socket, trattati nei [Capitoli 17](#17-socket--comunicazione-di-rete) e [18](#18-io-multiplexing--select)), la gestione dei segnali presenta due problematiche critiche:
+1. **L'interruzione delle system call bloccanti (`EINTR`)**, ad esempio durante l'attesa su `accept()` o `recv()`.
+2. **La chiusura improvvisa della connessione da parte del peer durante la scrittura (`SIGPIPE`)**.
 
+> *Nota di riferimento:* Per la teoria completa su `sigaction()`, il confronto con `signal()`, e l'uso atomico di `sa_mask`, consultare il [Capitolo 12.8 — Gestione Moderna dei Segnali — `sigaction()`](#128-gestione-moderna-dei-segnali--sigaction).
+
+### 19.1 Gestione delle Syscall Bloccanti e `EINTR`
+
+Quando un server è bloccato in attesa di connessioni (`accept()`) o di dati (`recv()`, `read()`), l'arrivo di un qualsiasi segnale (come `SIGCHLD` emesso da un processo figlio che termina) interrompe la chiamata.
+
+Esistono due approcci standard per gestire questa situazione:
+
+#### Metodo A: Riavvio Automatico con `SA_RESTART` (Raccomandato)
+Configurando il gestore con `sigaction()` e impostando il flag `SA_RESTART`, il sistema operativo riavvia automaticamente la chiamata interrotta non appena l'handler termina:
 ```c
-struct sigaction {
-    void     (*sa_handler)(int);
-    sigset_t sa_mask;
-    int      sa_flags;
-};
-
 struct sigaction sa = {0};
-sa.sa_handler = mio_handler;
-sa.sa_flags   = SA_RESTART;    // riavvia syscall interrotte
+sa.sa_handler = gestore_sigchld;
+sa.sa_flags = SA_RESTART; // Le syscall bloccanti interrotte NON falliscono con EINTR, ma ripartono
 sigemptyset(&sa.sa_mask);
-sigaction(SIGINT, &sa, NULL);
+sigaction(SIGCHLD, &sa, NULL);
 ```
 
-**`SA_RESTART`**: se una syscall bloccante (`accept`, `recv`, `read`) viene interrotta da un segnale, viene **riavviata automaticamente** invece di ritornare `-1` con `errno = EINTR`.
-
-### 19.2 Gestione di `EINTR` manuale
-
+#### Metodo B: Gestione Manuale nel Ciclo con `EINTR`
+Se `SA_RESTART` non è impostato, la chiamata fallisce restituendo `-1` e impostando `errno = EINTR`. In tal caso, il server deve verificare la condizione e ripetere l'operazione:
 ```c
 for (;;) {
     int sd = accept(listen_sd, ...);
-    if (sd >= 0) break;
-    if (errno == EINTR) continue;  // interrotto da segnale, riprova
-    perror("accept"); break;
+    if (sd >= 0) {
+        // Connessione accettata con successo
+        break;
+    }
+    if (errno == EINTR) {
+        // Interrotto da segnale: non è un errore fatale, si riprova!
+        continue;
+    }
+    perror("accept");
+    break;
 }
 ```
 
-### 19.3 Gestione di `SIGPIPE`
+### 19.2 Gestione di `SIGPIPE` nelle Socket TCP
 
-Quando un processo scrive su un socket il cui peer ha chiuso la connessione, riceve **SIGPIPE** (default: terminazione).
+Quando un processo tenta di inviare dati con `write()` o `send()` verso un socket TCP il cui lato remoto è già stato chiuso dal peer (connessione interrotta o caduta), il kernel invia al processo mittente il segnale **`SIGPIPE`**.
 
-**Approccio tipico:** ignorare SIGPIPE e gestire l'errore con `errno`:
+* **Comportamento di default:** Terminazione immediata del processo! In un server multi-client o web, questo causerebbe il crash dell'intero applicativo a causa della semplice disconnessione di un singolo client.
+* **Soluzione standard:** Ignorare `SIGPIPE` all'avvio del programma e gestire l'interruzione controllando il codice d'errore `EPIPE`:
+
 ```c
+// 1. Ignorare SIGPIPE all'inizio del programma:
 signal(SIGPIPE, SIG_IGN);
+// (oppure specificando MSG_NOSIGNAL in send: send(sd, buf, len, MSG_NOSIGNAL);)
 
+// 2. Verificare l'errore EPIPE su send/write:
 ssize_t w = send(sd, buf, len, 0);
 if (w < 0 && errno == EPIPE) {
-    // peer ha chiuso → chiudi il socket
+    // Il peer ha chiuso la connessione: chiudiamo il descrittore locale
     close(sd);
 }
 
-// Per la lettura:
+// 3. Per la lettura (recv/read), la chiusura del peer non genera segnali,
+//    ma restituisce semplicemente 0 (EOF):
 ssize_t n = recv(sd, buf, sizeof(buf), 0);
 if (n == 0) {
-    // peer ha chiuso la connessione (FIN)
+    // Il peer ha chiuso la connessione in modo ordinato (FIN)
     close(sd);
 }
 ```
@@ -5014,6 +5246,9 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [12.7 Insiemi di Segnali e Maschere](#127-insiemi-di-segnali-e-maschere)
 
 
+- [12.8 Gestione Moderna dei Segnali — `sigaction()`](#128-gestione-moderna-dei-segnali--sigaction)
+
+
 ### Indice delle Sottosezioni Capitolo 13
 
 
@@ -5146,13 +5381,10 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 ### Indice delle Sottosezioni Capitolo 19
 
 
-- [19.1 `sigaction()` vs `signal()`](#191-sigaction-vs-signal)
+- [19.1 Gestione delle Syscall Bloccanti e `EINTR`](#191-gestione-delle-syscall-bloccanti-e-eintr)
 
 
-- [19.2 Gestione di `EINTR` manuale](#192-gestione-di-eintr-manuale)
-
-
-- [19.3 Gestione di `SIGPIPE`](#193-gestione-di-sigpipe)
+- [19.2 Gestione di `SIGPIPE` nelle Socket TCP](#192-gestione-di-sigpipe-nelle-socket-tcp)
 
 
 ### Indice delle Sottosezioni Capitolo 20
