@@ -2372,7 +2372,7 @@ if (sigprocmask(SIG_BLOCK, &mask, &oldmask) == -1) {
 
 ### 12.8 Gestione Moderna dei Segnali — `sigaction()`
 
-Sebbene `signal()` (introdotta al [Capitolo 12.4](#124-catturare-un-segnale--signal)) sia la funzione storica del C per catturare i segnali, nei moderni sistemi operativi e nelle applicazioni concorrenti/di rete è considerata **obsoleta e inaffidabile**. Lo standard **POSIX** ha introdotto **`sigaction()`** per risolvere tutti i problemi di sincronizzazione e non-determinismo della vecchia interfaccia.
+Sebbene `signal()` sia la funzione storica del C per catturare i segnali, nei moderni sistemi operativi e nelle applicazioni concorrenti/di rete è considerata **obsoleta e inaffidabile**. Lo standard **POSIX** ha introdotto **`sigaction()`** per risolvere tutti i problemi di sincronizzazione e non-determinismo della vecchia interfaccia.
 
 > **L'intuizione chiave:**  
 > In un certo senso, **`sigaction()` combina `signal()` e `sigprocmask()` in un'unica operazione atomica**:
@@ -2419,7 +2419,7 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 // Restituisce: 0 in caso di successo, -1 in caso di errore
 ```
 
-#### Esempio Completo e Robusto
+#### Esempio Completo
 
 ```c
 #include <stdio.h>
@@ -2462,20 +2462,6 @@ int main(void) {
     return 0;
 }
 ```
-
----
-
-#### Confronto Riassuntivo per l'Esame
-
-| Caratteristica | `signal()` (Vecchio Stile) | `sigaction()` (Standard POSIX) |
-| :--- | :--- | :--- |
-| **Portabilità** | Scarsa (differenze storiche BSD vs System V) | **Universale e deterministica** (standard POSIX) |
-| **Persistenza** | Rischio di reset a `SIG_DFL` (One-shot) | **Permanente** per default |
-| **Race Conditions** | Frequenti per finestre critiche di ri-registrazione | **Assenti** (gestione atomica da parte del kernel) |
-| **Mascheramento** | Nessun controllo sui segnali durante l'handler | **Atomico tramite `sa_mask`** (solo per la durata dell'handler) |
-| **Syscall bloccanti** | Comportamento imprevedibile o dipendente dal SO | **Configurabile** con o senza il flag `SA_RESTART` |
-| **Info mittente** | Riceve solo il numero `int sig` | Può ricevere metadati dettagliati (`siginfo_t`, PID mittente) con `SA_SIGINFO` |
-
 ---
 
 ## 13. IPC: Pipe, FIFO e Memoria Condivisa (mmap)
@@ -3953,7 +3939,7 @@ Un **unico thread** gestisce listening socket + tutti i socket dei client:
 ## 19. Segnali nelle Socket di Rete — SIGPIPE ed EINTR
 <div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
-Nello sviluppo di applicazioni di rete (server concorrenti e client socket, trattati nei [Capitoli 17](#17-socket--comunicazione-di-rete) e [18](#18-io-multiplexing--select)), la gestione dei segnali presenta due problematiche critiche:
+Nello sviluppo di applicazioni di rete, la gestione dei segnali presenta due problematiche critiche:
 1. **L'interruzione delle system call bloccanti (`EINTR`)**, ad esempio durante l'attesa su `accept()` o `recv()`.
 2. **La chiusura improvvisa della connessione da parte del peer durante la scrittura (`SIGPIPE`)**.
 
