@@ -360,6 +360,7 @@ Ogni programma ha 3 canali di comunicazione:
 | Standard error | 2 | Schermo |
 
 **Operatori di redirezione:**
+Redireziona l'output di un processo verso un FILE non verso un altro processo.
 
 ```bash
 # Redirezione output (sovrascrive)
@@ -385,7 +386,7 @@ EOF
 
 ### 3.6 Pipe
 
-La **pipe** (`|`) collega l'output di un comando all'input del successivo:
+La **pipe** (`|`) collega l'output di un comando all'input di un altro comando:
 
 ```bash
 cat file | sort          # ordina il contenuto del file
@@ -422,7 +423,7 @@ ls | grep -v pluto | tail -3 | head -1  # come funziona e cosa fa verra' spiegat
 |---------|----------|
 | `mkdir [-p] [-m mode] dir` | Crea directory (`-p`: crea percorsi intermedi se mancanti, `-m`: imposta permessi iniziali) |
 | `rmdir [-p] dir` | Rimuove directory vuota (`-p`: rimuove anche i percorsi genitori se vuoti) |
-| `pwd` | Stampa la working directory attuale |
+| `pwd` | Stampa la working directory attuale (`Print Working Directory`)| 
 | `cd [dir]` | Cambia directory (senza argomenti → home) |
 | `ls [opzioni] [dir]` | Elenca contenuto directory (`-a`: file nascosti, `-l`: formato esteso, `-s`: dimensione in blocchi, `-t`: ordine per data modifica, `-R`: ricorsivo, `-F`: aggiunge `/` a dir e `*` ad eseguibili, `-i`: mostra i-number) |
 | `du [-s] [-k] file` | Mostra spazio disco utilizzato (`-s`: solo totale/sommario, `-k`: mostra taglia in Kilobytes) |
