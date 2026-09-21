@@ -440,7 +440,16 @@ ls | grep -v pluto | tail -3 | head -1  # come funziona e cosa fa verra' spiegat
 | `ln [-s] name1 name2` | Crea link (hard di default, `-s`: crea link simbolico) |
 | `chmod permissions file` | Cambia permessi |
 | `chown user[:group] file` | Cambia proprietario/gruppo |
-| `find path -name pattern` | Cerca file ricorsivamente |
+| `find path -name "pattern"` | Cerca file ricorsivamente |
+
+> [!IMPORTANT]
+> **Uso delle virgolette in find:** Quando si usa `find -name`, è essenziale racchiudere il pattern di ricerca (ad esempio `"*.txt"`) tra virgolette. Se non lo si fa, la shell espanderà `*.txt` *prima* di passare l'argomento a `find`, causando comportamenti inattesi o errori.
+
+**Esempio completo con opzioni:**
+```bash
+# Cerca nella cartella /home (e sottocartelle) tutti i file chiamati "*.sh", chiedendo conferma per cancellarli
+find /home -name "*.sh" -exec rm -i {} \;
+```
 
 ### 4.3 Comandi di Utilità su Testo <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
 
@@ -489,10 +498,21 @@ Esempio: `root:x:0:0:root:/root:/bin/bash`
 ### 5.1 Il Comando `grep`
 
 ```bash
-grep [opzioni] pattern [file]
+grep [opzioni] "pattern" [file]
 ```
 
 Stampa le righe che corrispondono al pattern. Se non si specifica un file, legge da stdin (utilizzabile in pipe).
+
+> [!IMPORTANT]
+> **Uso delle virgolette:** È fondamentale racchiudere sempre il pattern tra virgolette doppie (`"..."`) o apici singoli (`'...'`). Questo impedisce alla shell di interpretare spazi o caratteri speciali al loro interno (ad esempio il carattere `*` o lo spazio) prima che vengano passati al comando.
+
+**Esempio completo con opzioni:**
+```bash
+# Cerca "errore di sistema" ignorando il case (-i) e mostrando i numeri di riga (-n) nel file syslog
+grep -in "errore di sistema" /var/log/syslog
+# Oppure in alternativa separando le opzioni (non c'è differenza in output)
+grep -i -n "errore di sistema" /var/log/syslog
+```
 
 **Opzioni principali:**
 
@@ -518,6 +538,15 @@ Stampa le righe che corrispondono al pattern. Se non si specifica un file, legge
 | `exp\{N\}` | exp compare esattamente N volte |
 | `exp\{N,\}` | exp compare almeno N volte |
 | `exp\{N,M\}` | exp compare da N a M volte |
+
+> [!NOTE]
+> **A cosa serve il backslash (`\`) in grep?**
+> In `grep` (che di default usa le espressioni regolari "Base" o BRE), il backslash ha un ruolo fondamentale e bidirezionale:
+> 
+> 1. **Attivare caratteri speciali (Metacaratteri):** Caratteri come `{`, `}`, `<`, `>` o `(` vengono interpretati da `grep` come testo normale. Per fargli assumere il loro significato speciale, devi farli precedere dal backslash.
+>    - *Esempio:* `grep "A{3}" file` cercherà letteralmente la stringa "A{3}". Invece `grep "A\{3\}" file` cercherà la lettera "A" ripetuta esattamente 3 volte ("AAA").
+> 2. **Disattivare caratteri speciali (Escape):** Al contrario, caratteri come `.`, `*`, `^` e `$` hanno un significato speciale di default. Se vuoi cercare nel testo il simbolo letterale (es. un vero punto), devi usare il backslash per "scappare" (escape) dal suo significato speciale.
+>    - *Esempio:* `grep "file.txt" file` cercherà "file-txt", "file0txt" (perché il punto vale "qualsiasi carattere"). Invece `grep "file\.txt" file` cercherà solo l'esatta stringa "file.txt".
 
 **Classi POSIX:**
 - `[[:alpha:]]` → caratteri alfabetici
@@ -732,6 +761,16 @@ Per modificare il file di testo si deve **reindirizzare l'output in un altro fil
 
 **Sintassi:** `sed [opzioni] 'comando' [file]`
 
+> [!IMPORTANT]
+> **Uso degli apici/virgolette:** Come per grep, è vitale racchiudere il comando di `sed` (ad esempio la stringa di sostituzione) tra apici singoli (`'...'`) o virgolette doppie (`"..."`) per evitare che la shell modifichi o interpreti i caratteri speciali prima dell'esecuzione.
+
+**Esempio completo con opzioni:**
+```bash
+# Sostituisce tutte le occorrenze (-e 's/.../g') e lo fa senza stampare l'output standard (-n)
+# ma stampando solo le righe in cui è avvenuta la sostituzione (/p). 
+sed -n -e 's/"vecchio valore"/"nuovo valore"/gp' file.txt
+```
+
 **Opzioni principali:**
 * `-n`: Sopprime l'output automatico (di default `sed` stampa ogni riga processata). Utile in combinazione con il comando `p` per stampare solo le righe modificate o cercate.
 * `-e`: Permette di concatenare più comandi `sed` (es. `sed -e 'comando1' -e 'comando2'`).
@@ -804,6 +843,15 @@ sed -e 's/.*/lui dice: &/' file
 awk 'programma' file          # programma inline
 awk -f script.awk file        # programma da file
 awk -F: 'programma' file      # specifica il delimitatore (qui ':')
+```
+
+> [!IMPORTANT]
+> **Uso degli apici:** In `awk` è imperativo racchiudere il codice inline del programma tra apici singoli (`'...'`). Questo perché il codice `awk` utilizza spesso caratteri come `$1` o `$` che la shell di bash interpreterebbe come variabili d'ambiente (espandendole o sostituendole) ancor prima di passare il programma ad `awk`.
+
+**Esempio completo con opzioni:**
+```bash
+# Assegna una variabile interna awk usando -v e definisce un diverso separatore di campo con -F
+awk -v limite=1000 -F: '$3 > limite { print "Utente:", $1, "ID:", $3 }' /etc/passwd
 ```
 
 ---
