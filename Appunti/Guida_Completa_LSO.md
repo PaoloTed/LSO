@@ -505,6 +505,8 @@ Stampa le righe che corrispondono al pattern. Se non si specifica un file, legge
 
 > [!IMPORTANT]
 > **Uso delle virgolette:** È fondamentale racchiudere sempre il pattern tra virgolette doppie (`"..."`) o apici singoli (`'...'`). Questo impedisce alla shell di interpretare spazi o caratteri speciali al loro interno (ad esempio il carattere `*` o lo spazio) prima che vengano passati al comando.
+> 
+> *Consiglio:* Di norma è preferibile usare i **singoli apici (`'...'`)** per le regex di grep, per evitare del tutto interferenze della shell. Usa i **doppi apici (`"..."`)** solo se hai bisogno che Bash espanda una variabile (es. `$MIOPATTERN`) all'interno della ricerca.
 
 **Esempio completo con opzioni:**
 ```bash
@@ -589,12 +591,12 @@ ls -l | grep '^-..x'
 ls -d */ | grep '^[[:upper:]]'
 
 # Utenti che usano bash come shell
-grep "bash$" /etc/passwd
+grep 'bash$' /etc/passwd
 
 # File .txt nella directory corrente e sottodirectory
-ls -R | grep "\.txt$"
+ls -R | grep '\.txt$'
 # oppure
-find . -name "*.txt"
+find . -name '*.txt'
 ```
 
 ---
@@ -830,8 +832,15 @@ sed 's/parola//g' file
 # Aggiunge indentazione, redirige l'output in file.indent
 sed 's/^/   /' file > file.indent
 
-# & ripete l'ultimo match
+# Il simbolo & nella stringa di sostituzione rappresenta l'esatto testo trovato dal match.
+# In questo caso, .* (espressione regolare per "tutta la riga") trova l'intera riga. 
+# Quindi & viene sostituito con il contenuto originale della riga stessa.
+# Effetto pratico: aggiunge il prefisso "lui dice: " a ogni riga del file.
 sed -e 's/.*/lui dice: &/' file
+
+# Un altro esempio per capire meglio: se vuoi mettere tra parentesi quadre la parola 'errore'
+# ovunque si trovi, & prenderà esattamente la parola trovata.
+sed 's/errore/[&]/g' file
 ```
 
 ### 7.2 Awk — Linguaggio di Elaborazione Testuale
@@ -1047,16 +1056,16 @@ Puoi definire le tue funzioni in awk. La sintassi è simile al C. Le variabili d
 
 ```bash
 # Sintassi:
-# function nome(param1, param2,    locale1, locale2) {
-#     ...
-#     return valore
-# }
+ function nome(param1, param2,    locale1, locale2) {
+    ...
+     return valore
+ }
 
 ```
 
 ```bash
 # Funzione con variabile locale (il doppio spazio è una convenzione)
-awk '
+awk ' 
 function fattoriale(n,    risultato) {
     risultato = 1
     for (i = 2; i <= n; i++)
