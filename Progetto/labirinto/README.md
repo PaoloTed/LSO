@@ -31,6 +31,32 @@ make
 
 Produce i due eseguibili `bin/server` e `bin/client`. Per ripulire: `make clean`.
 
+## Avvio rapido (Windows con WSL)
+
+Compila dalla cartella del progetto:
+
+```bash
+make
+```
+
+Poi apri **tre terminali**. Su Windows puoi aprire una shell Linux con il comando `wsl`
+oppure lanciare tutto con `wsl -e bash -lc "..."`.
+
+Terminale 1 — server (non stampa nulla: scrive su `server.log`):
+
+```bash
+./bin/server 5200 600 15
+```
+
+Terminale 2 e Terminale 3 — due client:
+
+```bash
+./bin/client 127.0.0.1 5200
+```
+
+Avvia il server e connettiti subito: il timeout parte all'avvio del server, quindi usa
+un timeout lungo (es. `600`) per giocare con calma.
+
 ## Uso del server
 
 ```bash
@@ -75,6 +101,42 @@ password. Comandi disponibili durante la partita:
 | `g` | rivedi l'ultima mappa globale |
 | `h` | aiuto |
 | `q` | esci |
+
+## Come giocare
+
+1. Alla connessione scegli `2` per registrarti (solo la prima volta), inserendo nickname e
+   password; alle volte successive scegli `1` e accedi con le stesse credenziali. Ogni
+   client deve usare un nickname diverso.
+2. Muoviti con `w`/`a`/`s`/`d`: digita **una lettera per riga** e premi Invio. Ad ogni passo
+   il server scopre l'area attorno a te e ti invia la vista locale.
+3. Passando su una cella con `O` l'oggetto viene raccolto e il punteggio aumenta.
+4. Obiettivo: raggiungere una cella `E` (uscita). La partita termina allo scadere del
+   timeout oppure quando tutti i giocatori connessi sono usciti. Vince l'unico giocatore
+   uscito; altrimenti chi ha raccolto più oggetti.
+5. Ogni T secondi ricevi la mappa globale con le sole celle che hai già scoperto.
+
+Simboli e colori:
+
+- `#` muro, `.` cella libera, `E` uscita, `O` oggetto, `P` la tua posizione, `?` non scoperta.
+- Nella mappa locale le celle sono **blu**, `P` è **rosso**, `O` è **giallo**.
+- Nella mappa globale è **blu** solo la finestra locale attuale (5×5 attorno a te).
+
+Esempio di sessione:
+
+```
+Scelta: 2
+Nickname: mario
+Password: ****
+Accesso effettuato come 'mario'.
+...
+w
+Posizione: (riga 4, colonna 12)   Oggetti raccolti: 0
+  . . # # #
+  . # . . .
+  . # P . #
+  . . . # .
+  # . # . .
+```
 
 ## Protocollo applicativo
 
