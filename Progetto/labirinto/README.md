@@ -31,34 +31,37 @@ make
 
 Produce i due eseguibili `bin/server` e `bin/client`. Per ripulire: `make clean`.
 
-## Avvio rapido (Windows + WSL)
+## Avvio rapido
 
-Apri PowerShell. I comandi seguenti si lanciano con `wsl -e bash -lc "..."` (ogni comando
-usa il percorso del progetto: sostituiscilo con quello della tua copia).
+Compila il progetto dalla cartella `labirinto/`:
 
-Compila (una volta sola, o dopo ogni modifica al codice):
-
-```powershell
-wsl -e bash -lc "cd /mnt/c/Users/giova/LSO/Progetto/labirinto && make"
+```bash
+make
 ```
 
-Terminale 1 — server (non stampa nulla: scrive su `server.log`):
+Poi avvia server e client in terminali separati.
 
-```powershell
-wsl -e bash -lc "cd /mnt/c/Users/giova/LSO/Progetto/labirinto && ./bin/server 5200 600 15"
+**Linux / WSL**, dall'interno della cartella del progetto:
+
+```bash
+./bin/server 5200 600 15
+./bin/client 127.0.0.1 5200
 ```
 
-Terminale 2 e Terminale 3 — due client:
+**Windows (PowerShell)**: imposta una volta il percorso della tua copia del progetto e
+lancia ogni comando in un terminale diverso.
 
 ```powershell
-wsl -e bash -lc "cd /mnt/c/Users/giova/LSO/Progetto/labirinto && ./bin/client 127.0.0.1 5200"
+# adatta il percorso alla tua copia (es. C:\... diventa /mnt/c/...)
+$P = "/mnt/c/percorso/del/progetto/labirinto"
+
+wsl -e bash -lc "cd $P && make"
+wsl -e bash -lc "cd $P && ./bin/server 5200 600 15"
+wsl -e bash -lc "cd $P && ./bin/client 127.0.0.1 5200"
 ```
 
-Avvia il server e connettiti subito: il timeout parte all'avvio del server, quindi usa
-un timeout lungo (es. `600`) per giocare con calma.
-
-> Su Linux, dall'interno della cartella del progetto, gli stessi comandi diventano
-> `make`, `./bin/server 5200 600 15` e `./bin/client 127.0.0.1 5200`.
+Il server non stampa nulla: registra le attività su `server.log`. Avvialo e connettiti
+subito, perché il timeout parte all'avvio del server (usa un timeout lungo, es. `600`).
 
 ## Uso del server
 
