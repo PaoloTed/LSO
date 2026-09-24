@@ -25,43 +25,44 @@ labirinto/
 
 ## Compilazione
 
+Apri un terminale nella cartella del progetto (quella con il `Makefile`) e compila:
+
 ```bash
 make
+```
+
+Su Windows, dalla stessa cartella aperta in PowerShell, basta prefissare con `wsl`:
+
+```powershell
+wsl make
 ```
 
 Produce i due eseguibili `bin/server` e `bin/client`. Per ripulire: `make clean`.
 
 ## Avvio rapido
 
-Compila il progetto dalla cartella `labirinto/`:
+Apri PowerShell e portati nella cartella del progetto (dove sta il `Makefile`). `wsl`
+mantiene la cartella corrente, quindi non servono percorsi assoluti.
 
-```bash
-make
-```
-
-Poi avvia server e client in terminali separati.
-
-**Linux / WSL**, dall'interno della cartella del progetto:
-
-```bash
-./bin/server 5200 600 15
-./bin/client 127.0.0.1 5200
-```
-
-**Windows (PowerShell)**: imposta una volta il percorso della tua copia del progetto e
-lancia ogni comando in un terminale diverso.
+Avvia il **server** in un terminale (resta in esecuzione; non stampa nulla, scrive su
+`server.log`):
 
 ```powershell
-# adatta il percorso alla tua copia (es. C:\... diventa /mnt/c/...)
-$P = "/mnt/c/percorso/del/progetto/labirinto"
-
-wsl -e bash -lc "cd $P && make"
-wsl -e bash -lc "cd $P && ./bin/server 5200 600 15"
-wsl -e bash -lc "cd $P && ./bin/client 127.0.0.1 5200"
+wsl ./bin/server 5200 600 15
 ```
 
-Il server non stampa nulla: registra le attività su `server.log`. Avvialo e connettiti
-subito, perché il timeout parte all'avvio del server (usa un timeout lungo, es. `600`).
+Avvia uno o più **client**, ciascuno in un terminale diverso:
+
+```powershell
+wsl ./bin/client 127.0.0.1 5200
+```
+
+`5200` è la porta, `600` il timeout in secondi, `15` il periodo della mappa globale.
+Avviati e connettiti subito: il timeout parte all'avvio del server, quindi usa un timeout
+lungo (es. `600`) per giocare con calma.
+
+> Su Linux, senza `wsl`, gli stessi comandi sono `make`, `./bin/server 5200 600 15` e
+> `./bin/client 127.0.0.1 5200`.
 
 ## Uso del server
 
