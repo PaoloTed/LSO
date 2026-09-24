@@ -31,31 +31,34 @@ make
 
 Produce i due eseguibili `bin/server` e `bin/client`. Per ripulire: `make clean`.
 
-## Avvio rapido (Windows con WSL)
+## Avvio rapido (Windows + WSL)
 
-Compila dalla cartella del progetto:
+Apri PowerShell. I comandi seguenti si lanciano con `wsl -e bash -lc "..."` (ogni comando
+usa il percorso del progetto: sostituiscilo con quello della tua copia).
 
-```bash
-make
+Compila (una volta sola, o dopo ogni modifica al codice):
+
+```powershell
+wsl -e bash -lc "cd /mnt/c/Users/giova/LSO/Progetto/labirinto && make"
 ```
-
-Poi apri **tre terminali**. Su Windows puoi aprire una shell Linux con il comando `wsl`
-oppure lanciare tutto con `wsl -e bash -lc "..."`.
 
 Terminale 1 — server (non stampa nulla: scrive su `server.log`):
 
-```bash
-./bin/server 5200 600 15
+```powershell
+wsl -e bash -lc "cd /mnt/c/Users/giova/LSO/Progetto/labirinto && ./bin/server 5200 600 15"
 ```
 
 Terminale 2 e Terminale 3 — due client:
 
-```bash
-./bin/client 127.0.0.1 5200
+```powershell
+wsl -e bash -lc "cd /mnt/c/Users/giova/LSO/Progetto/labirinto && ./bin/client 127.0.0.1 5200"
 ```
 
 Avvia il server e connettiti subito: il timeout parte all'avvio del server, quindi usa
 un timeout lungo (es. `600`) per giocare con calma.
+
+> Su Linux, dall'interno della cartella del progetto, gli stessi comandi diventano
+> `make`, `./bin/server 5200 600 15` e `./bin/client 127.0.0.1 5200`.
 
 ## Uso del server
 
