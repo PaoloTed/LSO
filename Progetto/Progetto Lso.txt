@@ -1,0 +1,29 @@
+﻿TRACCIA A – Labirinto con oggetti e uscita
+Descrizione Sintetica
+Realizzare un sistema client–server che consenta a più utenti di partecipare, contemporaneamente, a un gioco di esplorazione di un labirinto. Ogni giocatore si muove in una mappa 2D generata randomicamente, raccoglie oggetti e cerca di raggiungere l'uscita. La mappa è nota solo al server; per ciascun giocatore il server tiene traccia delle caselle via via scoperte. Ad ogni mossa il giocatore riceve una vista locale, e periodicamente riceve una mappa globale "mascherata". Il progetto va sviluppato in C su piattaforma UNIX con comunicazione tramite socket TCP e corredato da documentazione.
+Descrizione Dettagliata
+All'avvio il server genera un labirinto rappresentato come una matrice di celle contenenti: muri, celle libere, alcune uscite e un certo numero di oggetti raccoglibili. Ogni giocatore che si connette viene posizionato in una cella libera casuale. Il giocatore vede inizialmente solo la propria cella.
+Il giocatore può muoversi in una delle quattro direzioni. Quando entra in una cella contenente un oggetto lo raccoglie; l'oggetto viene rimosso dal server. Ogni volta che il giocatore si muove, il server "rivela" una zona attorno a lui, che diventa permanentemente scoperta per quel giocatore.
+La partita termina allo scadere di un timeout globale oppure quando tutti i giocatori sono usciti. Il vincitore è determinato come segue:
+* se esce un solo giocatore → vince lui;
+* se escono più giocatori prima del timeout → vince chi ha raccolto più oggetti;
+* se nessuno esce → vince chi ha raccolto più oggetti.
+Per accedere al gioco ogni utente dovrà prima registrarsi al sito indicando password e nickname. Non c'è un limite a priori al numero di utenti che si possono collegare con il server.
+Il server mantiene l'intera mappa del gioco e, per ogni giocatore, l'insieme delle celle da lui scoperte. Quando riceve un comando (ad esempio un movimento), il server aggiorna la posizione del giocatore, rivela nuove celle e restituisce al client una mappa locale: una finestra (es. 4x4) centrata sul giocatore contenente solo le celle da lui scoperte.
+Indipendentemente dalle azioni dei client, il server invia periodicamente (ogni T secondi) a ciascun giocatore una mappa globale mascherata (l'intera matrice di gioco), in cui le celle da lui non ancora viste sono indicate con un simbolo speciale. Il server deve gestire simultaneamente: nuove connessioni, comandi dei client già connessi, l'invio periodico della mappa globale, senza bloccare i client. Il server sarà di tipo concorrente, ovvero in grado di servire più client simultaneamente. Durante il suo regolare funzionamento, il server effettuerà il logging delle attività principali in un file apposito. Ad esempio, memorizzando la data e l'ora di connessione dei client e il loro nome simbolico (se disponibile, altrimenti l'indirizzo IP) e la data e l'ora delle conquiste.
+Il client consentirà all'utente di collegarsi ad un server di comunicazione, indicando tramite riga di comando il nome o l'indirizzo IP di tale server e la porta da utilizzare. Una volta collegato ad un server l'utente potrà accedere al servizio come utente con un nickname. Il client permetterà all'utente di: spostarsi sulla mappa, disconnettersi, vedere la lista degli utenti collegati, visualizzare la mappa locale e quella globale.
+Regole generali
+Il server ed il client vanno realizzati in linguaggio C su piattaforma UNIX/Linux. Le comunicazioni tra client e server si svolgono tramite socket TCP.
+Oltre alle system call UNIX, i programmi possono utilizzare solo la libreria standard del C. È sconsigliato l'uso di primitive non coperte dal corso al posto di quelle studiate. Il server non deve inviare alcun output su standard output, non deve ricevere nessun input da standard input e può inviare output su standard error solo in caso di terminazione.
+Relazione
+Il progetto va accompagnato da una relazione che contenga almeno le seguenti sezioni:
+1. Una guida d'uso per il server e per il client, che illustri le modalità di compilazione e d'uso dei due programmi.
+
+2. Una sezione che illustri il protocollo al livello di applicazione utilizzato nelle comunicazioni tra client e server (non il protocollo TCP/IP!).
+
+3. Una sezione che descriva i dettagli implementativi giudicati più interessanti, eventualmente corredati dai corrispondenti frammenti di codice.
+
+4. La relazione dovrebbe constare di circa 10 pagine. Indicare sulla copertina della relazione i componenti del gruppo.
+
+Consegna del progetto
+Entro la data prescelta per lo scritto finale (con eccezione per il primo appello) devono essere consegnati al docente il progetto e la relazione. Il progetto e la relazione saranno inviati al docente, via chat di teams, in un archivio compresso in formato zip o rar. Durante l'esame orale, il client ed il server verranno testati, eseguendoli su due o più macchine diverse.
