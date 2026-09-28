@@ -2,7 +2,7 @@ CC      = gcc
 CFLAGS  = -Wall -Wextra -g -pthread -Icommon
 LDFLAGS = -pthread
 
-SERVER_SRC = server/server.c server/game.c server/auth.c server/log.c common/protocol.c
+SERVER_SRC = server/server.c server/game.c server/log.c common/protocol.c
 CLIENT_SRC = client/client.c client/display.c common/protocol.c
 
 all: bin/server bin/client
@@ -17,6 +17,6 @@ bin:
 	mkdir -p bin
 
 clean:
-	rm -rf bin server.log users.db
+	rm -rf bin server.log
 
 .PHONY: all clean

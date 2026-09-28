@@ -1,17 +1,13 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
-#include <stdint.h>
-#include <stddef.h>
-#include <sys/types.h>
-
-/* Dimensioni del labirinto e della vista locale. */
-#define MAP_ROWS 21
-#define MAP_COLS 41
-#define LOCAL_VIEW 5
+/* Dimensioni del labirinto e della vista locale */
+#define MAP_ROWS    21
+#define MAP_COLS    41
+#define LOCAL_VIEW  5
 #define VIEW_RADIUS (LOCAL_VIEW / 2)
 
-/* Simboli usati per rappresentare le celle. */
+/* Simboli utilizzati per le celle del labirinto */
 #define CELL_WALL   '#'
 #define CELL_FREE   '.'
 #define CELL_EXIT   'E'
@@ -19,58 +15,51 @@
 #define CELL_PLAYER 'P'
 #define CELL_HIDDEN '?'
 
-/* Lunghezza massima dei campi testuali scambiati. */
-#define MAX_NICK 32
-#define MAX_PASS 32
-#define MAX_TEXT 128
+/* Limiti dimensionali */
+#define MAX_NICK    32
+#define MAX_TEXT    128
+#define MAX_PLAYERS 32
 
-/* Messaggi dal client verso il server. */
-#define MSG_REGISTER 0x01
-#define MSG_LOGIN    0x02
-#define MSG_MOVE     0x03
-#define MSG_LIST     0x04
-#define MSG_QUIT     0x05
+/* Tipi di messaggio (protocollo applicativo) */
+#define MSG_LOGIN          1   /* Client -> Server: invio nickname */
+#define MSG_MOVE           2   /* Client -> Server: tasto direzione */
+#define MSG_LIST           3   /* Client -> Server: richiesta lista giocatori */
+#define MSG_QUIT           4   /* Client -> Server: disconnessione */
 
-/* Messaggi dal server verso il client. */
-#define MSG_OK          0x10
-#define MSG_ERROR       0x11
-#define MSG_LOCAL_MAP   0x12
-#define MSG_GLOBAL_MAP  0x13
-#define MSG_PLAYER_LIST 0x14
-#define MSG_GAME_OVER   0x15
-#define MSG_INFO        0x16
+#define MSG_OK             10  /* Server -> Client: operazione confermata */
+#define MSG_ERROR          11  /* Server -> Client: messaggio di errore */
+#define MSG_MAPPA_LOCALE   12  /* Server -> Client: invio vista 5x5 */
+#define MSG_MAPPA_GLOBALE  13  /* Server -> Client: invio mappa globale periodica */
+#define MSG_LISTA          14  /* Server -> Client: elenco giocatori connessi */
+#define MSG_FINE_PARTITA   15  /* Server -> Client: vincitore e fine gioco */
+#define MSG_INFO           16  /* Server -> Client: messaggio informativo */
 
-/* Ogni messaggio inizia con 4 byte: tipo, flag, lunghezza (big endian). */
-#define MSG_HEADER_LEN 4
-
-/* Dimensione degli header numerici dei due tipi di mappa. */
-#define LOCAL_MAP_HDR  (5 * 4)
-#define GLOBAL_MAP_HDR (2 * 4)
-
-#define MAX_PAYLOAD 4096
-
+/* Struttura per ciascun giocatore nella lista giocatori */
 typedef struct {
     char nickname[MAX_NICK];
-    char password[MAX_PASS];
-} AuthPayload;
+    int  score;
+    int  exited;
+} InfoGiocatore;
 
+/* Struttura unica per tutti i messaggi scambiati tra Client e Server */
 typedef struct {
-    char direction;
-} MovePayload;
+    int  type;                              /* Tipo di messaggio (MSG_*) */
+    char nickname[MAX_NICK];                /* Nickname per login o vincitore */
+    char direction;                         /* Direzione: 'w', 'a', 's', 'd' */
+    char text[MAX_TEXT];                    /* Testo descrittivo o messaggio di errore */
+    int  row;                               /* Riga corrente */
+    int  col;                               /* Colonna corrente */
+    int  score;                             /* Punteggio corrente */
+    
+    char local_map[LOCAL_VIEW][LOCAL_VIEW]; /* Vista locale 5x5 */
+    char global_map[MAP_ROWS][MAP_COLS];    /* Mappa globale 21x41 mascherata */
+    
+    int  num_players;                       /* Numero di giocatori nella lista */
+    InfoGiocatore players[MAX_PLAYERS];     /* Array dei giocatori connessi */
+} Messaggio;
 
-typedef struct {
-    char text[MAX_TEXT];
-} TextPayload;
-
-typedef struct {
-    char     nickname[MAX_NICK];
-    uint32_t score;
-    uint32_t exited;
-} PlayerEntry;
-
-ssize_t send_all(int fd, const void *buf, size_t n);
-ssize_t recv_all(int fd, void *buf, size_t n);
-int send_message(int fd, uint8_t type, const void *payload, uint16_t len);
-int recv_message(int fd, uint8_t *type, void *payload, size_t max_len);
+/* Funzioni di I/O affidabili per socket TCP */
+int invia_messaggio(int fd, const Messaggio *msg);
+int ricevi_messaggio(int fd, Messaggio *msg);
 
 #endif

@@ -1336,8 +1336,11 @@ int fd = open("prova.txt", O_RDONLY | O_CREAT, S_IRWXU);
 // Se prova.txt non esiste => viene creato con permessi rwx all'owner
 
 int fd = open("prova.txt", O_RDWR | O_CREAT | O_EXCL, S_IRWXU);
-// Se prova.txt non esiste => viene creato con permessi rwx all'owner
+// Se prova.txt non esiste => viene creato con permessi rwx all'owner e aperto in lettura e scrittura
 // Se prova.txt esiste => errore (segnalato da errno)
+
+int fd = open("prova.txt", O_CREAT, S_IRWXU);
+// Se prova.txt non esiste => viene creato con permessi rwx all'owner e aperto in sola lettura
 ```
 
 #### `creat` — Creazione di un file
@@ -1480,20 +1483,53 @@ Il kernel usa tre strutture dati:
 
 ### 10.6 Duplicazione File Descriptor — `dup` e `dup2`
 
+Le chiamate di sistema `dup` e `dup2` duplicano un file descriptor esistente.
+
 ```c
 #include <unistd.h>
-int dup(int oldFileDescriptor);       // ritorna il minimo fd non utilizzato
-int dup2(int oldFileDescriptor, int newFileDescriptor);  // specifica quale fd usare (operazione atomica)
-// Se newFileDescriptor è già in uso, viene chiuso prima di essere duplicato
+
+int dup(int oldfd);              // Duplica oldfd assegnando il MINIMO numero di fd disponibile
+int dup2(int oldfd, int newfd);  // Duplica oldfd esattamente su newfd (operazione ATOMICA)
+// Entrambe restituiscono: il nuovo fd in caso di successo, -1 in caso di errore
 ```
-Nel caso di dup2 newFileDescriptor punta alla stessa cosa di oldFileDescriptor, infatti l'entry di newFileDescriptor viene chiusa e la nuova entry che verra creata sara una copia della entry di oldFileDescriptor. In questo modo i due file descriptor puntano allo stesso file.
-**Esempio di redirezione stdout su file:**
+
+#### Come funziona `dup2(oldfd, newfd)` a livello di Kernel
+1. Se `newfd` è già aperto, il kernel **lo chiude automaticamente** prima di riassegnarlo.
+2. La voce all'indice `newfd` nella tabella dei file descriptor del processo viene fatta puntare alla **stessa voce nella File Table** a cui punta `oldfd`.
+3. Di conseguenza, `oldfd` e `newfd`:
+   - Condividono lo **stesso offset** di lettura/scrittura (se uno legge/scrive, l'offset avanza anche per l'altro).
+   - Condividono gli stessi flag di stato (es. `O_APPEND`).
+4. **Atomicità:** `dup2` chiude `newfd` e duplica `oldfd` in un'unica operazione atomica (evita condizioni di corsa che si avrebbero facendo `close(newfd)` seguito da `dup()`).
+5. **Casi particolari:** Se `oldfd == newfd`, `dup2` non fa nulla e restituisce semplicemente `newfd` (senza chiuderlo). Se `oldfd` non è un descrittore valido, fallisce con `EBADF`.
+
+---
+
+#### Esempio 1: Redirezione di `stdout` su file e RIPRISTINO
+
+> [!CAUTION]
+> **Errore comune:** Chiudere `close(fd)` **NON** ripristina `stdout` sulla console! `STDOUT_FILENO` (fd 1) continuerà a puntare al file finché non viene esplicitamente ripristinato.
+
+---
+
+#### Esempio: Tipico pattern Shell (`fork` + `dup2` + `exec`)
+Quando la shell esegue `ls > output.txt`, il processo padre fa `fork()`, e il processo figlio ridirige `stdout` prima di rimpiazzarsi con `exec`:
+
 ```c
-int fd = open("testfile", O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
-dup2(fd, STDOUT_FILENO);  // ora stdout scrive su testfile
-printf("Hello world!\n"); //questa print scrivera su testfile, non sulla console
-close(fd); 
-printf("Hello world!\n"); //questa print scrivera sulla console
+pid_t pid = fork();
+if (pid == 0) {
+    // Processo FIGLIO:
+    int fd = open("output.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) { perror("open"); _exit(1); }
+
+    dup2(fd, STDOUT_FILENO); // Sovrascrive stdout con il file
+    close(fd);               // Chiude il fd ridondante
+
+    execlp("ls", "ls", "-l", NULL); // L'output di 'ls' andrà dentro output.txt
+    perror("execlp");
+    _exit(1);
+}
+// Il padre NON subisce la redirezione: il suo stdout punta ancora al terminale
+wait(NULL);
 ```
 
 ### 10.7 Struttura `stat`

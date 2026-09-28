@@ -4,8 +4,8 @@
 #include "protocol.h"
 
 void display_help(void);
-void display_local_map(int row, int col, int score, int rows, int cols, const char *grid);
-void display_global_map(int rows, int cols, const char *grid);
-void display_player_list(const PlayerEntry *entries, int count);
+void display_local_map(int row, int col, int score, const char map[LOCAL_VIEW][LOCAL_VIEW], const char *notice, int clear_screen);
+void display_global_map(int row, int col, const char map[MAP_ROWS][MAP_COLS]);
+void display_player_list(const InfoGiocatore *players, int count);
 
 #endif

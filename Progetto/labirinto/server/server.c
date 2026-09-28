@@ -1,24 +1,23 @@
-#include <arpa/inet.h>
-#include <errno.h>
-#include <netinet/in.h>
-#include <pthread.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <unistd.h>
+#include <signal.h>
+#include <errno.h>
+#include <pthread.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
-#include "auth.h"
+#include "protocol.h"
 #include "game.h"
 #include "log.h"
-#include "protocol.h"
 
-#define DEFAULT_TIMEOUT 180
+#define DEFAULT_TIMEOUT  180
 #define DEFAULT_INTERVAL 20
-#define LOG_FILE "server.log"
+#define LOG_FILE         "server.log"
 
-/* Crea la socket TCP in ascolto. Ritorna il fd oppure -1. */
+/* Crea e configura la socket di ascolto TCP */
 static int create_listening_socket(int port) {
     int s = socket(AF_INET, SOCK_STREAM, 0);
     if (s < 0)
@@ -37,95 +36,112 @@ static int create_listening_socket(int port) {
         close(s);
         return -1;
     }
+
     if (listen(s, 16) < 0) {
         close(s);
         return -1;
     }
+
     return s;
 }
 
-static void send_text(int fd, uint8_t type, const char *text) {
-    TextPayload t;
-    memset(&t, 0, sizeof(t));
-    strncpy(t.text, text, MAX_TEXT - 1);
-    send_message(fd, type, &t, (uint16_t)sizeof(t));
-}
-
-/* Corpo del thread che gestisce un singolo client. */
+/* Thread dedicato al singolo client connesso */
 static void *client_thread(void *arg) {
     int fd = *(int *)arg;
     free(arg);
 
-    uint8_t type;
-    unsigned char payload[MAX_PAYLOAD];
+    Messaggio msg;
 
-    int len = recv_message(fd, &type, payload, sizeof(payload));
-    if (len < 0) {
+    /* Il primo messaggio deve essere il login con il nickname */
+    if (ricevi_messaggio(fd, &msg) <= 0 || msg.type != MSG_LOGIN) {
         close(fd);
         return NULL;
     }
 
-    if (type != MSG_REGISTER && type != MSG_LOGIN) {
-        send_text(fd, MSG_ERROR, "Autenticazione richiesta.");
+    msg.nickname[MAX_NICK - 1] = '\0';
+    if (strlen(msg.nickname) == 0) {
+        Messaggio err;
+        memset(&err, 0, sizeof(err));
+        err.type = MSG_ERROR;
+        strncpy(err.text, "Nickname non valido.", MAX_TEXT - 1);
+        invia_messaggio(fd, &err);
         close(fd);
         return NULL;
     }
 
-    AuthPayload *auth = (AuthPayload *)payload;
-    auth->nickname[MAX_NICK - 1] = '\0';
-    auth->password[MAX_PASS - 1] = '\0';
+    int player_idx = game_add_player(fd, msg.nickname);
+    if (player_idx < 0) {
+        Messaggio err;
+        memset(&err, 0, sizeof(err));
+        err.type = MSG_ERROR;
 
-    if (type == MSG_REGISTER) {
-        int rc = auth_register(auth->nickname, auth->password);
-        if (rc == -1) {
-            send_text(fd, MSG_ERROR, "Nickname gia' registrato.");
-            close(fd);
-            return NULL;
-        }
-        if (rc != 0) {
-            send_text(fd, MSG_ERROR, "Registrazione non valida.");
-            close(fd);
-            return NULL;
-        }
-        log_event("Nuovo utente registrato: %s.", auth->nickname);
-    }
-
-    if (auth_login(auth->nickname, auth->password) != 1) {
-        send_text(fd, MSG_ERROR, "Nickname o password errati.");
-        close(fd);
-        return NULL;
-    }
-
-    int index = game_add_player(fd, auth->nickname);
-    if (index < 0) {
-        if (index == -1)
-            send_text(fd, MSG_ERROR, "La partita e' terminata.");
-        else if (index == -2)
-            send_text(fd, MSG_ERROR, "Nickname gia' connesso.");
+        if (player_idx == -1)
+            strncpy(err.text, "La partita e' gia' terminata.", MAX_TEXT - 1);
+        else if (player_idx == -2)
+            strncpy(err.text, "Nickname gia' connesso.", MAX_TEXT - 1);
         else
-            send_text(fd, MSG_ERROR, "Server pieno.");
+            strncpy(err.text, "Server pieno.", MAX_TEXT - 1);
+
+        invia_messaggio(fd, &err);
         close(fd);
         return NULL;
     }
 
-    send_message(fd, MSG_OK, NULL, 0);
-    send_text(fd, MSG_INFO, "Benvenuto! Comandi: w/a/s/d, l, m, g, h, q.");
-    game_send_local_map(index);
+    /* Conferma l'accesso con MSG_OK */
+    Messaggio ok;
+    memset(&ok, 0, sizeof(ok));
+    ok.type = MSG_OK;
+    invia_messaggio(fd, &ok);
+
+    /* Invia la mappa globale iniziale (che include anche la vista locale 5x5) */
+    game_send_global_map(player_idx);
+
+    /* Loop ricezione comandi dal client */
+    while (ricevi_messaggio(fd, &msg) > 0) {
+        if (msg.type == MSG_MOVE) {
+            game_move(player_idx, msg.direction);
+        } else if (msg.type == MSG_LIST) {
+            game_send_player_list(player_idx);
+        } else if (msg.type == MSG_QUIT) {
+            break;
+        }
+    }
+
+    game_remove_player(player_idx);
+    return NULL;
+}
+
+/* Thread periodico: gestisce il timeout della partita e l'invio della mappa globale */
+static void *timer_thread(void *arg) {
+    (void)arg;
+    int seconds = 0;
 
     while (1) {
-        len = recv_message(fd, &type, payload, sizeof(payload));
-        if (len < 0)
-            break;
+        sleep(1);
+        seconds++;
 
-        if (type == MSG_MOVE && len >= 1)
-            game_move(index, (char)payload[0]);
-        else if (type == MSG_LIST)
-            game_send_player_list(index);
-        else if (type == MSG_QUIT)
+        pthread_mutex_lock(&g_game.mutex);
+        if (g_game.game_over) {
+            pthread_mutex_unlock(&g_game.mutex);
             break;
+        }
+
+        int elapsed = (int)(time(NULL) - g_game.start_time);
+        int time_is_up = (elapsed >= g_game.timeout);
+        pthread_mutex_unlock(&g_game.mutex);
+
+        if (time_is_up) {
+            log_event("Partita terminata per timeout (%d secondi).", g_game.timeout);
+            game_finish();
+            game_broadcast_game_over();
+            break;
+        }
+
+        /* Invio periodico della mappa globale ogni 'interval' secondi */
+        if (seconds % g_game.interval == 0) {
+            game_broadcast_global_maps();
+        }
     }
-
-    game_remove_player(index);
     return NULL;
 }
 
@@ -140,7 +156,7 @@ int main(int argc, char *argv[]) {
     int interval = (argc > 3) ? atoi(argv[3]) : DEFAULT_INTERVAL;
 
     if (port <= 0 || port > 65535) {
-        fprintf(stderr, "Porta non valida.\n");
+        fprintf(stderr, "Porta non valida: %s\n", argv[1]);
         return 1;
     }
     if (timeout <= 0)
@@ -148,11 +164,11 @@ int main(int argc, char *argv[]) {
     if (interval <= 0)
         interval = DEFAULT_INTERVAL;
 
-    /* Senza questa ignorazione una scrittura su socket chiusa terminerebbe il server. */
+    /* Ignora SIGPIPE: una disconnessione client non deve terminare il server */
     signal(SIGPIPE, SIG_IGN);
 
     if (log_open(LOG_FILE) < 0) {
-        fprintf(stderr, "Impossibile aprire il file di log.\n");
+        fprintf(stderr, "Impossibile aprire il file di log '%s'.\n", LOG_FILE);
         return 1;
     }
 
@@ -160,7 +176,7 @@ int main(int argc, char *argv[]) {
 
     int listen_fd = create_listening_socket(port);
     if (listen_fd < 0) {
-        fprintf(stderr, "Impossibile creare la socket in ascolto.\n");
+        fprintf(stderr, "Impossibile creare la socket in ascolto sulla porta %d.\n", port);
         return 1;
     }
     g_game.listen_fd = listen_fd;
@@ -168,31 +184,39 @@ int main(int argc, char *argv[]) {
     log_event("Server avviato sulla porta %d (timeout=%d, intervallo=%d).",
               port, timeout, interval);
 
-    game_start_timer();
+    /* Avvia il thread timer periodico */
+    pthread_t t_tid;
+    if (pthread_create(&t_tid, NULL, timer_thread, NULL) != 0) {
+        fprintf(stderr, "Impossibile avviare il timer thread.\n");
+        close(listen_fd);
+        return 1;
+    }
+    pthread_detach(t_tid);
 
+    /* Loop principale di accettazione connessioni */
     for (;;) {
         struct sockaddr_in client_addr;
-        socklen_t clen = sizeof(client_addr);
-        int fd = accept(listen_fd, (struct sockaddr *)&client_addr, &clen);
+        socklen_t client_len = sizeof(client_addr);
+        int client_fd = accept(listen_fd, (struct sockaddr *)&client_addr, &client_len);
 
-        if (fd < 0) {
+        if (client_fd < 0) {
             if (errno == EINTR)
                 continue;
-            log_event("Errore in accept: %s.", strerror(errno));
+            log_event("Errore accept: %s.", strerror(errno));
             continue;
         }
 
-        int *arg = malloc(sizeof(int));
-        if (!arg) {
-            close(fd);
+        int *pfd = malloc(sizeof(int));
+        if (!pfd) {
+            close(client_fd);
             continue;
         }
-        *arg = fd;
+        *pfd = client_fd;
 
         pthread_t tid;
-        if (pthread_create(&tid, NULL, client_thread, arg) != 0) {
-            free(arg);
-            close(fd);
+        if (pthread_create(&tid, NULL, client_thread, pfd) != 0) {
+            free(pfd);
+            close(client_fd);
             continue;
         }
         pthread_detach(tid);

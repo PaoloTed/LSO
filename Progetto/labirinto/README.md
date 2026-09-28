@@ -16,10 +16,9 @@ labirinto/
 ├── server/        logica del server
 │   ├── server.c   main, accept, thread per client
 │   ├── game.c/h   labirinto, giocatori, movimento, timer, fine partita
-│   ├── auth.c/h   registrazione e login con password (file users.db)
 │   └── log.c/h    logging su file (open/write)
 └── client/        client interattivo
-    ├── client.c   connessione, autenticazione, loop con select()
+    ├── client.c   connessione, inserimento nickname, loop con select()
     └── display.c/h  stampa delle mappe e delle liste
 ```
 
@@ -81,39 +80,36 @@ Esempio:
 ```
 
 Il server non scrive sullo standard output e non legge dallo standard input.
-Le attività vengono registrate nel file `server.log`; gli utenti sono salvati in `users.db`.
+Le attività vengono registrate nel file `server.log`. Non viene salvato alcun dato permanente su disco (nessun database utenti).
 
 ## Uso del client
 
 ```bash
-./bin/client <host> <porta>
+./bin/client <indirizzo_ip> <porta>
 ```
 
-`host` può essere un indirizzo IP o un nome simbolico (es. `localhost`). Il client risolve
-il nome tramite `getaddrinfo`. Esempio:
+- `indirizzo_ip`: indirizzo IPv4 del server (es. `127.0.0.1`).
+- `porta`: porta TCP del server (es. `5200`).
+
+Esempio:
 
 ```bash
 ./bin/client 127.0.0.1 5200
-./bin/client lab012.studenti.unina.it 5200
 ```
 
-Dopo la connessione si sceglie se accedere o registrarsi, poi si inseriscono nickname e
-password. Comandi disponibili durante la partita:
+Dopo la connessione viene richiesto solamente il proprio nickname. Comandi disponibili durante la partita:
 
 | Comando | Azione |
 |---------|--------|
 | `w` `a` `s` `d` | muovi su / sinistra / giù / destra |
 | `l` | lista dei giocatori connessi |
-| `m` | rivedi l'ultima mappa locale |
-| `g` | rivedi l'ultima mappa globale |
 | `h` | aiuto |
 | `q` | esci |
 
 ## Come giocare
 
-1. Alla connessione scegli `2` per registrarti (solo la prima volta), inserendo nickname e
-   password; alle volte successive scegli `1` e accedi con le stesse credenziali. Ogni
-   client deve usare un nickname diverso.
+1. Alla connessione inserisci il tuo nickname. Ogni client deve usare un nickname non
+   attualmente in uso da un altro giocatore connesso.
 2. Muoviti con `w`/`a`/`s`/`d`: digita **una lettera per riga** e premi Invio. Ad ogni passo
    il server scopre l'area attorno a te e ti invia la vista locale.
 3. Passando su una cella con `O` l'oggetto viene raccolto e il punteggio aumenta.
@@ -131,9 +127,7 @@ Simboli e colori:
 Esempio di sessione:
 
 ```
-Scelta: 2
-Nickname: mario
-Password: ****
+Inserisci il tuo nickname: mario
 Accesso effettuato come 'mario'.
 ...
 w
@@ -147,37 +141,43 @@ Posizione: (riga 4, colonna 12)   Oggetti raccolti: 0
 
 ## Protocollo applicativo
 
-Ogni messaggio è composto da un header fisso di 4 byte seguito da un payload:
+La comunicazione si basa su una struttura C fissa (`Messaggio`) scambiata tramite socket TCP:
 
+```c
+typedef struct {
+    int  type;                              /* Tipo di messaggio (MSG_*) */
+    char nickname[MAX_NICK];                /* Nickname per login o vincitore */
+    char direction;                         /* Direzione: 'w', 'a', 's', 'd' */
+    char text[MAX_TEXT];                    /* Testo descrittivo o messaggio di errore */
+    int  row;                               /* Riga corrente */
+    int  col;                               /* Colonna corrente */
+    int  score;                             /* Punteggio corrente */
+    
+    char local_map[LOCAL_VIEW][LOCAL_VIEW]; /* Vista locale 5x5 */
+    char global_map[MAP_ROWS][MAP_COLS];    /* Mappa globale 21x41 mascherata */
+    
+    int  num_players;                       /* Numero di giocatori nella lista */
+    InfoGiocatore players[MAX_PLAYERS];     /* Array dei giocatori connessi */
+} Messaggio;
 ```
-[ tipo:1 ][ flags:1 ][ lunghezza:2 ]
-```
 
-La lunghezza è la dimensione del payload ed è espressa in **network byte order**
-(`htons`/`ntohs`). Tutti i campi numerici a 32 bit dei payload sono convertiti con
-`htonl`/`ntohl`.
+L'invio e la ricezione avvengono con due funzioni ausiliarie (`invia_messaggio` e `ricevi_messaggio`) che gestiscono short read/write ed eventuali interruzioni (`EINTR`) con un semplice ciclo `while`.
 
-### Messaggi client → server
+### Tipi di messaggio
 
-| Tipo | Valore | Payload |
-|------|:------:|---------|
-| `MSG_REGISTER` | `0x01` | nickname[32], password[32] |
-| `MSG_LOGIN` | `0x02` | nickname[32], password[32] |
-| `MSG_MOVE` | `0x03` | direzione (1 byte: `w`/`a`/`s`/`d`) |
-| `MSG_LIST` | `0x04` | — |
-| `MSG_QUIT` | `0x05` | — |
-
-### Messaggi server → client
-
-| Tipo | Valore | Payload |
-|------|:------:|---------|
-| `MSG_OK` | `0x10` | — |
-| `MSG_ERROR` | `0x11` | testo[128] |
-| `MSG_LOCAL_MAP` | `0x12` | riga, colonna, punteggio, righe, colonne (5×u32) + griglia righe×colonne |
-| `MSG_GLOBAL_MAP` | `0x13` | righe, colonne (2×u32) + griglia righe×colonne |
-| `MSG_PLAYER_LIST` | `0x14` | numero (u32) + numero × (nickname[32], punteggio u32, uscito u32) |
-| `MSG_GAME_OVER` | `0x15` | vincitore[32], punteggio u32 |
-| `MSG_INFO` | `0x16` | testo[128] |
+| Tipo | Costante | Descrizione |
+|------|:--------:|-------------|
+| `MSG_LOGIN` | `1` | Client invia il proprio nickname per accedere |
+| `MSG_MOVE` | `2` | Client invia la direzione di movimento (`w`/`a`/`s`/`d`) |
+| `MSG_LIST` | `3` | Client richiede la lista dei giocatori connessi |
+| `MSG_QUIT` | `4` | Client notifica la disconnessione volontaria |
+| `MSG_OK` | `10` | Server conferma il login con successo |
+| `MSG_ERROR` | `11` | Server segnala errore (es. nickname duplicato o partita finita) |
+| `MSG_MAPPA_LOCALE` | `12` | Server invia la vista 5x5 centrata sul giocatore |
+| `MSG_MAPPA_GLOBALE` | `13` | Server invia periodicamente la mappa globale mascherata |
+| `MSG_LISTA` | `14` | Server invia l'elenco dei giocatori e punteggi |
+| `MSG_FINE_PARTITA` | `15` | Server notifica la fine della partita e il vincitore |
+| `MSG_INFO` | `16` | Server invia un messaggio testuale (es. oggetto raccolto) |
 
 ### Simboli della mappa
 
@@ -189,34 +189,22 @@ La lunghezza è la dimensione del payload ed è espressa in **network byte order
 ```
 CLIENT                                  SERVER
   |------- TCP connect ------------------>|
-  |-- MSG_REGISTER / MSG_LOGIN ---------->|
+  |-- MSG_LOGIN ------------------------->|
   |<-- MSG_OK ----------------------------|
-  |<-- MSG_INFO (benvenuto) --------------|
-  |<-- MSG_LOCAL_MAP ---------------------|
+  |<-- MSG_MAPPA_GLOBALE (iniziale) ------|
   |-- MSG_MOVE (w) ---------------------->|
-  |<-- MSG_INFO / MSG_LOCAL_MAP ----------|
+  |<-- MSG_MAPPA_LOCALE ------------------|
   |           ...                         |
-  |<-- MSG_GLOBAL_MAP (ogni T secondi) ---|
+  |<-- MSG_MAPPA_GLOBALE (ogni T sec) ----|
   |-- MSG_QUIT -------------------------->|
   |<-- chiusura --------------------------|
 ```
 
-La mappa locale è una finestra 5×5 centrata sul giocatore e contiene solo le celle
-scoperte. La mappa globale è l'intera matrice, con le celle non ancora viste indicate
-da `?`.
-
 ## Note implementative
 
-- **Concorrenza**: un thread per client (`pthread_create` + `pthread_detach`); un thread
-  dedicato invia la mappa globale e controlla il timeout.
-- **Sincronizzazione**: un mutex globale protegge labirinto, oggetti e stato dei giocatori;
-  un mutex per giocatore serializza le scritture sulla sua socket (il thread del client e
-  quello del timer possono inviare contemporaneamente).
-- **I/O affidabile**: `recv_all`/`send_all` gestiscono short read/write e `EINTR`.
-- **SIGPIPE** viene ignorato all'avvio, così una disconnessione non termina il server.
-- **Labirinto**: generato con DFS (recursive backtracker) sulle celle dispari, con
-  aperture aggiuntive per creare percorsi alternativi, uscite sul bordo e oggetti nelle
-  celle libere.
-- **Password**: salvate come hash (djb2) in `users.db`, non in chiaro.
-- **Fine partita**: per timeout oppure quando tutti i giocatori connessi sono usciti.
-  Vince l'unico giocatore uscito; altrimenti chi ha raccolto più oggetti.
+- **Concorrenza**: un thread per client (`pthread_create` + `pthread_detach`); un thread timer periodico controlla il timeout della partita e invia la mappa globale ogni T secondi.
+- **Sincronizzazione**: un **unico mutex globale** `g_game.mutex` protegge lo stato della partita, il labirinto e i giocatori, evitando qualsiasi rischio di deadlock.
+- **I/O di rete affidabile**: funzioni `invia_messaggio` e `ricevi_messaggio` con cicli `write`/`read` per gestire short read/write ed `EINTR`.
+- **Client non bloccante**: il client utilizza la primitiva `select()` su `STDIN_FILENO` e `sock_fd` per ricevere la mappa globale periodica senza bloccarsi nell'attesa dell'input da tastiera.
+- **Nessun dato persistente**: autenticazione rimossa; ai client è richiesto solo un nickname non duplicato.
+- **Fine partita**: per timeout oppure quando tutti i giocatori connessi sono usciti. Vince l'unico giocatore uscito; altrimenti chi ha raccolto più oggetti.
