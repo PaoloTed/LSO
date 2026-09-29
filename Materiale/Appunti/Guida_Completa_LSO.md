@@ -3468,15 +3468,73 @@ Se inviassimo il numero di porta "5200" sulla rete senza convertirla, i disposit
 
 *(Viceversa, per leggere un indirizzo ricevuto dalla rete nel formato dell'host locale, si usano `ntohs()` e `ntohl()`: Network TO Host).*
 
-**Conversione facilitata degli IP (stringa → numero):**
-Gli indirizzi IP sono comunemente espressi come stringhe (es. "127.0.0.1"), ma la struct richiede un valore numerico binario. Si usa `inet_pton` per eseguire la conversione sicura:
+**Conversione facilitata degli IP (stringa → numero): `inet_pton` e `inet_ntop`**
+Gli indirizzi IP sono comunemente espressi come stringhe testuali leggibili (es. `"127.0.0.1"` o `"192.168.1.1"`), ma la struct `sockaddr_in` richiede che il campo `sin_addr` contenga i 4 byte in formato binario di rete (Network Byte Order).
+Si usa `inet_pton` (**P**resentation **TO** **N**etwork) per convertire e validare l'indirizzo:
 
 ```c
 #include <arpa/inet.h>
+
 struct sockaddr_in addr;
-// Converte da stringa (Presentation) a binario di rete (Network)
-inet_pton(AF_INET, "192.168.1.1", &addr.sin_addr); 
+addr.sin_family = AF_INET;
+addr.sin_port   = htons(5200);
+
+// Converte da stringa (Presentation) a binario di rete (Network):
+int res = inet_pton(AF_INET, "192.168.1.1", &addr.sin_addr); 
+if (res <= 0) {
+    if (res == 0) fprintf(stderr, "Formato IP non valido!\n");
+    else perror("inet_pton");
+}
+
+// Operazione inversa (Network TO Presentation):
+char ip_str[INET_ADDRSTRLEN];
+inet_ntop(AF_INET, &addr.sin_addr, ip_str, sizeof(ip_str));
+printf("Indirizzo IP: %s\n", ip_str);
 ```
+
+#### Focus: Differenza Fondamentale tra `inet_pton()` e `ntohl()` / `htonl()`
+
+Spesso si fa confusione tra queste funzioni perché entrambe hanno a che fare con il "Network Byte Order". In realtà operano a livelli concettuali e su tipi di dato completamente distinti:
+
+```text
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ 1. Conversione INDIRIZZI IP (Testo <──► Binario di Rete)                               │
+│                                                                                        │
+│   Stringa ASCII: "192.168.1.1" ───[ inet_pton() ]───► struct in_addr (4 Byte Big Endian)│
+│   Stringa ASCII: "192.168.1.1" ◄───[ inet_ntop() ]─── struct in_addr (4 Byte Big Endian)│
+└────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ 2. Conversione DATI / INTERI (CPU Little Endian <──► Rete Big Endian)                  │
+│                                                                                        │
+│   Intero CPU (es. 1500)       ───[   htonl()   ]───► 4 Byte invertiti per la rete      │
+│   Intero CPU (es. 1500)       ◄───[   ntohl()   ]─── 4 Byte ricevuti dal socket        │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+| Caratteristica | `inet_pton()` | `htonl()` / `ntohl()` |
+| :--- | :--- | :--- |
+| **Etimologia** | **P**resentation **TO** **N**etwork | **H**ost **TO** **N**etwork **L**ong / **N**etwork **TO** **H**ost **L**ong |
+| **Input** | Stringa testuale ASCII (es. `"127.0.0.1"`) | Intero numerico a 32 bit (`uint32_t`, `int`) |
+| **Operazione** | **Parsing e validazione**: analizza caratteri e punti, verifica che i 4 ottetti siano 0-255 e li memorizza in memoria già in Big Endian. | **Byte-swapping**: non legge stringhe né valida nulla. Inverte semplicemente l'ordine dei 4 byte in memoria della CPU. |
+| **Quando si usa?** | **Fase di Setup**: per inizializzare `addr.sin_addr` prima di `connect()` o `bind()`. | **Fase di I/O (Dati)**: per inviare e ricevere numeri binari nel payload (es. `msg.type`, punteggi, lunghezze). |
+| **Supporto IPv6?** | Sì (`AF_INET6` su buffer a 128 bit `in6_addr`). | No (opera unicamente su numeri interi a 32 bit). |
+
+> [!CAUTION]
+> **Il tipico dubbio/errore d'esame:** *"Un indirizzo IPv4 è un numero a 32 bit, quindi posso usare `htonl()` / `ntohl()` per impostare un IP?"*
+> 
+> * **SÌ, ma SOLO se l'IP è già una costante numerica intera in C**, come `INADDR_ANY` (`0x00000000`) o `INADDR_LOOPBACK` (`0x7F000001`):
+>   ```c
+>   addr.sin_addr.s_addr = htonl(INADDR_ANY);      // CORRETTO: INADDR_ANY è un intero
+>   ```
+> * **NO se hai una stringa testuale come `"192.168.1.1"`**:
+>   ```c
+>   // ERRORE GRAVE: un letterale stringa è un puntatore 'char *'!
+>   // addr.sin_addr.s_addr = htonl("192.168.1.1"); // ERRORE! Invertirebbe i byte dell'indirizzo del puntatore in memoria!
+>   
+>   // CORRETTO:
+>   inet_pton(AF_INET, "192.168.1.1", &addr.sin_addr);
+>   ```
 
 **Il Casting a `(struct sockaddr *)` (Polimorfismo)**
 Nei codici successivi noterai che chiamate come `bind` o `connect` prendono l'indirizzo tramite un puntatore castato a `(struct sockaddr *)`.
@@ -3594,21 +3652,53 @@ ssize_t recv(int sock, void *buf, size_t len, int flags);
 
 Senza flag, `send`/`recv` si comportano come `write`/`read`.
 
-### 17.8 Scambio Dati Binari — Network Byte Order
+### 17.8 Scambio Dati Binari — Network Byte Order (`htonl` / `ntohl`)
+
+Quando scambiamo strutture o campi numerici (`short`, `int`, `long`, `uint16_t`, `uint32_t`) tramite socket, macchine con architetture diverse (o processori x86 rispetto allo standard Big Endian di Internet) interpreterebbero i byte in ordine inverso.
+
+* **Tipi a singolo byte (`char`, `uint8_t`, stringhe di caratteri):** **NON** richiedono alcuna conversione. L'ordine dei byte si applica solo quando un dato è composto da 2 o più byte.
+* **Tipi multibyte (`short`, `int`, `uint32_t`, ecc.):** devono essere **sempre** convertiti prima della spedizione con `htons()` / `htonl()` e riconvertiti alla ricezione con `ntohs()` / `ntohl()`.
+
+#### Esempio: Invio e Ricezione di un Intero a 32 bit
 
 ```c
-// Invio
+// =================== LATO TRASMITTENTE (Mittente) ===================
 int s = socket(AF_INET, SOCK_STREAM, 0);
-uint32_t val = 42;
-uint32_t val_net = htonl(val);
-write(s, &val_net, sizeof(val_net));
+// ... connect(s, ...) ...
 
-// Ricezione
-int s = socket(AF_INET, SOCK_STREAM, 0);
-uint32_t val_net;
-read(s, &val_net, sizeof(val_net));
-uint32_t val = ntohl(val_net);
+uint32_t punteggio_locale = 1500;
+// 1. Converte dal formato nativo CPU (Little Endian) al formato di rete (Big Endian):
+uint32_t punteggio_rete = htonl(punteggio_locale);
+
+// 2. Invia i 4 byte sulla socket:
+write(s, &punteggio_rete, sizeof(punteggio_rete));
+
+
+// =================== LATO RICEVENTE (Destinatario) ==================
+// ... accept(...) ...
+uint32_t dato_grezzo_rete;
+
+// 1. Riceve i 4 byte grezzi:
+read(c, &dato_grezzo_rete, sizeof(dato_grezzo_rete));
+
+// 2. Se usassimo 'dato_grezzo_rete' direttamente su x86, leggeremmo un valore sballato!
+// Converte da Network Byte Order (Big Endian) a Host Byte Order (Little Endian):
+uint32_t punteggio_effettivo = ntohl(dato_grezzo_rete);
+
+printf("Punteggio ricevuto: %u\n", punteggio_effettivo); // Stampa correttamente: 1500
 ```
+
+#### Esempio con Struttura / Header di Protocollo
+Se trasmetti un pacchetto contenente sia testo che interi:
+```c
+struct Pacchetto {
+    uint32_t tipo_msg;     // Multibyte -> richiede htonl / ntohl
+    uint32_t lunghezza;    // Multibyte -> richiede htonl / ntohl
+    char     payload[64];  // Singolo byte -> NON richiede conversione!
+};
+```
+* **Prima di `write`:** `pkt.tipo_msg = htonl(TIPO_LOGIN); pkt.lunghezza = htonl(len);`
+* **Dopo `read`:** `tipo = ntohl(pkt.tipo_msg); len = ntohl(pkt.lunghezza);`
 
 ### 17.9 Lettura e Scrittura Safe
 
