@@ -9,6 +9,9 @@
 ## Indice
 
 
+0. [Informazioni sul Corso e Modalità d'Esame (A.A. 2025-2026)](#0-informazioni-sul-corso-e-modalità-desame-aa-2025-2026) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-0)
+
+
 1. [Introduzione ai Sistemi Operativi e Unix](#1-introduzione-ai-sistemi-operativi-e-unix) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-1)
 
 
@@ -81,7 +84,7 @@
 24. [Docker](#24-docker) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-24)
 
 
-25. [Soluzioni Esercizi d'Esame](#25-soluzioni-esercizi-desame) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-25)
+25. [Corpus dei File Pratici d'Esame: Debugging (_ERR), Template (_TODO) e Prove Parziali](#25-corpus-dei-file-pratici-desame-debugging-_err-template-_todo-e-prove-parziali) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-25)
 
 
 26. [Guida Rapida alle Parole Chiave](#26-guida-rapida-alle-parole-chiave) — [Sottosezioni](#indice-delle-sottosezioni-capitolo-26)
@@ -5937,94 +5940,1556 @@ docker compose down -v              # ferma e rimuove anche i volumi dichiarati
 
 ---
 
-## 25. Soluzioni Esercizi d'Esame
+## 25. Corpus dei File Pratici d'Esame: Debugging (_ERR), Template (_TODO) e Prove Parziali
 <div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
-Di seguito sono riportate le soluzioni agli esercizi d'esame mostrati nelle immagini, utili per verificare la propria preparazione e ripassare i concetti.
+Nelle lezioni del corso (in particolare *Lezioni 24, 25, 27 e 28*), il docente fornisce un ricco corpus di file pratici suddivisi in:
+1. **File `_ERR.c` (Bug-Hunting):** Codici sorgente realistici che contengono errori tipici di concorrenza, deadlock o violazione di protocolli di rete. Lo studente deve individuare la riga incriminata, spiegare perché il programma si blocca o fallisce, e fornire la correzione.
+2. **File `_TODO.c` e `_TODO.sh` (Template d'Esame):** Scheletri di programmi C e script Bash con parti mancanti contrassegnate da `// TODO` da completare durante la prova.
+3. **Simulazione della Prova Parziale (Lezione 28):** La prova d'esame ufficiale proposta dal docente per la verifica intermedia al calcolatore.
 
-### Esercizio 1 (Pipeline Bash)
-**Consegna**: Stampare il nome degli utenti che hanno almeno 2 processi attivi nello stato *sleeping* (STAT inizia per S) e avviati da meno di 90 secondi (ELAPSED < 90). Ogni utente deve comparire una sola volta.
+Di seguito vengono riportati tutti i codici completi, le analisi dettagliate dei bug e le soluzioni risolte.
 
-**Soluzione**:
+---
+
+### 25.1 Esercizi di Bug-Hunting ("Trova e Correggi l'Errore" — File _ERR.c)
+
+#### 25.1.1 Risveglio Spuro: `es_cond_wait_if_ERR.c` (Slide 1261)
+Questo è uno degli errori concettuali più gravi e ricorrenti nelle prove d'esame sulla sincronizzazione thread.
+
+**Codice con Errore (`es_cond_wait_if_ERR.c`):**
+```c
+// es_cond_wait_if_ERR.c - Trova e correggi l'errore!
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <pthread.h>
+
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t  c = PTHREAD_COND_INITIALIZER;
+int ready = 0;
+
+void* worker(void* arg) {
+    int id = (int)(long)arg;
+    pthread_mutex_lock(&m);
+
+    // ERRORE CRITICO: uso di if invece di while!
+    if (!ready)
+        pthread_cond_wait(&c, &m);
+
+    printf("Thread %d entra nella sezione critica\n", id);
+    // Questo thread "consuma" la condizione e la rimette a 0
+    ready = 0;
+
+    pthread_mutex_unlock(&m);
+    return NULL;
+}
+
+int main(void) {
+    pthread_t t1, t2;
+    pthread_create(&t1, NULL, worker, (void*)1);
+    pthread_create(&t2, NULL, worker, (void*)2);
+
+    sleep(1);  // Tempo per far posizionare entrambi i thread in attesa
+
+    pthread_mutex_lock(&m);
+    ready = 1;
+    pthread_cond_broadcast(&c); // Risveglia ENTRAMBI i thread
+    pthread_mutex_unlock(&m);
+
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+    return 0;
+}
+```
+
+**Analisi del Bug:**
+1. Il `main` esegue `pthread_cond_broadcast(&c)`, risvegliando sia `t1` che `t2`.
+2. Uno dei due thread (es. `t1`) acquisisce per primo il mutex `m`, esce dalla `pthread_cond_wait()`, stampa il messaggio ed esegue `ready = 0;`, consumando la condizione e rilasciando il mutex.
+3. Il secondo thread (`t2`) acquisisce a sua volta il mutex ed esce dalla `pthread_cond_wait()`. **Poiché c'è un `if` anziché un `while`, `t2` non riverifica la condizione `ready`!** `t2` entra illegittimamente nella sezione critica anche se `ready == 0`, violando il predicato di sincronizzazione. Inoltre, lo standard POSIX ammette i cosiddetti *spurious wakeups* (risvegli senza segnale).
+
+**Correzione:**
+Sostituire tassativamente l'`if` con il ciclo `while`:
+```c
+// CORREZIONE:
+while (!ready) {
+    pthread_cond_wait(&c, &m);
+}
+```
+
+---
+
+#### 25.1.2 Deadlock da Doppio Lock Consecutivo: `es2_2_ERR.c` (Slide 1318)
+Questo esercizio evidenzia il deadlock causato dalla riacquisizione dello stesso mutex non ricorsivo.
+
+**Codice con Errore (`es2_2_ERR.c`):**
+```c
+// es2_2_ERR.c - Trova e correggi l'errore!
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <unistd.h>
+
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t  c = PTHREAD_COND_INITIALIZER;
+int ready = 0;
+
+void* worker(void* arg) {
+    pthread_mutex_lock(&m);
+    while (!ready)
+        pthread_cond_wait(&c, &m);
+    printf("Worker: condizione soddisfatta (OK)\n");
+    pthread_mutex_unlock(&m);
+    return NULL;
+}
+
+int main(void) {
+    pthread_t t;
+    pthread_create(&t, NULL, worker, NULL);
+
+    pthread_mutex_lock(&m);
+    // Simula elaborazione
+    sleep(2);
+
+    // ERRORE 1: Tentativo di riacquisire lo stesso mutex già posseduto!
+    pthread_mutex_lock(&m);
+
+    ready = 1;
+    pthread_cond_signal(&c);
+
+    // ERRORE 2: join chiamato prima di rilasciare il mutex
+    pthread_join(t, NULL);
+    pthread_mutex_unlock(&m);
+    return 0;
+}
+```
+
+**Analisi del Bug:**
+1. Il `main` invoca `pthread_mutex_lock(&m)`.
+2. Dopo `sleep(2)`, il `main` invoca nuovamente `pthread_mutex_lock(&m)` sullo stesso mutex. I mutex POSIX di default (`PTHREAD_MUTEX_DEFAULT` o `NORMAL`) non sono ricorsivi: un thread che cerca di ribloccare un mutex che già possiede **va in deadlock con se stesso**, bloccandosi all'infinito!
+3. Inoltre, anche rimuovendo il doppio lock, il `main` chiama `pthread_join(t, NULL)` **prima** di aver rilasciato il mutex con `pthread_mutex_unlock(&m)`. Il worker non potrà mai uscire dalla `pthread_cond_wait(&c, &m)` perché ha bisogno di riacquisire `m`, generando un secondo deadlock!
+
+**Correzione:**
+Eliminare il secondo lock nel `main` e sbloccare il mutex prima della `pthread_join`:
+```c
+// CORREZIONE NEL MAIN:
+pthread_mutex_lock(&m);
+sleep(2);
+ready = 1;
+pthread_cond_signal(&c);
+pthread_mutex_unlock(&m); // Rilascia PRIMA del join!
+
+pthread_join(t, NULL);
+```
+
+---
+
+#### 25.1.3 Deadlock tra Mutex e Socket Bloccante: `es_client_merge_ERR.c` (Slide 1259–1266)
+Un classico scenario da sistemi distribuiti: interazione errata tra primitive di concorrenza locale e chiamate di I/O di rete bloccanti.
+
+**Codice con Errore (`es_client_merge_ERR.c`):**
+```c
+// es_client_merge_ERR.c - Trova e correggi l'errore!
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <arpa/inet.h>
+
+int sockfd;
+struct sockaddr_in servaddr;
+pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
+
+void* sender(void* arg) {
+    const char *msg1 = "ciao";
+    const char *msg2 = "mondo";
+
+    pthread_mutex_lock(&mtx);
+    sendto(sockfd, msg1, strlen(msg1), 0, (struct sockaddr*)&servaddr, sizeof(servaddr));
+    printf("sender: inviato '%s'\n", msg1);
+    sendto(sockfd, msg2, strlen(msg2), 0, (struct sockaddr*)&servaddr, sizeof(servaddr));
+    printf("sender: inviato '%s'\n", msg2);
+    pthread_mutex_unlock(&mtx);
+    return NULL;
+}
+
+void* receiver(void* arg) {
+    char buf[256];
+
+    // ERRORE CRITICO: acquisisce il lock prima di una chiamata di rete bloccante!
+    pthread_mutex_lock(&mtx);
+    ssize_t n = recvfrom(sockfd, buf, sizeof(buf)-1, 0, NULL, NULL);
+    if (n > 0) {
+        buf[n] = '\0';
+        printf("receiver: ricevuto <%s>\n", buf);
+    }
+    pthread_mutex_unlock(&mtx);
+    return NULL;
+}
+```
+
+**Analisi del Bug:**
+1. Il thread `receiver` parte e acquisisce immediatamente `pthread_mutex_lock(&mtx)`.
+2. `receiver` si blocca sulla system call `recvfrom()`, in attesa che il server risponda.
+3. Il server risponde solo se riceve i messaggi dal client; tuttavia, il thread `sender` **non può inviare nulla** perché per fare la `sendto()` deve acquisire `pthread_mutex_lock(&mtx)`, che è detenuto da `receiver`!
+4. **Deadlock per attesa circolare:** `sender` aspetta il mutex posseduto da `receiver`; `receiver` aspetta il pacchetto che solo `sender` può innescare. Il programma si congela per sempre.
+
+**Correzione:**
+I socket UDP sono full-duplex e thread-safe per operazioni simmetriche separate: la `recvfrom()` **non deve essere protetta dallo stesso mutex della trasmissione**, oppure il lock va limitato alla sola manipolazione di strutture dati condivise in memoria:
+```c
+// CORREZIONE NEL RECEIVER:
+// La recvfrom deve avvenire SENZA detenere il lock del sender!
+char buf[256];
+ssize_t n = recvfrom(sockfd, buf, sizeof(buf)-1, 0, NULL, NULL);
+if (n > 0) {
+    buf[n] = '\0';
+    pthread_mutex_lock(&mtx);
+    printf("receiver: ricevuto <%s>\n", buf);
+    pthread_mutex_unlock(&mtx);
+}
+```
+
+---
+
+### 25.2 Template d'Esame da Completare (File _TODO.c e _TODO.sh)
+
+#### 25.2.1 Sincronizzazione a Cascata: `es_thread_cascata_TODO.c` (Slide 1267–1268)
+**Consegna:** Tre thread $T_1$, $T_2$, $T_3$ devono eseguire in sequenza rigorosa: $T_1$ deve partire per primo; al termine deve svegliare $T_2$; al termine $T_2$ deve svegliare $T_3$.
+
+**Soluzione Completa:**
+```c
+// es_thread_cascata_TODO.c - Risolto
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+int stato = 1;  // 1 = turno di t1, 2 = turno di t2, 3 = turno di t3
+
+void* thread1(void* arg) {
+    pthread_mutex_lock(&mtx);
+    while (stato != 1) {
+        pthread_cond_wait(&cond, &mtx);
+    }
+    printf("[T1] Inizia -> elabora -> finisce\n");
+    stato = 2; // Passa il testimone a T2
+    pthread_cond_broadcast(&cond); // Sveglia gli altri thread
+    pthread_mutex_unlock(&mtx);
+    return NULL;
+}
+
+void* thread2(void* arg) {
+    pthread_mutex_lock(&mtx);
+    while (stato != 2) {
+        pthread_cond_wait(&cond, &mtx);
+    }
+    printf("[T2] Inizia -> elabora -> finisce\n");
+    stato = 3; // Passa il testimone a T3
+    pthread_cond_broadcast(&cond);
+    pthread_mutex_unlock(&mtx);
+    return NULL;
+}
+
+void* thread3(void* arg) {
+    pthread_mutex_lock(&mtx);
+    while (stato != 3) {
+        pthread_cond_wait(&cond, &mtx);
+    }
+    printf("[T3] Inizia -> elabora -> cascata completata con successo!\n");
+    pthread_mutex_unlock(&mtx);
+    return NULL;
+}
+
+int main(void) {
+    pthread_t t1, t2, t3;
+    // Creazione in ordine sparso per verificare la robustezza della sincronizzazione
+    pthread_create(&t3, NULL, thread3, NULL);
+    pthread_create(&t1, NULL, thread1, NULL);
+    pthread_create(&t2, NULL, thread2, NULL);
+
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+    pthread_join(t3, NULL);
+
+    pthread_mutex_destroy(&mtx);
+    pthread_cond_destroy(&cond);
+    return 0;
+}
+```
+
+---
+
+#### 25.2.2 Multiplexing tra Pipe Anonima e Tastiera con `select()`: `es_pipe_select_TODO.c` (Slide 1262–1265)
+**Consegna:** Il processo padre crea una pipe e un figlio. Il padre legge stringhe dall'utente o invia dati sulla pipe; il figlio usa `select()` per fare multiplexing tra input tastiera (`STDIN_FILENO = 0`) e la pipe anonima, gestendo la chiusura della pipe e terminando quando entrambi gli stream sono chiusi.
+
+**Soluzione Completa:**
+```c
+// es_pipe_select_TODO.c - Risolto
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/select.h>
+#include <sys/wait.h>
+
+#define BUF_SIZE 64
+
+int main(void) {
+    int pfd[2];
+    if (pipe(pfd) == -1) { perror("pipe"); exit(1); }
+
+    pid_t pid = fork();
+    if (pid < 0) { perror("fork"); exit(1); }
+
+    if (pid == 0) {
+        // === PROCESSO FIGLIO ===
+        close(pfd[1]); // Chiude scrittura pipe
+        int pipe_fd = pfd[0];
+        int pipe_closed = 0;
+        int stdin_closed = 0;
+        char buf[BUF_SIZE];
+
+        while (!pipe_closed || !stdin_closed) {
+            fd_set readfds;
+            FD_ZERO(&readfds);
+            int maxfd = -1;
+
+            if (!stdin_closed) {
+                FD_SET(STDIN_FILENO, &readfds);
+                if (STDIN_FILENO > maxfd) maxfd = STDIN_FILENO;
+            }
+            if (!pipe_closed) {
+                FD_SET(pipe_fd, &readfds);
+                if (pipe_fd > maxfd) maxfd = pipe_fd;
+            }
+
+            int ret = select(maxfd + 1, &readfds, NULL, NULL, NULL);
+            if (ret < 0) { perror("select"); break; }
+
+            // 1. Canale Pipe
+            if (!pipe_closed && FD_ISSET(pipe_fd, &readfds)) {
+                ssize_t n = read(pipe_fd, buf, sizeof(buf) - 1);
+                if (n > 0) {
+                    buf[n] = '\0';
+                    printf("[Figlio da PIPE]: %s", buf);
+                } else if (n == 0) {
+                    printf("[Figlio] EOF su pipe: canale chiuso dal padre.\n");
+                    close(pipe_fd);
+                    pipe_closed = 1;
+                }
+            }
+
+            // 2. Canale Tastiera (STDIN)
+            if (!stdin_closed && FD_ISSET(STDIN_FILENO, &readfds)) {
+                ssize_t n = read(STDIN_FILENO, buf, sizeof(buf) - 1);
+                if (n > 0) {
+                    buf[n] = '\0';
+                    printf("[Figlio da TASTIERA]: %s", buf);
+                } else if (n == 0) {
+                    printf("[Figlio] EOF su tastiera (Ctrl+D).\n");
+                    stdin_closed = 1;
+                }
+            }
+        }
+        printf("[Figlio] Entrambi i canali chiusi: uscita regolare.\n");
+        _exit(0);
+    } else {
+        // === PROCESSO PADRE ===
+        close(pfd[0]); // Chiude lettura pipe
+        const char *m1 = "Messaggio 1 dal padre\n";
+        const char *m2 = "Messaggio 2 dal padre\n";
+        sleep(1);
+        write(pfd[1], m1, strlen(m1));
+        sleep(2);
+        write(pfd[1], m2, strlen(m2));
+        close(pfd[1]); // Invia EOF al figlio sulla pipe
+        wait(NULL);
+    }
+    return 0;
+}
+```
+
+---
+
+#### 25.2.3 Chat UDP Multicast con `select()`: `chat_multi_TODO.c` (Slide 1225–1228)
+**Consegna:** Implementare un'applicazione di chat di gruppo distribuita che trasmette e riceve messaggi usando UDP Multicast (gruppo `239.255.0.1`, porta `12345`), monitorando contemporaneamente input tastiera e messaggi di rete con `select()`.
+
+**Soluzione Completa:**
+```c
+// chat_multi_TODO.c - Risolto
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/select.h>
+
+#define MCAST_GROUP "239.255.0.1"
+#define MCAST_PORT 12345
+#define BUF_SIZE 512
+
+int main(void) {
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) { perror("socket"); exit(1); }
+
+    // Permette il riuso dell'indirizzo e della porta per più client sulla stessa macchina
+    int reuse = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(MCAST_PORT);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        perror("bind");
+        close(sock);
+        exit(1);
+    }
+
+    // Unione al gruppo Multicast (IGMP join)
+    struct ip_mreq mreq;
+    mreq.imr_multiaddr.s_addr = inet_addr(MCAST_GROUP);
+    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+    if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
+        perror("setsockopt IP_ADD_MEMBERSHIP");
+        close(sock);
+        exit(1);
+    }
+
+    // Indirizzo di destinazione per le trasmissioni
+    struct sockaddr_in dest_addr;
+    memset(&dest_addr, 0, sizeof(dest_addr));
+    dest_addr.sin_family = AF_INET;
+    dest_addr.sin_port = htons(MCAST_PORT);
+    dest_addr.sin_addr.s_addr = inet_addr(MCAST_GROUP);
+
+    printf("Connesso alla chat Multicast %s:%d. Digita un messaggio:\n", MCAST_GROUP, MCAST_PORT);
+
+    char buf[BUF_SIZE];
+    while (1) {
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        FD_SET(STDIN_FILENO, &rfds);
+        FD_SET(sock, &rfds);
+        int maxfd = (sock > STDIN_FILENO) ? sock : STDIN_FILENO;
+
+        int ret = select(maxfd + 1, &rfds, NULL, NULL, NULL);
+        if (ret < 0) { perror("select"); break; }
+
+        // Messaggio ricevuto dal gruppo
+        if (FD_ISSET(sock, &rfds)) {
+            struct sockaddr_in from;
+            socklen_t fromlen = sizeof(from);
+            ssize_t n = recvfrom(sock, buf, sizeof(buf) - 1, 0, (struct sockaddr*)&from, &fromlen);
+            if (n > 0) {
+                buf[n] = '\0';
+                printf("[%s:%d]: %s", inet_ntoa(from.sin_addr), ntohs(from.sin_port), buf);
+            }
+        }
+
+        // Messaggio digitato dall'utente
+        if (FD_ISSET(STDIN_FILENO, &rfds)) {
+            if (fgets(buf, sizeof(buf), stdin) != NULL) {
+                sendto(sock, buf, strlen(buf), 0, (struct sockaddr*)&dest_addr, sizeof(dest_addr));
+            } else {
+                printf("Uscita dalla chat.\n");
+                break;
+            }
+        }
+    }
+
+    // Abbandono del gruppo multicast
+    setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mreq, sizeof(mreq));
+    close(sock);
+    return 0;
+}
+```
+
+---
+
+#### 25.2.4 Client WHOIS TCP su Porta 43: `whois_TODO.c` (Slide 1229–1230)
+**Consegna:** Interrogare un server WHOIS (es. `whois.ripe.net` sulla porta TCP 43) per ottenere informazioni su un dominio, inviando la query formattata con `\r\n` e leggendo la risposta completa fino a EOF.
+
+**Soluzione Completa:**
+```c
+// whois_TODO.c - Risolto
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
+#define WHOIS_PORT "43"
+#define DEFAULT_SERVER "whois.ripe.net"
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Uso: %s <dominio/IP> [server_whois]\n", argv[1]);
+        return 1;
+    }
+    const char *query = argv[1];
+    const char *server = (argc >= 3) ? argv[2] : DEFAULT_SERVER;
+
+    struct addrinfo hints, *res;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;        // IPv4
+    hints.ai_socktype = SOCK_STREAM;  // TCP
+
+    int err = getaddrinfo(server, WHOIS_PORT, &hints, &res);
+    if (err != 0) {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(err));
+        return 1;
+    }
+
+    int sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (sockfd < 0) { perror("socket"); freeaddrinfo(res); return 1; }
+
+    if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
+        perror("connect");
+        close(sockfd);
+        freeaddrinfo(res);
+        return 1;
+    }
+    freeaddrinfo(res);
+
+    // Invio della query terminata da CRLF come previsto dal protocollo WHOIS
+    char qbuf[256];
+    snprintf(qbuf, sizeof(qbuf), "%s\r\n", query);
+    write(sockfd, qbuf, strlen(qbuf));
+
+    // Lettura ciclica della risposta fino a EOF
+    char rbuff[1024];
+    ssize_t n;
+    while ((n = read(sockfd, rbuff, sizeof(rbuff) - 1)) > 0) {
+        rbuff[n] = '\0';
+        printf("%s", rbuff);
+    }
+    close(sockfd);
+    return 0;
+}
+```
+
+---
+
+#### 25.2.5 Turni Rigidi tra Thread A e B: `es2_1_condvar_TODO.c` (Slide 1317)
+**Consegna:** Coordinare due thread affinché stampino alternativamente `A` e `B` (`A B A B A B...`) per 5 turni esatti tramite mutex e condition variable.
+
+**Soluzione Completa:**
+```c
+// es2_1_condvar_TODO.c - Risolto
+#include <stdio.h>
+#include <pthread.h>
+
+#define NUM_TURNI 5
+
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t  c = PTHREAD_COND_INITIALIZER;
+int turn = 0;   // 0 = tocca ad A, 1 = tocca a B
+
+void* threadA(void* arg) {
+    for (int i = 0; i < NUM_TURNI; i++) {
+        pthread_mutex_lock(&m);
+        while (turn != 0) {
+            pthread_cond_wait(&c, &m);
+        }
+        printf("A\n");
+        turn = 1; // Cede il turno a B
+        pthread_cond_signal(&c);
+        pthread_mutex_unlock(&m);
+    }
+    return NULL;
+}
+
+void* threadB(void* arg) {
+    for (int i = 0; i < NUM_TURNI; i++) {
+        pthread_mutex_lock(&m);
+        while (turn != 1) {
+            pthread_cond_wait(&c, &m);
+        }
+        printf("B\n");
+        turn = 0; // Cede il turno ad A
+        pthread_cond_signal(&c);
+        pthread_mutex_unlock(&m);
+    }
+    return NULL;
+}
+
+int main(void) {
+    pthread_t tA, tB;
+    pthread_create(&tA, NULL, threadA, NULL);
+    pthread_create(&tB, NULL, threadB, NULL);
+
+    pthread_join(tA, NULL);
+    pthread_join(tB, NULL);
+
+    pthread_mutex_destroy(&m);
+    pthread_cond_destroy(&c);
+    return 0;
+}
+```
+
+---
+
+#### 25.2.6 Script Bash d'Esame Svolti (`es_file_bash1/2/3_TODO.sh`)
+
+##### Script 1: Monitoraggio File con Modifiche (`es_file_bash1_TODO.sh`, Slide 1269)
+```bash
+#!/bin/bash
+# Monitora file .txt contenenti una stringa in una cartella
+if [ $# -ne 2 ]; then
+    echo "Uso: $0 <directory> <stringa>"
+    exit 1
+fi
+
+DIR="$1"
+STR="$2"
+
+if [ ! -d "$DIR" ]; then
+    echo "Errore: '$DIR' non e' una directory valida."
+    exit 1
+fi
+
+old_count=-1
+while true; do
+    count=0
+    for f in "$DIR"/*.txt; do
+        if [ -f "$f" ]; then
+            if grep -q "$STR" "$f"; then
+                count=$((count + 1))
+            fi
+        fi
+    done
+
+    if [ "$count" -ne "$old_count" ]; then
+        echo "[$(date +%T)] Trovati $count file .txt contenenti '$STR' (variazione rilevata!)"
+        old_count=$count
+    fi
+    sleep 5
+done
+```
+
+##### Script 2: Conteggio Thread LWP per Utente (`es_file_bash2_TODO.sh`, Slide 1270)
+```bash
+#!/bin/bash
+if [ $# -ne 2 ]; then
+    echo "Uso: $0 <utente> <soglia_LWP>"
+    exit 1
+fi
+
+USER_NAME="$1"
+THRESHOLD="$2"
+
+ps -L -u "$USER_NAME" -o pid,lwp --no-headers | awk -v soglia="$THRESHOLD" -v user="$USER_NAME" '
+BEGIN {
+    proc_over = 0;
+}
+{
+    pid = $1;
+    count[pid]++; // Incrementa il numero di LWP per questo PID
+}
+END {
+    printf("Processi dell utente %s con piu di %d LWP:\n\n", user, soglia);
+    for (pid in count) {
+        if (count[pid] > soglia) {
+            printf("PID %-6d -> %3d LWP\n", pid, count[pid]);
+            proc_over++;
+        }
+    }
+    printf("\nTotale processi sopra soglia: %d\n", proc_over);
+}'
+```
+
+##### Script 3: Sostituzione Dinamica con Sed (`es_file_bash3_TODO.sh`, Slide 1271)
+```bash
+#!/bin/bash
+if [ $# -ne 1 ]; then
+    echo "Uso: $0 <file>"
+    exit 1
+fi
+
+FILE="$1"
+if [ ! -f "$FILE" ]; then
+    echo "Errore: file '$FILE' inesistente."
+    exit 1
+fi
+
+BASENAME=$(basename "$FILE")
+# Estrae prima lettera
+FIRST=$(echo "$BASENAME" | cut -c1)
+# Estrae ultima lettera (eliminando eventuale estensione o dall'intera stringa)
+LAST=$(echo "$BASENAME" | sed 's/.*\(.\)$/\1/')
+
+echo "Basename: $BASENAME, First: $FIRST, Last: $LAST"
+# Sostituisce tutte le parole che iniziano per FIRST e finiscono per LAST con BASENAME
+sed -i "s/\b${FIRST}[a-zA-Z0-9_]*${LAST}\b/$BASENAME/g" "$FILE"
+```
+
+---
+
+### 25.3 Simulazione Ufficiale Prova Parziale (Lezione 28 — Prova PA)
+
+Questa sezione riporta fedelmente la **simulazione ufficiale della prova parziale** erogata dal docente Alberto Finzi nella **Lezione 28** (*Slide 1322–1325*), con tutti i quesiti e le relative soluzioni complete.
+
+#### Quesito 1 (Pipeline Bash — Processi e Thread LWP)
+**Testo:** Scrivere una pipeline di comandi che stampi la lista di tutti gli utenti che hanno **almeno un processo con almeno 2 thread (LWP)**. Ogni utente deve comparire al massimo una volta nell'output.  
+*Comandi utili:* `ps`, `awk`, `sort`.  
+*Suggerimento:* Il comando `ps -eo user,nlwp` stampa l'utente e il numero di thread (`NLWP`).
+
+**Soluzione:**
+```bash
+ps -eo user,nlwp --no-headers | awk '$2 >= 2 {print $1}' | sort -u
+```
+**Spiegazione:**
+1. `ps -eo user,nlwp --no-headers`: Estrae le colonne relative allo username del proprietario e al numero di LWP del task.
+2. `awk '$2 >= 2 {print $1}'`: Seleziona solo le righe dove la seconda colonna (`NLWP`) è maggiore o uguale a 2, stampando lo username (`$1`).
+3. `sort -u`: Ordina ed elimina tutti i duplicati, garantendo che ogni utente compaia esattamente una sola volta.
+
+---
+
+#### Quesito 2 (Pipeline Filtri su Metadati File: `ls -l`)
+**Testo:** Dato l'output di `ls -l`, visualizzare i nomi dei file che soddisfano **tutte** le seguenti condizioni:
+a. Sono file regolari (non directory, non link, ecc.);  
+b. Hanno estensione `.txt`;  
+c. Sono leggibili sia dal proprietario (`user`) sia dal gruppo (`group`).
+
+**Soluzione:**
+```bash
+ls -l | awk '/^-r..r/ && $9 ~ /\.txt$/ {print $9}'
+```
+In alternativa con combinazione di `grep`:
+```bash
+ls -l | grep '^-r..r' | grep '\.txt$' | awk '{print $9}'
+```
+**Spiegazione:**
+- `^-r..r`:
+  - `^` = inizio riga.
+  - `-` = primo carattere per indicare file regolare (non `d` o `l`).
+  - `r` = secondo carattere: permesso di lettura per il proprietario abilitato.
+  - `..` = caratteri 3 e 4: scrittura ed esecuzione proprietario indifferenti.
+  - `r` = quinto carattere: permesso di lettura per il gruppo abilitato.
+- `$9 ~ /\.txt$/`: la nona colonna (nome file) deve terminare con `.txt`.
+
+---
+
+#### Quesito 3 (Sezione Critica con Limite di Concorrenza: Massimo 3 Thread)
+**Testo:** Si vuole realizzare un meccanismo che permette a **non più di 3 thread alla volta** di entrare in una sezione critica. Sono definite le variabili globali:
+```c
+int dentro = 0; // Thread attualmente in sezione critica
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t  c = PTHREAD_COND_INITIALIZER;
+```
+Completare le funzioni `inizio()` e `fine()`:
+```c
+void *worker(void *arg) {
+    while (1) {
+        inizio();
+        sezione_critica();
+        fine();
+    }
+}
+```
+
+**Soluzione:**
+```c
+void inizio(void) {
+    pthread_mutex_lock(&m);
+    /* B: attende finché dentro è già al valore massimo (3) */
+    while (dentro >= 3) {
+        pthread_cond_wait(&c, &m);
+    }
+    /* D: incrementa il numero di thread presenti */
+    dentro++;
+    pthread_mutex_unlock(&m);
+}
+
+void fine(void) {
+    pthread_mutex_lock(&m);
+    /* G: decrementa il numero di thread presenti */
+    dentro--;
+    /* H: sveglia uno dei thread in attesa */
+    pthread_cond_signal(&c);
+    pthread_mutex_unlock(&m);
+}
+```
+
+---
+
+#### Quesito 4 (Processi Figli su Pipe Distinte e Padre con `select()` fino a 10 Caratteri)
+**Testo:** Due figli scrivono periodicamente un carattere su una propria pipe: il figlio 1 scrive `'A'` su `p1`, il figlio 2 scrive `'B'` su `p2`. Il padre usa `select()` per leggere dai due descrittori, conta quanti caratteri arrivano da ciascuna pipe, termina dopo aver ricevuto in totale 10 caratteri e stampa i conteggi. Aggiungere inoltre la gestione di pipe rotte nei figli con handler `SIGPIPE`.
+
+**Soluzione Completa:**
+```c
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/select.h>
+#include <signal.h>
+
+void sigpipe_handler(int signo) {
+    (void)signo;
+    const char msg[] = "[Figlio] Ricevuto SIGPIPE: pipe chiusa dal padre! Termino.\n";
+    write(STDERR_FILENO, msg, sizeof(msg) - 1);
+    _exit(1);
+}
+
+int main(void) {
+    int p1[2], p2[2];
+    char buf;
+    int c1 = 0, c2 = 0;
+
+    // Utilizzo di pipe2() o pipe()
+    if (pipe(p1) == -1 || pipe(p2) == -1) { perror("pipe"); exit(1); }
+
+    // FIGLIO 1
+    if (fork() == 0) {
+        signal(SIGPIPE, sigpipe_handler);
+        close(p1[0]); // Chiude lettura p1
+        close(p2[0]); close(p2[1]); // Non usa p2
+        while (1) {
+            if (write(p1[1], "A", 1) <= 0) break;
+            usleep(50000);
+        }
+        _exit(0);
+    }
+
+    // FIGLIO 2
+    if (fork() == 0) {
+        signal(SIGPIPE, sigpipe_handler);
+        close(p2[0]); // Chiude lettura p2
+        close(p1[0]); close(p1[1]); // Non usa p1
+        while (1) {
+            if (write(p2[1], "B", 1) <= 0) break;
+            usleep(50000);
+        }
+        _exit(0);
+    }
+
+    // PADRE
+    close(p1[1]); close(p2[1]); // Chiude le estremità di scrittura
+
+    fd_set set;
+    int maxfd = (p1[0] > p2[0] ? p1[0] : p2[0]) + 1;
+
+    while (c1 + c2 < 10) {
+        FD_ZERO(&set);
+        FD_SET(p1[0], &set);
+        FD_SET(p2[0], &set);
+
+        int ret = select(maxfd, &set, NULL, NULL, NULL);
+        if (ret < 0) { perror("select"); break; }
+
+        if (FD_ISSET(p1[0], &set)) {
+            if (read(p1[0], &buf, 1) > 0) {
+                c1++;
+                printf("[Padre] Ricevuto '%c' da Pipe 1 (Tot p1: %d)\n", buf, c1);
+            }
+        }
+        if (FD_ISSET(p2[0], &set)) {
+            if (read(p2[0], &buf, 1) > 0) {
+                c2++;
+                printf("[Padre] Ricevuto '%c' da Pipe 2 (Tot p2: %d)\n", buf, c2);
+            }
+        }
+    }
+
+    printf("\nConteggio finale: pipe1 = %d, pipe2 = %d (Totale: %d)\n", c1, c2, c1 + c2);
+    // Chiudendo le letture, i successivi write dei figli riceveranno SIGPIPE
+    close(p1[0]); close(p2[0]);
+    return 0;
+}
+```
+
+---
+
+#### Quesito 5 (Analisi Concorrente C: Fork e Multithreading)
+**Testo:** Dato il frammento:
+```c
+#define NUM_THREADS 2
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t c = PTHREAD_COND_INITIALIZER;
+int v1 = 1, v2 = 5;
+
+void *f1(void* param) {
+    pthread_mutex_lock(&m);
+    while (v1 != v2)
+        pthread_cond_wait(&c, &m);
+    v1 = 1 + v2;
+    pthread_mutex_unlock(&m);
+    return 0;
+}
+
+void *f2(void* param) {
+    pthread_mutex_lock(&m);
+    v2 = v1 + 1; v1++;
+    pthread_mutex_unlock(&m);
+    return 0;
+}
+
+int main() {
+    pthread_t threads[NUM_THREADS];
+    int pid;
+    pid = fork();
+    if (pid != 0) {
+        pthread_create(&threads[0], NULL, f1, NULL);
+        pthread_create(&threads[1], NULL, f2, NULL);
+        pthread_join(threads[0], NULL);
+        pthread_join(threads[1], NULL);
+    }
+    printf("%d %d\n", v1, v2);
+    return 0;
+}
+```
+
+**Quesiti e Risposte:**
+a) **Quanti processi e quanti thread genera il frammento?**
+- Processi: **2** (il processo padre e 1 processo figlio generato da `fork()`).
+- Thread: **2 nuovi thread** generati tramite `pthread_create()` **esclusivamente nel processo padre** (poiché invocati dentro `if (pid != 0)`). In totale nel sistema vi sono 4 contesti di esecuzione (il main thread del figlio, e il main thread del padre + i suoi 2 thread `f1` e `f2`).
+
+b) **Il programma termina correttamente? Segnalare e correggere eventuali anomalie.**
+- **NO, il programma può andare in DEADLOCK (attesa indefinita).**
+- *Motivo:* In `f1`, il thread si mette in attesa con `while (v1 != v2) pthread_cond_wait(&c, &m)`. Tuttavia, in `f2`, dopo aver modificato `v2 = v1 + 1; v1++;`, **non viene mai invocata `pthread_cond_signal(&c)` o `pthread_cond_broadcast(&c)`!** Se `f1` entra in `pthread_cond_wait()` prima che `f2` termini, non verrà mai risvegliato, bloccando la `pthread_join(threads[0], NULL)` all'infinito.
+- *Inoltre:* Anche se `f2` inviasse la signal, `f2` imposta `v1 = 2` e `v2 = 2` (se parte con `v1=1`). Quindi la condizione `v1 == v2` sarebbe soddisfatta, ma senza signal non si propaga.
+- *Correzione:* Aggiungere `pthread_cond_signal(&c)` in `f2` prima di rilasciare il mutex.
+
+c) **Cosa stampa il programma?**
+- **Il processo figlio (`pid == 0`):** Non entra nel blocco `if (pid != 0)`. Esegue direttamente la `printf("%d %d\n", v1, v2)` stampando i valori iniziali non modificati: **`1 5`**.
+- **Il processo padre (`pid != 0`):** Se corretto con la signal:
+  1. `f2` esegue: `v2 = 1 + 1 = 2`, `v1 = 2`, sblocca `f1`.
+  2. `f1` si sveglia con `v1 == v2 == 2`, calcola `v1 = 1 + 2 = 3`.
+  3. Il padre termina le join e stampa: **`3 2`**.
+
+---
+
+### 25.4 Traccia d'Esame Ufficiale Svolta — Compito A
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
+
+Questa sezione riporta integralmente la traccia ufficiale d'esame del **Compito A** (presente nei documenti d'esame del corso), con tutti i 5 esercizi risolti e commentati passo-passo.
+
+---
+
+#### Esercizio 1 (Pipeline di Comandi Bash: `ps, awk, sort, uniq`)
+**Testo:**
+Scrivere una pipeline di comandi che stampi il nome degli utenti che hanno **almeno 2 processi in esecuzione da meno di 20 secondi**. Ogni utente deve comparire **una sola volta** nell'output.
+
+*Comandi utili:* `ps, awk, sort, uniq`.  
+*Suggerimento dalla traccia:* Il comando `ps -eo user,etimes` stampa per ogni processo l'utente (`USER`) e i secondi trascorsi dall'avvio (`ELAPSED` / `etimes`):
+```text
+ps -eo user,etimes
+USER     ELAPSED
+root     120
+root     3600
+alice    45
+bob      900
+alice    720
+carlo    15
+```
+
+**Soluzione Canonica:**
+```bash
+ps -eo user,etimes | awk 'NR>1 && $2 < 20 {print $1}' | sort | uniq -c | awk '$1 >= 2 {print $2}'
+```
+
+**Soluzione Alternativa (con opzione `--no-headers`):**
+```bash
+ps -eo user,etimes --no-headers | awk '$2 < 20 {print $1}' | sort | uniq -c | awk '$1 >= 2 {print $2}'
+```
+
+**Spiegazione Dettagliata Passo-Passo:**
+1. **`ps -eo user,etimes`**: Elenca tutti i processi attivi nel sistema estraendo solo due colonne: lo username dell'utente (`$1`) e i secondi trascorsi dall'avvio del processo (`$2`, `etimes`).
+2. **`awk 'NR>1 && $2 < 20 {print $1}'`**:
+   - `NR>1`: Ignora la prima riga di intestazione (`USER ELAPSED`).
+   - `$2 < 20`: Filtra solo i processi avviati da strettamente meno di 20 secondi.
+   - `{print $1}`: Per ogni processo valido, estrae e stampa esclusivamente il nome dell'utente.
+3. **`sort`**: Ordina alfabeticamente i nomi degli utenti estratti. Questo passaggio è **obbligatorio**, poiché il comando `uniq` è in grado di raggruppare e conteggiare solo righe consecutive adiacenti.
+4. **`uniq -c`**: Raggruppa i duplicati e antepone il conteggio delle occorrenze di ciascun utente (es. producendo un flusso come `   3 carlo`, `   1 alice`).
+5. **`awk '$1 >= 2 {print $2}'`**: Ispeziona il conteggio generato da `uniq`: se la prima colonna (`$1`, il conteggio) è maggiore o uguale a 2, stampa la seconda colonna (`$2`, il nome dell'utente), garantendo che ogni utente compaia una sola volta.
+
+---
+
+#### Esercizio 2 (Pipeline Filtri su Metadati File: `ls -l`)
+**Testo:**
+Dato l'output del comando `ls -l`:
+```text
+-rw-r--r-- 1 student student   9200 Nov 12 10:10 relazione.txt
+-rw-r----- 1 student student   4500 Nov 12 10:11 appunti.txt
+-rw-rw-r-- 1 student student  12000 Nov 12 10:12 dati.txt
+-rwxr-xr-x 1 student student   2100 Nov 12 10:13 script.sh
+drwxr-xr-x 2 student student   4096 Nov 12 10:14 documenti
+-r--r----- 1 student student   1800 Nov 12 10:15 note.txt
+-rw-r--r-- 1 alice   staff      512 Nov 12 10:16 elenco.txt
+lrwxrwxrwx 1 student student     15 Nov 12 10:17 link -> relazione.txt
+```
+Si vogliono visualizzare i nomi dei file che soddisfano **tutte** le seguenti condizioni:
+a. Sono **file regolari**;  
+b. Hanno **estensione `.sh`**;  
+c. Hanno il **permesso di scrittura solo per il proprietario** (cioè il proprietario ha `w`, mentre gruppo e altri **non** hanno `w`).
+
+Scrivere una pipeline di comandi per ottenere l'elenco dei soli nomi dei file che soddisfano queste condizioni.  
+*Comandi utili:* `ls -l, grep, awk`.
+
+**Soluzione con `grep` e `awk`:**
+```bash
+ls -l | grep '^-..w..[^w]..[^w]' | grep '\.sh$' | awk '{print $9}'
+```
+
+**Soluzione Diretta con solo `awk`:**
+```bash
+ls -l | awk '/^-..w..[^w]..[^w]/ && $9 ~ /\.sh$/ {print $9}'
+```
+
+**Spiegazione Dettagliata dei Permessi:**
+La stringa dei permessi in `ls -l` è composta da 10 caratteri: `[tipo][user][group][other]`.
+- **Condizione a (File regolare):** Il primo carattere deve essere un trattino `-` (si escludono directory `d` e link `l`). Nella regex: `^-`.
+- **Condizione c (Scrittura SOLO per il proprietario):**
+  - **User (caratteri 2, 3, 4):** Il permesso di scrittura per l'utente è il carattere 4 (il terzo della terna user). Deve essere presente (`w`). I permessi di lettura ed esecuzione possono essere qualsiasi (`..`). La terna user corrisponde a: `..w`.
+  - **Group (caratteri 5, 6, 7):** Il permesso di scrittura per il gruppo è il carattere 6 (il secondo della terna group). **Non** deve essere presente (`-` oppure negato con `[^w]`). La terna group corrisponde a: `..[^w]` (oppure `. - .`).
+  - **Other (caratteri 8, 9, 10):** Il permesso di scrittura per gli altri è il carattere 9 (il secondo della terna other). **Non** deve essere presente (`-` oppure negato con `[^w]`). La terna other corrisponde a: `..[^w]`.
+  - Regex risultante completa sui primi 10 caratteri: `^-..w..[^w]..[^w]` (oppure `^-..w..-..-`).
+- **Condizione b (Estensione `.sh`):** Il nome del file deve terminare con `.sh`. Con `grep` usiamo `grep '\.sh$'` oppure in `awk` verifichiamo la nona colonna con `$9 ~ /\.sh$/`.
+- **Estrazione nome:** `awk '{print $9}'` isola e stampa solo la colonna del nome file.
+
+---
+
+#### Esercizio 3 (Processi, Thread e Sincronizzazione C: `x=5, y=3`)
+**Testo del Programma:**
+```c
+#define NUM_THREADS 2
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t c = PTHREAD_COND_INITIALIZER;
+int x = 5, y = 3;
+
+void *t1(void* param) {
+    pthread_mutex_lock(&m);
+    while (x <= y)
+        pthread_cond_wait(&c, &m);
+    y = x + y;
+    pthread_mutex_unlock(&m);
+    return 0;
+}
+
+void *t2(void* param) {
+    pthread_mutex_lock(&m);
+    x = y + 2;
+    pthread_cond_signal(&c);
+    pthread_mutex_unlock(&m);
+    return 0;
+}
+
+int main() {
+    pthread_t th[NUM_THREADS];
+    int pid;
+    pid = fork();
+    if (pid == 0) {
+        x = 20;
+        y = 30;
+    } else {
+        x = y;
+        pthread_create(&th[0], NULL, t1, NULL);
+        pthread_create(&th[1], NULL, t2, NULL);
+        pthread_join(th[0], NULL);
+        pthread_join(th[1], NULL);
+    }
+    wait(NULL);
+    printf("%d %d\n", x, y);
+    return 0;
+}
+```
+
+**Quesiti e Risposte Dettagliate:**
+
+##### a) Quanti processi e quanti thread vengono creati? (specificare anche "per processo")
+- **Processi totali nel sistema:** **2 processi**.
+  - Il processo **Padre** (il processo originario).
+  - **1 processo Figlio** generato dall'invocazione della system call `fork()`.
+- **Thread creati:**
+  - Vengono creati **2 nuovi thread** tramite `pthread_create()` (`th[0]` che esegue `t1` e `th[1]` che esegue `t2`).
+  - **Questi 2 thread vengono creati ESCLUSIVAMENTE nel processo Padre**, poiché le chiamate a `pthread_create` si trovano all'interno del ramo `else` (eseguito solo quando `pid != 0`).
+- **Dettaglio per processo:**
+  - **Processo Figlio (`pid == 0`):** Ha **1 solo thread** (il main thread del figlio). Non crea alcun thread aggiuntivo.
+  - **Processo Padre (`pid > 0`):** Ha **3 thread in totale** (il main thread del padre + i 2 worker thread `t1` e `t2`).
+  - Totale contesti di esecuzione complessivi: **4 thread**.
+
+##### b) Il programma termina correttamente? Segnalare e correggere eventuali anomalie.
+- **Sì, il programma termina**, ma presenta un'**anomalia logica nella chiamata a `wait()`**:
+  - L'istruzione `wait(NULL);` si trova all'esterno del blocco `if-else`, quindi viene eseguita **sia dal Padre che dal Figlio**.
+  - Nel **Figlio**, che non ha generato alcun processo figlio a sua volta, la chiamata a `wait(NULL)` fallisce immediatamente restituendo `-1` e impostando la variabile globale `errno = ECHILD` (*No child processes*).
+  - Nel **Padre**, `wait(NULL)` attende correttamente la terminazione del processo figlio.
+  - **Correzione:** Spostare `wait(NULL);` all'interno del ramo `else` del padre, oppure racchiuderlo in un controllo esplicito:
+    ```c
+    if (pid > 0) {
+        wait(NULL);
+    }
+    ```
+- *Verifica Deadlock:* Nel padre **non si verifica deadlock**. Il padre imposta `x = y` ($x = 3, y = 3$). Se parte prima `t1`, trova `x <= y` ($3 \le 3$, vero) e si sospende rilasciando il lock. `t2` acquisisce il lock, imposta $x = 3 + 2 = 5$, invia la `signal` e sblocca il mutex. `t1` si risveglia, verifica $5 \le 3$ (falso), esce dal ciclo `while`, aggiorna $y$ e termina.
+
+##### c) Cosa stampa il programma? (motivare)
+Poiché sia il padre che il figlio raggiungono la `printf("%d %d\n", x, y);`, il programma produrrà **due righe di output**:
+
+1. **Output del processo Figlio (`pid == 0`):**
+   - Il figlio esegue il ramo `if (pid == 0)`, assegnando: `x = 20;` e `y = 30;`.
+   - Non esegue alcun thread; la `wait(NULL)` ritorna subito con errore.
+   - Stampa direttamente: **`20 30`**.
+
+2. **Output del processo Padre (`pid > 0`):**
+   - Nel ramo `else`, il padre esegue prima: `x = y;` $\implies x = 3, y = 3$ (ereditati dall'inizializzazione globale).
+   - Crea `t1` e `t2`.
+   - Il thread `t1` entra, acquisisce `m`, valuta `while (x <= y)`: poiché $3 \le 3$ è vero, si mette in attesa nella `pthread_cond_wait(&c, &m)` rilasciando il lock.
+   - Il thread `t2` acquisisce `m`, calcola: `x = y + 2;` $\implies x = 3 + 2 = 5$.
+   - `t2` chiama `pthread_cond_signal(&c)` e rilascia il lock con `pthread_mutex_unlock(&m)`.
+   - Il thread `t1` viene risvegliato, riacquisisce il lock `m` e rivaluta il ciclo: ora $x = 5, y = 3$. La condizione $5 \le 3$ è **falsa**, quindi `t1` esce dal `while`.
+   - `t1` calcola: `y = x + y;` $\implies y = 5 + 3 = 8$. Rilascia il lock e termina.
+   - Il main del padre attende la fine dei due thread con `pthread_join`, attende il figlio con `wait(NULL)` e poi stampa: **`5 8`**.
+
+3. **Ordine di stampa a schermo:**
+   Dato che il padre attende esplicitamente la terminazione del figlio tramite `wait(NULL)`, il processo figlio stamperà **prima** del padre:
+   ```text
+   20 30
+   5 8
+   ```
+
+---
+
+#### Esercizio 4 (Pipe, Fork, Select, I/O con Buffer di Stringa)
+**Testo del Programma:**
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/select.h>
+#include <signal.h>
+#include <stdlib.h>
+
+int main(void) {
+    int p[2];
+    pipe(p);
+
+    if (fork() == 0) {
+        close(p[0]);
+        write(p[1], "ABCD", 4);
+        close(p[1]);
+        exit(0);
+    }
+    close(p[1]);
+
+    char buff[3];
+    int n1, n2;
+    fd_set set;
+
+    FD_ZERO(&set);
+    FD_SET(p[0], &set);
+    select(p[0] + 1, &set, NULL, NULL, NULL);
+    n1 = read(p[0], buff, 2);
+    buff[n1] = '\0';
+
+    FD_ZERO(&set);
+    FD_SET(p[0], &set);
+    select(p[0] + 1, &set, NULL, NULL, NULL);
+    n2 = read(p[0], buff, 2);
+    buff[n2] = '\0';
+
+    printf("buff=%s, n1=%d n2=%d\n", buff, n1, n2);
+    close(p[0]);
+    return 0;
+}
+```
+
+**Quesiti e Risposte Dettagliate:**
+
+##### 1. Le due select() del padre si bloccano oppure ritornano subito? Perché?
+- **La prima `select()`:**
+  - Si **blocca temporaneamente** fino a quando il processo figlio non scrive i dati nella pipe. Appena il figlio esegue `write(p[1], "ABCD", 4)`, i byte entrano nel buffer kernel della pipe; il descrittore `p[0]` diventa pronto in lettura e la `select()` si sblocca ritornando `1`.
+- **La seconda `select()`:**
+  - **Ritorna immediatamente senza bloccarsi**.
+  - *Motivo:* Il figlio ha scritto 4 byte (`"ABCD"`). La prima `read()` ha consumato soltanto 2 byte (`"AB"`). All'interno del buffer della pipe rimangono ancora 2 byte non letti (`"CD"`). Poiché il buffer della pipe non è vuoto, il descrittore `p[0]` è già pronto per una nuova lettura immediata.
+
+##### 2. Quanto valgono n1 e n2? E cosa stampa la printf finale?
+- Il figlio inietta 4 byte nella pipe: `'A'`, `'B'`, `'C'`, `'D'`.
+- La prima `read(p[0], buff, 2)` legge 2 byte (`"AB"`). Restituisce il numero di byte effettivamente letti: **`n1 = 2`**. Il buffer contiene `'A'`, `'B'`, `'\0'`.
+- La seconda `read(p[0], buff, 2)` legge i restanti 2 byte (`"CD"`). Restituisce **`n2 = 2`**. Il buffer viene sovrascritto e contiene `'C'`, `'D'`, `'\0'`.
+- La stampa finale `printf("buff=%s, n1=%d n2=%d\n", buff, n1, n2);` produce esattamente:
+  ```text
+  buff=CD, n1=2 n2=2
+  ```
+
+##### 3. Il processo figlio cosa fa dopo aver scritto "ABCD"? Il programma termina?
+- Dopo la `write(p[1], "ABCD", 4)`, il processo figlio:
+  1. Chiude la sua estremità di scrittura con `close(p[1]);`.
+  2. Termina immediatamente la propria esecuzione invocando `exit(0);`.
+- Il processo padre legge i dati, esegue la stampa, chiude `p[0]` e termina a sua volta con `return 0;`. L'intero programma **termina regolarmente**.
+
+##### 4. C'è rischio di zombie?
+- **Sì, c'è il rischio che il processo figlio rimanga in stato Zombie (`Z`).**
+- *Motivo:* Il processo figlio termina con `exit(0)`, ma il processo padre **non invoca mai `wait()` o `waitpid()`** per raccoglierne il valore di uscita e rimuovere la sua voce (`task_struct`) dalla tabella dei processi del sistema operativo. Il figlio rimane quindi in stato zombie per tutto il tempo in cui il padre è in esecuzione.
+- *Come evitarlo:*
+  - Inserire una chiamata a `wait(NULL);` nel processo padre prima di `return 0;`.
+  - Oppure impostare prima della fork l'azione del segnale `SIGCHLD` su ignorato: `signal(SIGCHLD, SIG_IGN);`, istruendo il kernel a deallocare automaticamente i figli terminati.
+
+---
+
+#### Esercizio 5 (Namespace e Container Docker)
+**Testo dello Scenario:**
+Si consideri un sistema Linux con hostname host su cui vengono eseguiti i seguenti comandi:
+```bash
+docker pull ubuntu
+docker run -it ubuntu bash
+```
+All'interno del container vengono eseguite le seguenti operazioni:
+```bash
+ps -ef
+hostname laboratorio
+mkdir /esame
+touch /esame/prova.txt
+ls /
+exit
+```
+Si osserva che:
+- (a) Con `ps -ef` il processo `bash` ha **`PID = 1`**;
+- (b) Il valore restituito da `hostname` è **diverso da quello dell'host**;
+- (c) La directory `/esame` e il file `/esame/prova.txt` **non sono immediatamente visibili** nel filesystem dell'host;
+- (d) Dopo `exit`, il processo `bash` del container **termina** e il container si arresta.
+
+**Spiegazione Dettagliata dei Meccanismi di Isolamento:**
+
+##### (a) PID Namespace (`PID = 1`)
+Docker isola l'albero dei processi sfruttando la feature del kernel Linux denominata **PID Namespace** (`CLONE_NEWPID`).
+- All'interno del namespace privato del container, la numerazione dei processi riparte da 1.
+- Il comando `bash` avviato come entrypoint diventa il **PID 1** (il processo Init locale del container), che funge da radice e adotta gli eventuali orfani generati all'interno del container.
+- Sull'host fisico, lo stesso processo possiede un normale PID globale (es. `PID = 14520`).
+
+##### (b) UTS Namespace (`hostname`)
+L'isolamento dei parametri di identificazione della macchina (nome host e nome di dominio NIS) è garantito dall'**UTS Namespace** (*UNIX Timesharing System*, flag `CLONE_NEWUTS`).
+- Il container possiede una propria copia isolata della struttura `struct uts_namespace`.
+- Quando all'interno del container si esegue `hostname laboratorio`, la modifica ha effetto **soltanto** all'interno dell'UTS namespace del container, lasciando completamente inalterato l'hostname reale della macchina host.
+
+##### (c) Mount Namespace e OverlayFS (Filesystem a Strati)
+L'isolamento dei file e delle cartelle create è dovuto all'interazione tra il **Mount Namespace** (`CLONE_NEWNS`) e il driver di storage **OverlayFS**:
+- Il filesystem visibile nel container è il risultato della sovrapposizione di più livelli:
+  1. **`lowerdir` (Immagine base Ubuntu):** Uno o più strati a **sola lettura** condivisi.
+  2. **`upperdir` (Container layer):** Un livello a **lettura e scrittura privato**, isolato ed effimero, assegnato specificamente a quella singola istanza di container.
+- Quando si eseguono `mkdir /esame` e `touch /esame/prova.txt`, i nuovi file vengono scritti fisicamente all'interno dell'`upperdir` del container (memorizzata in un percorso interno di Docker come `/var/lib/docker/overlay2/<id>/diff/`).
+- La radice `/` dell'host non viene in alcun modo toccata perché il container opera in un proprio albero di mount separato.
+
+##### (d) Ciclo di Vita del Container e Morte di PID 1
+Nei sistemi Linux, il processo con **PID 1 è il supervisore vitale del namespace**:
+- Quando l'utente digita `exit` nella shell interattiva, il processo `bash` (che è PID 1) termina.
+- Per le regole del kernel Linux sui PID Namespace, la morte del processo PID 1 provoca automaticamente l'invio del segnale `SIGKILL` a tutti gli altri processi presenti nel namespace e la distruzione del namespace stesso.
+- Il container passa dallo stato *Running* allo stato *Exited* (arrestato).
+
+---
+
+### 25.5 Traccia d'Esame Ufficiale Svolta — Compito B
+<div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
+
+Questa sezione riporta integralmente la traccia ufficiale d'esame del **Compito B** (presente nei documenti d'esame del corso), con tutti i 5 esercizi risolti e commentati passo-passo.
+
+---
+
+#### Esercizio 1 (Pipeline di Comandi: Processi Sleeping e Secondi Trascorsi)
+**Testo:**
+Scrivere una pipeline di comandi che stampi il nome degli utenti che hanno **almeno 2 processi attivi** che soddisfano **entrambe** le seguenti condizioni:
+1. Il processo si trova nello stato *sleeping*, cioè il campo `STAT` **inizia con `S`** (es. `S`, `Ss`, `Sl`);
+2. Il processo è stato avviato da **meno di 90 secondi** (`etimes < 90`).
+
+Ogni utente deve comparire **una sola volta** nell'output.  
+*Comandi utili:* `ps, awk, sort, uniq`.
+
+Il comando `ps -eo user=,stat=,etimes=` può produrre per esempio:
+```text
+root     Ss   400
+alice    S    45
+bob      R    12
+alice    Sl   70
+carlo    S    130
+bob      S    25
+bob      S    60
+student  Z    15
+```
+Nell'esempio, l'output atteso è:
+```text
+alice
+bob
+```
+
+**Soluzione Canonica:**
+```bash
+ps -eo user=,stat=,etimes= | awk '$2 ~ /^S/ && $3 < 90 {print $1}' | sort | uniq -c | awk '$1 >= 2 {print $2}'
+```
+
+**Soluzione con `ps -eo user,stat,etimes` standard (gestendo l'header):**
 ```bash
 ps -eo user,stat,etimes | awk 'NR>1 && $2 ~ /^S/ && $3 < 90 {print $1}' | sort | uniq -c | awk '$1 >= 2 {print $2}'
 ```
-**Spiegazione**:
-1. `ps` produce la lista dei processi. `NR>1` salta l'intestazione stampata dal comando `ps`.
-2. `awk` filtra le righe la cui seconda colonna (`$2`, STAT) inizia per `S` (tramite regex `/^S/`) e la cui terza colonna (`$3`, ELAPSED) è `< 90`. Per ogni riga valida, stampa il nome dell'utente (colonna 1).
-3. `sort` ordina alfabeticamente i nomi degli utenti (necessario come passo preliminare prima di usare `uniq`).
-4. `uniq -c` collassa i duplicati contando le occorrenze di ciascun utente (creando un output del tipo `   3 alice`).
-5. L'ultimo `awk` filtra la lista numerata, stampando il nome dell'utente (seconda colonna) solo dove il conteggio (prima colonna) è `>= 2`.
 
-### Esercizio 2 (Pipeline ls, grep, awk)
-**Consegna**: Dato l'output di `ls -l`, estrarre i soli nomi dei file che: sono regolari, hanno estensione `.log`, hanno permesso di lettura per il gruppo, non hanno permesso di scrittura per altri e pesano più di 3000 byte.
+**Spiegazione Dettagliata:**
+1. **`ps -eo user=,stat=,etimes=`**: Estrae le colonne Utente (`$1`), Stato del processo (`$2`) e Secondi trascorsi dall'avvio (`$3`). I segni `=` dopo i nomi dei campi sopprimono la riga di intestazione.
+2. **`awk '$2 ~ /^S/ && $3 < 90 {print $1}'`**:
+   - `$2 ~ /^S/`: Tramite espressione regolare, verifica che la stringa dello stato inizi con la lettera maiuscola `S` (include `S`, `Ss`, `Sl`, `S+`, ecc., escludendo stati come `R` (running) o `Z` (zombie)).
+   - `$3 < 90`: Verifica che il tempo di vita sia inferiore a 90 secondi.
+   - Per ogni riga conforme stampa il nome utente `$1`.
+3. **`sort | uniq -c`**: Ordina i nomi e calcola la frequenza di occorrenza per ciascun utente.
+4. **`awk '$1 >= 2 {print $2}'`**: Isola e stampa il nome dell'utente (`$2`) solo se il conteggio (`$1`) è $\ge 2$.
 
-**Soluzione**:
-Usando unicamente `awk` applicato ai metadati:
+---
+
+#### Esercizio 2 (Pipeline Filtri su Metadati File: `ls -l` con Dimensione)
+**Testo:**
+Dato l'output del comando `ls -l`:
+```text
+-rw-r----- 1 student student 6400 Jul 15 10:10 errori.log
+-rw-rw-r-- 1 student student 9200 Jul 15 10:11 debug.log
+-rw-r---rw- 1 student student 5300 Jul 15 10:12 condiviso.log
+-rw------- 1 student student 8000 Jul 15 10:13 privato.log
+-rw-r----- 1 student student 1500 Jul 15 10:14 breve.log
+-rwxr-xr-x 1 student student 4100 Jul 15 10:15 avvio.sh
+drwxr-xr-x 2 student student 4096 Jul 15 10:16 archivio.log
+-rw-r----- 1 alice   staff   7200 Jul 15 10:17 sistema.txt
+lrwxrwxrwx 1 student student   10 Jul 15 10:18 ultimo.log -> errori.log
+```
+Scrivere una pipeline di comandi che visualizzi i nomi dei file che soddisfano **tutte** le seguenti condizioni:
+1. Sono **file regolari**;
+2. Hanno **estensione `.log`**;
+3. Hanno il **permesso di lettura per il gruppo**;
+4. **Non** hanno il permesso di scrittura per gli altri utenti;
+5. Hanno dimensione **maggiore di 3000 byte**.
+
+L'output deve contenere solamente i nomi dei file.  
+*Comandi utili:* `ls -l, grep, awk`.
+
+**Soluzione con solo `awk`:**
 ```bash
 ls -l | awk '/^-...r...[^w]/ && $5 > 3000 && $9 ~ /\.log$/ {print $9}'
 ```
-In alternativa usando `grep` per le stringhe dei permessi come suggerito:
+
+**Soluzione Combinata con `grep` e `awk`:**
 ```bash
 ls -l | grep '^-...r...[^w]' | awk '$5 > 3000 && $9 ~ /\.log$/ {print $9}'
 ```
-**Spiegazione**:
-* La Regex `^-...r...[^w]` verifica i permessi:
-  * `^` indica l'inizio della riga.
-  * `-` impone che sia un file regolare (esclude directory `d` o link `l`).
-  * I 3 puntini `...` ignorano i permessi *rwx* del proprietario (posizioni 2-4).
-  * La `r` si posiziona al quinto carattere (primo del gruppo), imponendo il permesso di lettura per il gruppo.
-  * I 3 puntini successivi ignorano il resto del gruppo e il primo flag di lettura per gli *others* (posizioni 6-8).
-  * `[^w]` al nono carattere impone che il permesso in scrittura per *others* **non** sia `w`.
-* `$5 > 3000` in `awk` filtra la dimensione (quinta colonna in `ls -l`).
-* `$9 ~ /\.log$/` in `awk` assicura che il nome del file (nona colonna) finisca in `.log`.
 
-### Esercizio 3 (Thread e Sincronizzazione C)
-**Frammento**:
-Due thread `t1` e `t2` accedono e modificano variabili globali `x` e `y`. Il main genera un figlio tramite `fork()`, modifica localmente `x` e `y` e lancia in parallelo i due thread (sia nel processo padre che nel processo figlio).
+**Spiegazione Dettagliata:**
+- `^-`: Posizione 1 della riga: trattino indicante **file regolare** (esclude directory `d` come `archivio.log` e link simbolici `l` come `ultimo.log`).
+- `...`: Posizioni 2, 3, 4: permessi utente proprietario (indifferenti).
+- `r`: Posizione 5: primo carattere della terna group, impone il **permesso di lettura per il gruppo**.
+- `...`: Posizioni 6, 7, 8: permessi scrittura/esecuzione gruppo e lettura altri.
+- `[^w]`: Posizione 9: secondo carattere della terna others, impone che il permesso di scrittura per altri **non sia `w`** (deve essere `-`).
+- `$5 > 3000`: La quinta colonna in `ls -l` rappresenta la dimensione logica in byte; esclude file come `breve.log` (1500 byte).
+- `$9 ~ /\.log$/`: La nona colonna deve terminare con l'estensione `.log`; esclude file come `sistema.txt` e `avvio.sh`.
+- Output prodotto sui dati d'esempio: `errori.log`, `debug.log`.
 
-**Risposte**:
-a) **Quanti processi e thread vengono creati?**
-Viene creato 1 nuovo processo figlio dalla `fork()`, per un totale di **2 processi** attivi (padre e figlio).
-**Per ogni processo** (padre e figlio) vengono creati tramite `pthread_create` 2 nuovi thread (`t1` e `t2`). Tali 2 thread si sommano al thread base originario, risultando in 3 thread per processo. In sintesi, a livello applicativo vengono istanziati **4 nuovi thread** (escluso il main thread e includendo sia l'esecuzione nel padre che nel figlio).
+---
 
-b) **Il programma termina correttamente? Segnalare e correggere eventuali anomalie.**
-Sì, ma presenta alcune anomalie di rilievo:
-1. **Chiamata errata a `wait()`**: L'istruzione `wait(NULL);` viene eseguita indistintamente dal main di entrambi i processi. Poiché il figlio non ne possiede a sua volta, la sua invocazione a wait(NULL) fallirà subito ritornando il codice d'errore `ECHILD`.  
-   *Correzione*: Racchiudere la wait in uno scope ristretto (es. `if (pid > 0) { wait(NULL); }`) oppure concludere il path d'esecuzione del processo figlio con una `exit(0)`.
-2. **Race condition nel processo figlio**: il figlio inizializza `x=50` e `y=20`. Quando avvia `t1`, la condizione del loop `while (x <= y)` (50 <= 20) è immediatamente falsa: il thread elude l'attesa condizionale ed esegue subito la sottrazione `x = x - y`. Il thread `t2`, se non eseguito prima, imposterà incondizionatamente `x = y + 4` ignorando i calcoli precedenti. In assenza di vincoli temporali forzati via condition variable (come accade nel padre), il risultato finale di `x` varia (24 oppure 4) assecondando lo scheduler, configurando un evidente non-determinismo logico.
+#### Esercizio 3 (Processi, Thread e Sincronizzazione C: `x=9, y=3`)
+**Testo del Programma:**
+```c
+#define NUM_THREADS 2
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t c = PTHREAD_COND_INITIALIZER;
+int x = 9, y = 3;
 
-c) **Cosa stampa il programma?**
-* **Nel padre**: la fork ha re-inviato `x = y` configurando `x=3` e `y=3`. `t1` si bloccherà nella condition wait (essendo `3 <= 3`). `t2` imposterà quindi `x = 3 + 4 = 7` inviando poi un segnale per sbloccare la wait. `t1` ricalcolerà il test (`7 <= 3` ora FALSO) ed uscirà dal loop facendo `x = 7 - 3 = 4`. L'ordine deterministico farà stampare esattamente: `4 3`.
-* **Nel figlio**: a causa della race condition spiegata sopra, l'output non è deterministico e potrà casualmente stampare `24 20` (se `t1` termina prima che parta `t2`) oppure `4 20` (se `t2` esegue prima, sovrascritto poi dalla sottrazione di `t1`). L'ordine temporale generale tra la printf del padre e quella del figlio sarà inoltre misto.
+void *t1(void* param) {
+    pthread_mutex_lock(&m);
+    while (x <= y)
+        pthread_cond_wait(&c, &m);
+    x = x - y;
+    pthread_mutex_unlock(&m);
+    return 0;
+}
 
-### Esercizio 4 (Pipe, Fork, Select in C)
-**Frammento**:
-Il processo padre esegue delle `read()` via multiplexing attendendo byte che un figlio inietta in un costrutto pipe `p[2]`.
+void *t2(void* param) {
+    pthread_mutex_lock(&m);
+    x = y + 4;
+    pthread_cond_signal(&c);
+    pthread_mutex_unlock(&m);
+    return 0;
+}
 
-**Risposte**:
-1. **Le tre `select()` del padre si bloccano oppure ritornano subito?**
-La **prima** `select()` si **bloccherà** attendendo che i byte giungano nel buffer di rete o che il file descriptor attiguo venga chiuso. Le **successive**, dopo l'acquisizione dei primi due byte, ritorneranno invece **subito**, rilevando la permanenza del byte mancante in circolo nel kernel buffer o lo stato latente della socket già liberata dal lato in scrittura.
-2. **Quanto valgono `n1`, `n2`, `n3`?**
-Il figlio ha scritto la stringa "XYZ" per un totale di 3 byte.
-- La 1ª `read(p[0], buff, 2)` legge una limitazione fissata a 2 byte ("XY"), popolando il buffer e restituendo il valore effettivo `n1 = 2`.
-- La 2ª `read(p[0], buff, 2)` legge il residuo decurtato ad 1 byte ("Z"). `n2 = 1`.
-- La 3ª `read(p[0], buff, 2)` esegue la lettura ma non rintraccia altri flussi per intercorsa chiusura lato figli, ricevendo per prassi **End-Of-File (EOF)** che su interi equivale a `n3 = 0`.
-3. **Cosa indica il valore restituito dalla terza `read()`? Il programma termina correttamente?**
-Il valore **0** esprime la fine del file, la condizione di tranciamento del canale per avvenuta operazione. Il programma si spegne correttamente stampando `n1=2 n2=1 n3=0`.
-4. **C'è il rischio che il processo figlio rimanga temporaneamente in stato zombie?**
-**Sì**. Il processo generato fa `exit(0)` rilasciando il core per chiudere il proprio ciclo biologico, ma la routine del suo parent logico continua ignorandolo sistematicamente poiché nel costrutto priva di alcuna chiamata alla the system-call `wait()`. Egli permane nell'albero in stato `Z` (zombie) fintanto che il padre stesso terminerà il suo eseguibile, delegandone la rimozione ad _Init_ all'uscita complessiva.
+int main() {
+    pthread_t th[NUM_THREADS];
+    int pid;
+    pid = fork();
+    if (pid == 0) {
+        x = 50;
+        y = 20;
+    } else {
+        x = y;
+        pthread_create(&th[0], NULL, t1, NULL);
+        pthread_create(&th[1], NULL, t2, NULL);
+        pthread_join(th[0], NULL);
+        pthread_join(th[1], NULL);
+    }
+    wait(NULL);
+    printf("%d %d\n", x, y);
+    return 0;
+}
+```
 
-### Esercizio 5 (Namespace e Docker)
-**Scenario**: Innesco ravvicinato di due isolatori bash mediante container da un SO denominato _MioPC_.
+**Quesiti e Risposte Dettagliate:**
 
-**Risposte**:
-(a) **Quale PID avrà il processo bash visualizzato con ps -ef nel contenitore2?**
-Il processo bash deterrà senza dubbio il **PID 1**. Ogni contenimento su _Docker_ sfrutta le feature del modulo **PID Namespace** a livello di Kernel, staccandolo percettivamente dalla numerazione standard dell'OS host per instaurarlo in cima a un suo sottoramo privato partendo proprio dal PID 1.
-(b) **Quale valore restituirà il comando hostname?**
-Visualizzerà la stringa **nodo2**. Passando flag `--hostname` si invoca il distaccamento del **UTS Namespace** del container, il cui obiettivo è slegare i dati nominali del domain dall'effettivo server.
-(c) **Saranno presenti la directory e il file `/lavoro/info.txt` creati in precedenza nel `contenitore1`?**
-**No**, assolutamente assenti. Ciò deriva dalla specificità intrinseca degli **Overlay File System**. I due sub-sistemi sono originati dall'identica `ubuntu` *Read-Only* ma appositamente instradati ciascuno nel proprio *layer* virtuale indipendente detto **upperdir** (leggibile e scrivibile separato ed effimero). Qualsiasi directory forgiata in uno sfocia in un suo file d'overlay e decade appena cancellato.
+##### a) Quanti processi e quanti thread vengono creati? (specificare anche "per processo")
+- **Processi:** **2 processi in totale** (il processo **Padre** e **1 processo Figlio** generato da `fork()`).
+- **Thread:** **2 nuovi thread** (`th[0]` e `th[1]`) generati **esclusivamente all'interno del processo Padre** (poiché nel blocco `else` dove `pid != 0`).
+- **Per processo:**
+  - Nel processo **Figlio**: **1 thread** (il solo thread principale `main`).
+  - Nel processo **Padre**: **3 thread** (il thread principale `main` + i due worker `t1` e `t2`).
+
+##### b) Il programma termina correttamente? Segnalare e correggere eventuali anomalie.
+- **Sì, il programma termina.**
+- **Anomalie:**
+  1. `wait(NULL);` viene eseguita anche dal processo Figlio. Poiché il figlio non ha figli a sua volta, la `wait()` fallisce immediatamente restituendo `-1` con `errno = ECHILD`.  
+     *Correzione:* Spostare la chiamata dentro l'else del padre o racchiuderla in `if (pid > 0) wait(NULL);`.
+  2. *Sincronizzazione robusta:* Se nel padre `t2` esegue prima di `t1`, imposta $x = y + 4 = 3 + 4 = 7$. Quando `t1` parte, trova $x \le y$ ($7 \le 3$, falso) e non si blocca nella condition wait, eseguendo subito $x = 7 - 3 = 4$. Se parte prima `t1`, trova $3 \le 3$ (vero) $	o$ si sospende in `pthread_cond_wait`, viene risvegliato dalla signal di `t2` e calcola ugualmente $x = 7 - 3 = 4$. L'esecuzione nel padre è quindi deterministica e priva di deadlock.
+
+##### c) Cosa stampa il programma? (motivare)
+Entrambi i processi eseguono la `printf("%d %d\n", x, y);`:
+1. **Output del processo Figlio (`pid == 0`):**
+   - Esegue il ramo `if`: `x = 50; y = 20;`.
+   - Nessun thread modifica le variabili nel figlio.
+   - Stampa: **`50 20`**.
+2. **Output del processo Padre (`pid > 0`):**
+   - Inizializza: `x = y;` $\implies x = 3, y = 3$.
+   - Thread `t1`: valuta $x \le y$ ($3 \le 3$, vero) $\implies$ si blocca nella condition wait rilasciando il mutex `m`.
+   - Thread `t2`: acquisisce `m`, calcola `x = y + 4;` $\implies x = 3 + 4 = 7$. Invia `pthread_cond_signal(&c)` e rilascia `m`.
+   - Thread `t1`: si risveglia riacquisendo `m`, valuta $x \le y$ ($7 \le 3$, falso) $\implies$ esce dal ciclo `while`.
+   - `t1` calcola: `x = x - y;` $\implies x = 7 - 3 = 4$. Rilascia `m`.
+   - Il main del padre esegue le join, attende il figlio e stampa: **`4 3`**.
+3. **Sequenza complessiva:**
+   ```text
+   50 20
+   4 3
+   ```
+
+---
+
+#### Esercizio 4 (Pipe, Fork, Select in C: 3 read e Condizione di EOF)
+**Testo del Programma:**
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/select.h>
+#include <signal.h>
+#include <stdlib.h>
+
+int main(void) {
+    int p[2];
+    pipe(p);
+
+    if (fork() == 0) {
+        close(p[0]);
+        write(p[1], "XYZ", 3);
+        close(p[1]);
+        exit(0);
+    }
+    close(p[1]);
+
+    char buff[3];
+    int n1, n2, n3;
+    fd_set set;
+
+    FD_ZERO(&set);
+    FD_SET(p[0], &set);
+    select(p[0] + 1, &set, NULL, NULL, NULL);
+    n1 = read(p[0], buff, 2);
+
+    FD_ZERO(&set);
+    FD_SET(p[0], &set);
+    select(p[0] + 1, &set, NULL, NULL, NULL);
+    n2 = read(p[0], buff, 2);
+
+    FD_ZERO(&set);
+    FD_SET(p[0], &set);
+    select(p[0] + 1, &set, NULL, NULL, NULL);
+    n3 = read(p[0], buff, 2);
+
+    printf("n1=%d n2=%d, n3=%d\n", n1, n2, n3);
+    close(p[0]);
+    return 0;
+}
+```
+
+**Quesiti e Risposte Dettagliate:**
+
+##### 1. Le tre select() del padre si bloccano oppure ritornano subito? Perché?
+- **La prima `select()`:**
+  - Si **blocca** fino a quando il processo figlio non scrive i dati nella pipe. Quando il figlio invoca `write(p[1], "XYZ", 3)`, la pipe diventa leggibile e la `select()` ritorna.
+- **La seconda `select()`:**
+  - **Ritorna subito senza bloccarsi**, poiché nella pipe è rimasto ancora 1 byte non letto (`'Z'`). Il descrittore è pronto in lettura.
+- **La terza `select()`:**
+  - **Ritorna subito anch'essa senza bloccarsi!**
+  - *Motivo fondamentale (domanda classica d'esame):* Il processo figlio ha chiuso la sua estremità di scrittura con `close(p[1]);` ed è terminato. Il padre ha già chiuso `p[1]` all'inizio. **Quando tutte le estremità di scrittura di una pipe sono chiuse, la pipe viene considerata dal kernel come pronta in lettura per notificare la condizione di End-Of-File (EOF)!** Di conseguenza, `select()` non attende e ritorna immediatamente pronta.
+
+##### 2. Quanto valgono n1, n2, n3?
+- Il figlio inietta 3 byte (`"XYZ"`).
+- 1ª `read(p[0], buff, 2)`: legge 2 byte (`"XY"`). **`n1 = 2`**.
+- 2ª `read(p[0], buff, 2)`: legge il restante 1 byte (`"Z"`). **`n2 = 1`**.
+- 3ª `read(p[0], buff, 2)`: il buffer della pipe è completamente vuoto e tutti i descrittori di scrittura sono chiusi. La `read()` rileva la fine del file e ritorna **`n3 = 0`**.
+- Output stampato:
+  ```text
+  n1=2 n2=1, n3=0
+  ```
+
+##### 3. Che cosa indica il valore restituito dalla terza read()? Il programma termina correttamente?
+- Il valore `n3 = 0` indica inequivocabilmente la condizione di **End-Of-File (EOF)**: la pipe è chiusa e non vi sono ulteriori dati da leggere.
+- Il programma termina correttamente e senza blocchi.
+
+##### 4. C'è il rischio che il processo figlio rimanga temporaneamente in stato zombie? In caso affermativo, indicare come modificare il programma per evitarlo.
+- **Sì, il figlio diventa zombie.**
+- Il processo figlio termina la sua esecuzione con `exit(0)`, ma il processo padre non esegue alcuna chiamata a `wait()` o `waitpid()`. Il processo figlio rimane registrato come zombie (`Z`) nella tabella dei processi fino a quando il padre non conclude l'esecuzione con `return 0;`.
+- *Modifica correttiva:* Aggiungere `wait(NULL);` prima della chiusura del main nel padre, oppure impostare `signal(SIGCHLD, SIG_IGN);`.
+
+---
+
+#### Esercizio 5 (Namespace e Container Docker: Due Container Separati)
+**Testo dello Scenario:**
+Si consideri un sistema Linux con hostname `MioPC` su cui vengono eseguiti i seguenti comandi:
+```bash
+docker pull ubuntu
+docker run -it --name contenitore1 --hostname nodo1 ubuntu bash
+```
+All'interno del container vengono eseguite le operazioni:
+```bash
+ps -ef
+hostname
+mkdir /lavoro
+echo "prova 1" > /lavoro/info.txt
+exit
+```
+Successivamente viene creato e avviato un **secondo container**:
+```bash
+docker run -it --name contenitore2 --hostname nodo2 ubuntu bash
+```
+Nel nuovo container:
+- (a) Quale PID avrà il processo `bash` visualizzato con `ps -ef`?
+- (b) Quale valore restituirà il comando `hostname`?
+- (c) Saranno presenti `/lavoro` e `/lavoro/info.txt`?
+
+Spiegare brevemente il comportamento illustrato discutendo i namespace coinvolti e l'Overlay File System.
+
+**Risposte Dettagliate e Spiegazione dei Concetti:**
+
+##### (a) PID del processo bash in `contenitore2`: `PID = 1`
+- Il comando `docker run` genera una nuova istanza completamente isolata invocando `clone()` con il flag `CLONE_NEWPID`.
+- Ogni container possiede un proprio **PID Namespace indipendente**: all'interno di questo namespace, il primo processo creato (il comando di avvio `/bin/bash`) assume sempre e invariabilmente il **`PID = 1`**.
+
+##### (b) Valore restituito dal comando `hostname`: `nodo2`
+- Docker isola il nome della macchina tramite l'**UTS Namespace** (`CLONE_NEWUTS`).
+- L'opzione `--hostname nodo2` passata a `docker run` assegna la stringa `nodo2` alla struttura nodename del nuovo UTS namespace. Il comando `hostname` all'interno di `contenitore2` restituirà quindi esattamente **`nodo2`**, mentre all'interno di `contenitore1` restituiva `nodo1` e sull'host fisico restituisce `MioPC`.
+
+##### (c) Presenza di `/lavoro` e `/lavoro/info.txt` in `contenitore2`: NO, TOTALMENTE ASSENTI
+- I file creati in `contenitore1` **non saranno in alcun modo visibili** in `contenitore2`.
+- **Spiegazione con l'architettura a livelli di OverlayFS:**
+  - Entrambi i container condividono la stessa immagine base `ubuntu`, che risiede nel layer a sola lettura (**`lowerdir`**).
+  - Tuttavia, all'atto dell'avvio di un container, Docker alloca un **nuovo layer di lettura e scrittura privato ed esclusivo (`upperdir`)** associato unicamente a quel container.
+  - La creazione della cartella `/lavoro` e del file `info.txt` effettuata in `contenitore1` è stata registrata **soltanto nell'`upperdir` di `contenitore1`**.
+  - Quando viene avviato `contenitore2`, Docker gli assegna una `upperdir` **nuova, vuota e completamente scorrelata**.
+  - Poiché `/lavoro` non faceva parte dell'immagine base originaria (`lowerdir`), `contenitore2` vedrà unicamente il filesystem immutato di Ubuntu pulito.
 
 ---
 
@@ -6096,6 +7561,21 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 ---
 
 ## Indice Dettagliato delle Sottosezioni
+
+
+### Indice delle Sottosezioni Capitolo 0
+
+
+- [0.1 Obiettivi del Corso](#01-obiettivi-del-corso)
+
+
+- [0.2 Modalità d'Esame e Criteri di Valutazione](#02-modalità-desame-e-criteri-di-valutazione)
+
+
+- [0.3 Prove Parziali vs Appelli Ordinari](#03-prove-parziali-vs-appelli-ordinari)
+
+
+- [0.4 Ambiente di Sviluppo di Riferimento](#04-ambiente-di-sviluppo-di-riferimento)
 
 
 ### Indice delle Sottosezioni Capitolo 1
@@ -6410,6 +7890,9 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [14.6 Cancellazione Thread](#146-cancellazione-thread)
 
 
+- [14.7 Thread-Specific Data (TSD) — Dati Specifici del Thread](#147-thread-specific-data-tsd--dati-specifici-del-thread)
+
+
 ### Indice delle Sottosezioni Capitolo 15
 
 
@@ -6432,6 +7915,9 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 
 
 - [16.2 Readers-Writers (Lettori-Scrittori)](#162-readers-writers-lettori-scrittori)
+
+
+- [16.3 Problema del Ponte a Senso Unico Alternato (Bridge Problem)](#163-problema-del-ponte-a-senso-unico-alternato-bridge-problem--sem_pontec)
 
 
 ### Indice delle Sottosezioni Capitolo 17
@@ -6584,6 +8070,9 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 - [23.5 OverlayFS — Filesystem a Strati](#235-overlayfs--filesystem-a-strati)
 
 
+- [23.6 Mini-Container Didattico in C tramite `clone()` e `mount()`](#236-mini-container-didattico-in-c-tramite-clone-e-mount-test_containerc)
+
+
 ### Indice delle Sottosezioni Capitolo 24
 
 
@@ -6612,11 +8101,11 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 
 ### Indice delle Sottosezioni Capitolo 25
 
-- [Esercizio 1 (Pipeline Bash)](#esercizio-1-pipeline-bash)
-- [Esercizio 2 (Pipeline ls, grep, awk)](#esercizio-2-pipeline-ls-grep-awk)
-- [Esercizio 3 (Thread e Sincronizzazione C)](#esercizio-3-thread-e-sincronizzazione-c)
-- [Esercizio 4 (Pipe, Fork, Select in C)](#esercizio-4-pipe-fork-select-in-c)
-- [Esercizio 5 (Namespace e Docker)](#esercizio-5-namespace-e-docker)
+- [25.1 Esercizi di Bug-Hunting ("Trova e Correggi l'Errore" — File _ERR.c)](#251-esercizi-di-bug-hunting-trova-e-correggi-lerrore--file-_errc)
+- [25.2 Template d'Esame da Completare (File _TODO.c e _TODO.sh)](#252-template-desame-da-completare-file-_todoc-e-_todosh)
+- [25.3 Simulazione Ufficiale Prova Parziale (Lezione 28 — Prova PA)](#253-simulazione-ufficiale-prova-parziale-lezione-28--prova-pa)
+- [25.4 Traccia d'Esame Ufficiale Svolta — Compito A](#254-traccia-desame-ufficiale-svolta--compito-a)
+- [25.5 Traccia d'Esame Ufficiale Svolta — Compito B](#255-traccia-desame-ufficiale-svolta--compito-b)
 
 ### Indice delle Sottosezioni Capitolo 26
 
