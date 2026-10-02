@@ -508,9 +508,21 @@ find /home -name "*.sh" -exec rm -i {} \;
 | `cut -d: -f1,5 file` | Estrae colonne (`-d:`: definisce delimitatore, `-f`: indica quali campi/colonne estrarre) |
 | `paste file1 file2` | Compone file affiancandoli |
 | `sort [-n] [-r] [-t:] [-k] file` | Ordina righe (`-n`: numerico, `-r`: inverso, `-t:`: delimitatore, `-k`: numero del campo da usare come chiave di ordinamento) |
+| `uniq [-c] [-d] [-u] [-i] file` | Rimuove o segnala duplicati adiacenti (`-c`: conta occorrenze, `-d`: solo duplicati, `-u`: solo unici, `-i`: ignora maiusc./minusc.) |
 | `diff file1 file2` | Mostra differenze tra file |
 | `head [-n N] file` | Visualizza le prime N righe |
 | `tail [-n N] file` | Visualizza le ultime N righe |
+
+> [!IMPORTANT]
+> **Funzionamento di `uniq` e combinazione con `sort`:**  
+> Il comando `uniq` opera **esclusivamente su righe adiacenti (consecutive)**: non individua duplicati sparsi se non si trovano su righe contigue. Per questo motivo, per eliminare o contare i duplicati di un intero file o stream, viene quasi sempre posto in pipeline a valle di `sort`:
+> ```bash
+> sort file.txt | uniq       # Rimuove tutti i duplicati (mantiene una sola istanza)
+> sort file.txt | uniq -c    # Conta le occorrenze di ciascuna riga (formato: "  <conteggio> <riga>")
+> sort file.txt | uniq -d    # Mostra SOLO le righe duplicate
+> sort file.txt | uniq -u    # Mostra SOLO le righe uniche (che compaiono 1 sola volta)
+> ```
+> Nelle prove d'esame (es. [Capitolo 25](#25-corpus-dei-file-pratici-desame-debugging-_err-template-_todo-e-prove-parziali)), la combinazione `sort | uniq -c | awk '$1 >= N {print $2}'` è il pattern fondamentale per estrarre elementi con frequenza maggiore o uguale a una certa soglia.
 
 ### 4.4 Listing di Processi
 
@@ -7509,6 +7521,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 ### Shell, Comandi e Scripting
 * **Pipeline (`|`)**: Collega lo standard output di un processo allo standard input del successivo.
 * **Redirezione (`>`, `<`, `>>`, `2>`)**: Devia l'input/output o gli errori da/verso file.
+* **Sort / Uniq**: `sort` ordina le righe di un flusso testuale; `uniq` filtra o conta (`-c`) le righe duplicate adiacenti (richiede quasi sempre `sort` preventivo).
 * **Grep**: Comando per cercare pattern logici testuali usando Espressioni Regolari (BRE o ERE con `egrep`).
 * **Awk**: Linguaggio di elaborazione testuale per record/campi separati (variabili: `$1, $2, ...`, `NR`, `NF`).
 * **Sed**: Stream editor per operare su stream testuali senza interazione (es. `s/old/new/g`).

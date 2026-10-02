@@ -508,9 +508,21 @@ find /home -name "*.sh" -exec rm -i {} \;
 | `cut -d: -f1,5 file` | Estrae colonne (`-d:`: definisce delimitatore, `-f`: indica quali campi/colonne estrarre) |
 | `paste file1 file2` | Compone file affiancandoli |
 | `sort [-n] [-r] [-t:] [-k] file` | Ordina righe (`-n`: numerico, `-r`: inverso, `-t:`: delimitatore, `-k`: numero del campo da usare come chiave di ordinamento) |
+| `uniq [-c] [-d] [-u] [-i] file` | Rimuove o segnala duplicati adiacenti (`-c`: conta occorrenze, `-d`: solo duplicati, `-u`: solo unici, `-i`: ignora maiusc./minusc.) |
 | `diff file1 file2` | Mostra differenze tra file |
 | `head [-n N] file` | Visualizza le prime N righe |
 | `tail [-n N] file` | Visualizza le ultime N righe |
+
+> [!IMPORTANT]
+> **Funzionamento di `uniq` e combinazione con `sort`:**  
+> Il comando `uniq` opera **esclusivamente su righe adiacenti (consecutive)**: non individua duplicati sparsi se non si trovano su righe contigue. Per questo motivo, per eliminare o contare i duplicati di un intero file o stream, viene quasi sempre posto in pipeline a valle di `sort`:
+> ```bash
+> sort file.txt | uniq       # Rimuove tutti i duplicati (mantiene una sola istanza)
+> sort file.txt | uniq -c    # Conta le occorrenze di ciascuna riga (formato: "  <conteggio> <riga>")
+> sort file.txt | uniq -d    # Mostra SOLO le righe duplicate
+> sort file.txt | uniq -u    # Mostra SOLO le righe uniche (che compaiono 1 sola volta)
+> ```
+> Nelle prove d'esame (es. [Capitolo 25](#25-corpus-dei-file-pratici-desame-debugging-_err-template-_todo-e-prove-parziali)), la combinazione `sort | uniq -c | awk '$1 >= N {print $2}'` è il pattern fondamentale per estrarre elementi con frequenza maggiore o uguale a una certa soglia.
 
 ### 4.4 Listing di Processi
 
@@ -6553,7 +6565,7 @@ fi
 DIR="$1"
 STR="$2"
 
-if [ ! -d "$DIR" ]; then
+if [ ! -d "$DIR" ]; then //-d controlla se il file è una directory
     echo "Errore: '$DIR' non e' una directory valida."
     exit 1
 fi
@@ -6562,8 +6574,10 @@ old_count=-1
 while true; do
     count=0
     for f in "$DIR"/*.txt; do
-        if [ -f "$f" ]; then
-            if grep -q "$STR" "$f"; then
+        if [ -f "$f" ]; then  
+                                            /*Attenzione, dettaglio d esame importante! Se nella cartella non c è alcun file .txt, Bash non espande la wildcard e assegna letteralmente a $f la stringa "$DIR/*.txt". Il test [ -f "$f" ] verifica che $f sia effettivamente un file regolare esistente prima di procedere, evitando errori.*/
+            if grep -q "$STR" "$f"; then /*-q sopprime l output, 
+                                        questa riga ritorna 0 se trova la stringa $STR in $f, altrimenti 1. */
                 count=$((count + 1))
             fi
         fi
@@ -6756,7 +6770,8 @@ int main(void) {
         close(p1[0]); // Chiude lettura p1
         close(p2[0]); close(p2[1]); // Non usa p2
         while (1) {
-            if (write(p1[1], "A", 1) <= 0) break;
+            if (write(p1[1], "A", 1) <= 0) 
+                break;
             usleep(50000);
         }
         _exit(0);
@@ -6768,14 +6783,16 @@ int main(void) {
         close(p2[0]); // Chiude lettura p2
         close(p1[0]); close(p1[1]); // Non usa p1
         while (1) {
-            if (write(p2[1], "B", 1) <= 0) break;
+            if (write(p2[1], "B", 1) <= 0) 
+                break;
             usleep(50000);
         }
         _exit(0);
     }
 
     // PADRE
-    close(p1[1]); close(p2[1]); // Chiude le estremità di scrittura
+    close(p1[1]);
+    close(p2[1]); // Chiude le estremità di scrittura
 
     fd_set set;
     int maxfd = (p1[0] > p2[0] ? p1[0] : p2[0]) + 1;
@@ -6786,7 +6803,10 @@ int main(void) {
         FD_SET(p2[0], &set);
 
         int ret = select(maxfd, &set, NULL, NULL, NULL);
-        if (ret < 0) { perror("select"); break; }
+        if (ret < 0) { 
+            perror("select"); 
+            break; 
+        }
 
         if (FD_ISSET(p1[0], &set)) {
             if (read(p1[0], &buf, 1) > 0) {
@@ -7509,6 +7529,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 ### Shell, Comandi e Scripting
 * **Pipeline (`|`)**: Collega lo standard output di un processo allo standard input del successivo.
 * **Redirezione (`>`, `<`, `>>`, `2>`)**: Devia l'input/output o gli errori da/verso file.
+* **Sort / Uniq**: `sort` ordina le righe di un flusso testuale; `uniq` filtra o conta (`-c`) le righe duplicate adiacenti (richiede quasi sempre `sort` preventivo).
 * **Grep**: Comando per cercare pattern logici testuali usando Espressioni Regolari (BRE o ERE con `egrep`).
 * **Awk**: Linguaggio di elaborazione testuale per record/campi separati (variabili: `$1, $2, ...`, `NR`, `NF`).
 * **Sed**: Stream editor per operare su stream testuali senza interazione (es. `s/old/new/g`).
