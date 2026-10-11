@@ -116,21 +116,12 @@ static void *timer_thread(void *arg) {
     (void)arg;
     int seconds = 0;
 
-    while (1) {
+    while (!g_game.game_over) {
         sleep(1);
         seconds++;
 
-        pthread_mutex_lock(&g_game.mutex);
-        if (g_game.game_over) {
-            pthread_mutex_unlock(&g_game.mutex);
-            break;
-        }
-
-        int elapsed = (int)(time(NULL) - g_game.start_time);
-        int time_is_up = (elapsed >= g_game.timeout);
-        pthread_mutex_unlock(&g_game.mutex);
-
-        if (time_is_up) {
+        /* Scadenza del timeout globale */
+        if (seconds >= g_game.timeout) {
             log_event("Partita terminata per timeout (%d secondi).", g_game.timeout);
             game_finish();
             game_broadcast_game_over();

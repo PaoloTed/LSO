@@ -55,8 +55,11 @@ void display_global_map(int row, int col, const char map[MAP_ROWS][MAP_COLS]) {
     for (int r = 0; r < MAP_ROWS; r++) {
         printf("  ");
         for (int c = 0; c < MAP_COLS; c++) {
+            /* Controlla se la cella si trova all'interno della vista locale 
+            controllando che la cella "map[r][c]" sia in nell'intervallo 
+            [row - VIEW_RADIUS, row + VIEW_RADIUS] e [col - VIEW_RADIUS, col + VIEW_RADIUS]*/
             int in_view = (r >= row - VIEW_RADIUS && r <= row + VIEW_RADIUS &&
-                           c >= col - VIEW_RADIUS && c <= col + VIEW_RADIUS);
+                            c >= col - VIEW_RADIUS && c <= col + VIEW_RADIUS);
             print_cell(map[r][c], in_view);
         }
         putchar('\n');

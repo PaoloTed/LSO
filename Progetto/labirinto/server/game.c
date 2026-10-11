@@ -9,68 +9,86 @@
 
 StatoGioco g_game;
 
-/* Template generico del labirinto (21 righe x 41 colonne, 100% connesso) */
-static const char MAZE_TEMPLATE[MAP_ROWS][MAP_COLS + 1] = {
-    "#########################################",
-    "#.#.....#.....#...#...............#.#...#",
-    "#.###.#.#.###.#.#.#.#.#####.#####.#.#.#.#",
-    "#...#.#...#...#.#...#.....#.#...#.#...#.#",
-    "###.#.#.#######.###.#.#####.###.#.#####.#",
-    "#.#.#.#.#.....#.#.....#...#.#...#.#.....#",
-    "#.#.#.###.###.#.#####.#.#.#.#.#.#.#.###.#",
-    "#.#.#...#.#.#.#...#...#.#.#.#.#.#...#...#",
-    "#.#.#...#.#.#.###.#.#...#.#.#.#######.###",
-    "#.#.#.#...#.#.......#.#.#.#...........#.#",
-    "#.#.#.#####.###########.#.#.###.#.###.#.#",
-    "#...#.#...#...........#.#.#...#.....#...#",
-    "#.###.#.#.#.#.###.#.#.#...#.#.#####.###.#",
-    "#.#.....#...........#...#.#.#.....#...#.#",
-    "#.#####.#####.###.#.###.#.#.###.#.###.#.#",
-    "#...#...#...#.#.....#...#.....#.#...#.#.#",
-    "###.#####.#.#.#.#.#.#.#.#####.#####.#...#",
-    "#.#.......#.#.#...#.#.#.#...#.....#.#...#",
-    "#.#########.#.#.#.###.#...#.#####.#.###.#",
-    "#.............#.#.....#...#.........#...#",
-    "#########################################"
-};
-
-/* 10 uscite predefinite distribuite sul perimetro del labirinto */
+/* Punti di partenza per la generazione: 4 angoli e 4 centri dei lati (coordinate interne) */
 static const struct {
     int r, c;
-} USCITE_PREDEFINITE[10] = {
-    {0, 5},   {0, 20},  {0, 35},   /* 3 sul bordo superiore */
-    {20, 5},  {20, 20}, {20, 35},  /* 3 sul bordo inferiore */
-    {5, 0},   {15, 0},             /* 2 sul bordo sinistro */
-    {5, 40},  {15, 40}             /* 2 sul bordo destro */
+} PUNTI_PARTENZA[8] = {
+    {1, 1},                       /* Angolo superiore sinistro */
+    {1, MAP_COLS - 2},            /* Angolo superiore destro */
+    {MAP_ROWS - 2, 1},            /* Angolo inferiore sinistro */
+    {MAP_ROWS - 2, MAP_COLS - 2}, /* Angolo inferiore destro */
+    {1, MAP_COLS / 2},            /* Centro lato superiore */
+    {MAP_ROWS - 2, MAP_COLS / 2}, /* Centro lato inferiore */
+    {MAP_ROWS / 2, 1},            /* Centro lato sinistro */
+    {MAP_ROWS / 2, MAP_COLS - 2}  /* Centro lato destro */
 };
 
-/* Genera il labirinto dal template, randomizzando uscite e oggetti */
+/* Genera proceduralmente il labirinto con cammini casuali a croce dagli 8 punti */
 static void generate_maze(Labirinto *m) {
-    /* 1. Copia la struttura del labirinto dal template */
+    /* 1. Inizializza l'intera matrice con muri '#' */
     for (int r = 0; r < MAP_ROWS; r++) {
         for (int c = 0; c < MAP_COLS; c++) {
-            m->cells[r][c] = MAZE_TEMPLATE[r][c];
+            m->cells[r][c] = CELL_WALL;
             m->objects[r][c] = 0;
         }
     }
 
-    /* 2. Sceglie casualmente 4 uscite distinte tra le 10 predefinite */
-    int uscite_scelte = 0;
-    while (uscite_scelte < 4) {
-        int idx = rand() % 10;
-        int r = USCITE_PREDEFINITE[idx].r;
-        int c = USCITE_PREDEFINITE[idx].c;
-        if (m->cells[r][c] != CELL_EXIT) {
-            m->cells[r][c] = CELL_EXIT;
-            uscite_scelte++;
+    /* Centro del labirinto */
+    int center_r = MAP_ROWS / 2;
+    int center_c = MAP_COLS / 2;
+    m->cells[center_r][center_c] = CELL_FREE;
+
+    /* Direzioni a croce: Su, Giù, Sinistra, Destra */
+    const int dr[4] = {-1, 1, 0, 0};
+    const int dc[4] = {0, 0, -1, 1};
+
+    /* 2. Scava partendo dagli 8 punti (angoli e punti centrali dei lati) */
+    for (int i = 0; i < 8; i++) {
+        int r = PUNTI_PARTENZA[i].r;
+        int c = PUNTI_PARTENZA[i].c;
+        m->cells[r][c] = CELL_FREE;
+
+        /* Corridoio verso il centro per garantire mappa sempre connessa */
+        int cr = r, cc = c;
+        while (cr != center_r || cc != center_c) {
+            if (cr < center_r) cr++;
+            else if (cr > center_r) cr--;
+            else if (cc < center_c) cc++;
+            else if (cc > center_c) cc--;
+            m->cells[cr][cc] = CELL_FREE;
+        }
+
+        /* Random Walk a croce: scava celle libere con pari probabilità nelle 4 direzioni */
+        int curr_r = r;
+        int curr_c = c;
+        int passi = 100;
+        for (int step = 0; step < passi; step++) {
+            int dir = rand() % 4;
+            int nr = curr_r + dr[dir];
+            int nc = curr_c + dc[dir];
+
+            /* Se incontra i limiti esterni non li oltrepassa */
+            if (nr <= 0 || nr >= MAP_ROWS - 1 || nc <= 0 || nc >= MAP_COLS - 1)
+                continue;
+
+            curr_r = nr;
+            curr_c = nc;
+            m->cells[curr_r][curr_c] = CELL_FREE;
         }
     }
 
-    /* 3. Distribuisce casualmente 15 oggetti raccoglibili 'O' su celle libere */
+    /* 3. Posiziona 4 uscite 'E' sul perimetro collegate ai corridoi dei punti centrali */
+    m->cells[0][MAP_COLS / 2] = CELL_EXIT;            /* Uscita superiore */
+    m->cells[MAP_ROWS - 1][MAP_COLS / 2] = CELL_EXIT; /* Uscita inferiore */
+    m->cells[MAP_ROWS / 2][0] = CELL_EXIT;            /* Uscita sinistra */
+    m->cells[MAP_ROWS / 2][MAP_COLS - 1] = CELL_EXIT; /* Uscita destra */
+
+    /* 4. Distribuisce casualmente 15 oggetti raccoglibili 'O' su celle libere*/
     int objects = 15;
     while (objects > 0) {
         int r = 1 + rand() % (MAP_ROWS - 2);
         int c = 1 + rand() % (MAP_COLS - 2);
+
         if (m->cells[r][c] == CELL_FREE && m->objects[r][c] == 0) {
             m->objects[r][c] = 1;
             objects--;
@@ -187,32 +205,10 @@ int game_add_player(int fd, const char *nickname) {
         return -3;
     }
 
-    /* Trova una posizione iniziale libera */
-    int row = 1, col = 1;
-    for (int t = 0; t < 5000; t++) {
-        int r = 1 + rand() % (MAP_ROWS - 2);
-        int c = 1 + rand() % (MAP_COLS - 2);
-        if (g_game.maze.cells[r][c] != CELL_FREE || g_game.maze.objects[r][c])
-            continue;
-
-        /* Assicura che ci sia almeno una via di movimento adiacente */
-        if (g_game.maze.cells[r - 1][c] != CELL_FREE &&
-            g_game.maze.cells[r + 1][c] != CELL_FREE &&
-            g_game.maze.cells[r][c - 1] != CELL_FREE &&
-            g_game.maze.cells[r][c + 1] != CELL_FREE)
-            continue;
-
-        int busy = 0;
-        for (int j = 0; j < MAX_PLAYERS; j++) {
-            if (g_game.players[j].active && g_game.players[j].row == r && g_game.players[j].col == c)
-                busy = 1;
-        }
-        if (!busy) {
-            row = r;
-            col = c;
-            break;
-        }
-    }
+    /* Assegna casualmente uno degli 8 punti di partenza dei walker */
+    int idx = rand() % 8;
+    int row = PUNTI_PARTENZA[idx].r;
+    int col = PUNTI_PARTENZA[idx].c;
 
     Giocatore *p = &g_game.players[slot];
     p->fd = fd;

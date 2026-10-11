@@ -58,7 +58,7 @@ typedef struct {
     InfoGiocatore players[MAX_PLAYERS];     /* Array dei giocatori connessi */
 } Messaggio;
 
-/* Funzioni di I/O affidabili per socket TCP */
+/* Funzioni di invio e ricezione messaggi TCP */
 int invia_messaggio(int fd, const Messaggio *msg);
 int ricevi_messaggio(int fd, Messaggio *msg);
 

@@ -12,6 +12,18 @@
 #include "protocol.h"
 #include "display.h"
 
+static int loop = 1;
+
+static void handle_sigint(int sig) {
+    (void)sig;
+    loop = 0;
+}
+
+static void display_prompt(void) {
+    printf("Inserisci il comando + ENTER: ");
+    fflush(stdout);
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 3) {
         fprintf(stderr, "Uso: %s <indirizzo_ip> <porta>\n", argv[0]);
@@ -27,6 +39,7 @@ int main(int argc, char *argv[]) {
 
     /* Ignora SIGPIPE per evitare terminazione in caso di scrittura su socket chiusa */
     signal(SIGPIPE, SIG_IGN);
+
 
     /* Creazione socket TCP */
     int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -60,10 +73,7 @@ int main(int argc, char *argv[]) {
     char nickname[MAX_NICK];
     printf("Inserisci il tuo nickname: ");
     fflush(stdout);
-    if (scanf("%31s", nickname) != 1) {
-        close(sock_fd);
-        return 0;
-    }
+    scanf("%s", nickname);
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
 
@@ -108,12 +118,19 @@ int main(int argc, char *argv[]) {
     FD_SET(sock_fd, &master_fds);
     int max_fd = (sock_fd > STDIN_FILENO) ? sock_fd : STDIN_FILENO;
 
-    while (1) {
+    /* Gestione segnali: intercetta SIGINT (Ctrl+C) e SIGTERM per inviare MSG_QUIT */
+    signal(SIGINT, handle_sigint);
+    signal(SIGTERM, handle_sigint);
+    
+    while (loop) {
         read_fds = master_fds;
         int activity = select(max_fd + 1, &read_fds, NULL, NULL, NULL);
         if (activity < 0) {
-            if (errno == EINTR)
+            if (errno == EINTR) {
+                if (!loop)
+                    break;
                 continue;
+            }
             perror("select");
             break;
         }
@@ -121,11 +138,9 @@ int main(int argc, char *argv[]) {
         /* 1) Input da tastiera dell'utente */
         if (FD_ISSET(STDIN_FILENO, &read_fds)) {
             char buffer[64];
-            if (!fgets(buffer, sizeof(buffer), stdin)) {
-                /* EOF (Ctrl+D): disconnessione */
-                memset(&msg, 0, sizeof(msg));
-                msg.type = MSG_QUIT;
-                invia_messaggio(sock_fd, &msg);
+            /* EOF (Ctrl+D): disconnessione */
+            if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+                loop = 0;
                 break;
             }
 
@@ -201,6 +216,14 @@ int main(int argc, char *argv[]) {
                     break;
             }
         }
+    }
+
+    /* Se usciti a causa di un segnale (EOF Ctrl+D / Ctrl+C / SIGINT / SIGTERM), invia MSG_QUIT al server */
+    if (!loop) {
+        printf("\nRicevuto segnale di interruzione: disconnessione in corso...\n");
+        memset(&msg, 0, sizeof(msg));
+        msg.type = MSG_QUIT;
+        invia_messaggio(sock_fd, &msg);
     }
 
     close(sock_fd);
