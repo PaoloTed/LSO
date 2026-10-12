@@ -14,12 +14,12 @@ labirinto/
 │   ├── protocol.h
 │   └── protocol.c
 ├── server/        logica del server
-│   ├── server.c   main, accept, thread per client
-│   ├── game.c/h   labirinto, giocatori, movimento, timer, fine partita
-│   └── log.c/h    logging su file (open/write)
+│   ├── server.c   main, accept (while 1), timer thread, thread per client
+│   ├── game.c/h   labirinto dinamico, spawn, uscite casuali, movimento, fine partita
+│   └── log.c/h    logging su file (open 0644, write, snprintf, mutex)
 └── client/        client interattivo
-    ├── client.c   connessione, inserimento nickname, loop con select()
-    └── display.c/h  stampa delle mappe e delle liste
+    ├── client.c   connessione, select(), segnali (SIGINT/Ctrl+C -> MSG_QUIT)
+    └── display.c/h  stampa delle mappe e delle liste a colori ANSI
 ```
 
 ## Compilazione
@@ -43,7 +43,7 @@ Produce i due eseguibili `bin/server` e `bin/client`. Per ripulire: `make clean`
 Apri PowerShell e portati nella cartella del progetto (dove sta il `Makefile`). `wsl`
 mantiene la cartella corrente, quindi non servono percorsi assoluti.
 
-Avvia il **server** in un terminale (resta in esecuzione; non stampa nulla, scrive su
+Avvia il **server** in un terminale (resta in esecuzione; non stampa nulla a video, scrive su
 `server.log`):
 
 ```powershell
@@ -56,11 +56,11 @@ Avvia uno o più **client**, ciascuno in un terminale diverso:
 wsl ./bin/client 127.0.0.1 5200
 ```
 
-`5200` è la porta, `600` il timeout in secondi, `15` il periodo della mappa globale.
-Avviati e connettiti subito: il timeout parte all'avvio del server, quindi usa un timeout
-lungo (es. `600`) per giocare con calma.
+- `5200` è la porta TCP.
+- `600` è il timeout della partita in secondi.
+- `15` è l'intervallo di invio periodico della mappa globale in secondi.
 
-> Su Linux, senza `wsl`, gli stessi comandi sono `make`, `./bin/server 5200 600 15` e
+> Su Linux nativo gli stessi comandi sono `make`, `./bin/server 5200 600 15` e
 > `./bin/client 127.0.0.1 5200`.
 
 ## Uso del server
@@ -79,7 +79,7 @@ Esempio:
 ./bin/server 5200 300 15
 ```
 
-Il server non scrive sullo standard output e non legge dallo standard input.
+Il server non scrive sullo standard output e non legge dallo standard input (come da specifica).
 Le attività vengono registrate nel file `server.log`. Non viene salvato alcun dato permanente su disco (nessun database utenti).
 
 ## Uso del client
@@ -102,42 +102,24 @@ Dopo la connessione viene richiesto solamente il proprio nickname. Comandi dispo
 | Comando | Azione |
 |---------|--------|
 | `w` `a` `s` `d` | muovi su / sinistra / giù / destra |
-| `l` | lista dei giocatori connessi |
+| `l` | lista dei giocatori connessi e punteggi |
 | `h` | aiuto |
-| `q` | esci |
+| `q` | esci (oppure `Ctrl+C` / `Ctrl+D`) |
 
-## Come giocare
+## Come giocare e regole del gioco
 
-1. Alla connessione inserisci il tuo nickname. Ogni client deve usare un nickname non
-   attualmente in uso da un altro giocatore connesso.
-2. Muoviti con `w`/`a`/`s`/`d`: digita **una lettera per riga** e premi Invio. Ad ogni passo
-   il server scopre l'area attorno a te e ti invia la vista locale.
-3. Passando su una cella con `O` l'oggetto viene raccolto e il punteggio aumenta.
-4. Obiettivo: raggiungere una cella `E` (uscita). La partita termina allo scadere del
-   timeout oppure quando tutti i giocatori connessi sono usciti. Vince l'unico giocatore
-   uscito; altrimenti chi ha raccolto più oggetti.
-5. Ogni T secondi ricevi la mappa globale con le sole celle che hai già scoperto.
+1. **Accesso**: alla connessione inserisci il nickname (univoco tra i giocatori attualmente connessi).
+2. **Spawn**: ciascun giocatore entra nella mappa posizionandosi casualmente in uno degli **8 punti di partenza perimetrali** del labirinto.
+3. **Movimento**: muoviti con `w`/`a`/`s`/`d` e premi Invio. Ad ogni passo il server scopre l'area attorno a te e invia la vista locale 5×5.
+4. **Oggetti (`O`)**: passando su una cella con `O` l'oggetto viene raccolto, rimosso dalla mappa e il tuo punteggio incrementa di 1.
+5. **Uscite (`E`)**: le **4 uscite** sono posizionate casualmente sui 4 bordi del labirinto (in celle garantite adiacenti a corridoi interni).
+6. **Mappa Globale**: ogni T secondi il server invia a ciascun giocatore l'intera mappa con le sole celle da lui scoperte (le altre sono mascherate con `?`).
+7. **Fine Partita**: la partita termina allo scadere del timeout globale oppure quando tutti i giocatori connessi sono usciti.
+   - Se esce un solo giocatore → vince lui;
+   - Se escono più giocatori o nessuno → vince chi ha raccolto più oggetti.
 
-Simboli e colori:
-
-- `#` muro, `.` cella libera, `E` uscita, `O` oggetto, `P` la tua posizione, `?` non scoperta.
-- Nella mappa locale le celle sono **blu**, `P` è **rosso**, `O` è **giallo**.
-- Nella mappa globale è **blu** solo la finestra locale attuale (5×5 attorno a te).
-
-Esempio di sessione:
-
-```
-Inserisci il tuo nickname: mario
-Accesso effettuato come 'mario'.
-...
-w
-Posizione: (riga 4, colonna 12)   Oggetti raccolti: 0
-  . . # # #
-  . # . . .
-  . # P . #
-  . . . # .
-  # . # . .
-```
+Simboli della mappa:
+- `#` muro, `.` cella libera, `E` uscita, `O` oggetto, `P` posizione del giocatore, `?` cella nascosta.
 
 ## Protocollo applicativo
 
@@ -161,7 +143,7 @@ typedef struct {
 } Messaggio;
 ```
 
-L'invio e la ricezione avvengono con due funzioni ausiliarie (`invia_messaggio` e `ricevi_messaggio`) che gestiscono short read/write ed eventuali interruzioni (`EINTR`) con un semplice ciclo `while`.
+L'invio e la ricezione avvengono tramite funzioni dedicate (`invia_messaggio` e `ricevi_messaggio`) che gestiscono short read/write ed eventuali interruzioni da segnali (`EINTR`) con cicli `while`.
 
 ### Tipi di messaggio
 
@@ -177,34 +159,39 @@ L'invio e la ricezione avvengono con due funzioni ausiliarie (`invia_messaggio` 
 | `MSG_MAPPA_GLOBALE` | `13` | Server invia periodicamente la mappa globale mascherata |
 | `MSG_LISTA` | `14` | Server invia l'elenco dei giocatori e punteggi |
 | `MSG_FINE_PARTITA` | `15` | Server notifica la fine della partita e il vincitore |
-| `MSG_INFO` | `16` | Server invia un messaggio testuale (es. oggetto raccolto) |
+| `MSG_INFO` | `16` | Server invia un messaggio informativo |
 
-### Simboli della mappa
-
-`#` muro, `.` cella libera, `E` uscita, `O` oggetto, `P` posizione del giocatore,
-`?` cella non ancora scoperta.
-
-### Sequenza di connessione
+### Sequenza tipica di comunicazione
 
 ```
 CLIENT                                  SERVER
-  |------- TCP connect ------------------>|
-  |-- MSG_LOGIN ------------------------->|
+  |------- TCP connect() ---------------->|
+  |-- MSG_LOGIN (nickname) -------------->|
   |<-- MSG_OK ----------------------------|
   |<-- MSG_MAPPA_GLOBALE (iniziale) ------|
   |-- MSG_MOVE (w) ---------------------->|
   |<-- MSG_MAPPA_LOCALE ------------------|
   |           ...                         |
   |<-- MSG_MAPPA_GLOBALE (ogni T sec) ----|
-  |-- MSG_QUIT -------------------------->|
-  |<-- chiusura --------------------------|
+  |-- MSG_QUIT (o Ctrl+C) --------------->|
+  |<-- chiusura socket -------------------|
 ```
 
-## Note implementative
+## Note implementative e scelte tecniche
 
-- **Concorrenza**: un thread per client (`pthread_create` + `pthread_detach`); un thread timer periodico controlla il timeout della partita e invia la mappa globale ogni T secondi.
-- **Sincronizzazione**: un **unico mutex globale** `g_game.mutex` protegge lo stato della partita, il labirinto e i giocatori, evitando qualsiasi rischio di deadlock.
-- **I/O di rete affidabile**: funzioni `invia_messaggio` e `ricevi_messaggio` con cicli `write`/`read` per gestire short read/write ed `EINTR`.
-- **Client non bloccante**: il client utilizza la primitiva `select()` su `STDIN_FILENO` e `sock_fd` per ricevere la mappa globale periodica senza bloccarsi nell'attesa dell'input da tastiera.
-- **Nessun dato persistente**: autenticazione rimossa; ai client è richiesto solo un nickname non duplicato.
-- **Fine partita**: per timeout oppure quando tutti i giocatori connessi sono usciti. Vince l'unico giocatore uscito; altrimenti chi ha raccolto più oggetti.
+- **Concorrenza Multithread**: il server gestisce le connessioni con un ciclo `while (1)` e alloca un thread per client (`pthread_create` + `pthread_detach`). Un thread dedicato `timer_thread` gestisce il conteggio dei secondi per il timeout e i broadcast periodici.
+- **Sincronizzazione**: un **unico mutex globale** `g_game.mutex` protegge lo stato della partita, il labirinto e i giocatori, garantendo assenza di race condition e prevenendo deadlock.
+- **Logging Thread-Safe (`log.c`)**:
+  - Usa la classica system call a basso livello `open("server.log", O_WRONLY | O_CREAT | O_APPEND, 0644)` e `write()`.
+  - Data e ora formattate con `strftime` (`[AAAA-MM-GG HH:MM:SS]`).
+  - Composizione sicura con `snprintf` a prova di buffer overflow.
+  - Protetto da un mutex dedicato `log_mutex` per impedire l'interleaving dei caratteri sul file tra thread concorrenti.
+- **Generazione Labirinto Dinamico (`game.c`)**:
+  - Algoritmo a cammini casuali (random walk) da 8 punti perimetrali verso l'hub centrale, garantendo percorsi sempre aperti e connessi.
+  - 4 uscite (`E`) posizionate casualmente sui 4 bordi, verificate come adiacenti a celle calpestabili e distinte dai punti di spawn.
+- **Gestione Segnali nel Client (`client.c`)**:
+  - `signal(SIGINT, handle_sigint)` e `signal(SIGTERM, handle_sigint)`: alla pressione di `Ctrl+C` il client invia automaticamente `MSG_QUIT` al server prima di terminare, garantendo la rimozione pulita del giocatore dalla partita.
+- **I/O Multiplexing con `select()`**:
+  - Il client usa `select()` su `STDIN_FILENO` e `sock_fd` per ricevere la mappa globale periodica dal server senza bloccarsi nell'attesa dell'input da tastiera.
+- **I/O di Rete Robusto (`protocol.c`)**:
+  - Cicli `while (rimanenti > 0)` su `write()` e `read()` con gestione delle short read/write e ripresa su `errno == EINTR`.

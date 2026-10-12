@@ -122,7 +122,9 @@ static void *timer_thread(void *arg) {
 
         /* Scadenza del timeout globale */
         if (seconds >= g_game.timeout) {
-            log_event("Partita terminata per timeout (%d secondi).", g_game.timeout);
+            char log_buf[128];
+            snprintf(log_buf, sizeof(log_buf), "Partita terminata per timeout (%d secondi).", g_game.timeout);
+            log_event(log_buf);
             game_finish();
             game_broadcast_game_over();
             break;
@@ -172,8 +174,10 @@ int main(int argc, char *argv[]) {
     }
     g_game.listen_fd = listen_fd;
 
-    log_event("Server avviato sulla porta %d (timeout=%d, intervallo=%d).",
-              port, timeout, interval);
+    char log_buf[128];
+    snprintf(log_buf, sizeof(log_buf), "Server avviato sulla porta %d (timeout=%d, intervallo=%d).",
+             port, timeout, interval);
+    log_event(log_buf);
 
     /* Avvia il thread timer periodico */
     pthread_t t_tid;
@@ -185,7 +189,7 @@ int main(int argc, char *argv[]) {
     pthread_detach(t_tid);
 
     /* Loop principale di accettazione connessioni */
-    for (;;) {
+    while (1) {
         struct sockaddr_in client_addr;
         socklen_t client_len = sizeof(client_addr);
         int client_fd = accept(listen_fd, (struct sockaddr *)&client_addr, &client_len);
@@ -193,7 +197,9 @@ int main(int argc, char *argv[]) {
         if (client_fd < 0) {
             if (errno == EINTR)
                 continue;
-            log_event("Errore accept: %s.", strerror(errno));
+            char err_buf[128];
+            snprintf(err_buf, sizeof(err_buf), "Errore accept: %s.", strerror(errno));
+            log_event(err_buf);
             continue;
         }
 

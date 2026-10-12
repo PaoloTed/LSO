@@ -139,10 +139,7 @@ static int find_winner_locked(void) {
         Giocatore *p = &g_game.players[i];
         if (!p->joined)
             continue;
-        int better = (p->score > best_score);
-        int tie_and_exited = (p->score == best_score && p->exited &&
-                              best >= 0 && !g_game.players[best].exited);
-        if (better || tie_and_exited) {
+        if (p->score > best_score) {
             best_score = p->score;
             best = i;
         }
@@ -224,7 +221,9 @@ int game_add_player(int fd, const char *nickname) {
 
     pthread_mutex_unlock(&g_game.mutex);
 
-    log_event("Nuova connessione: '%s' (riga %d, colonna %d).", nickname, row, col);
+    char log_buf[128];
+    snprintf(log_buf, sizeof(log_buf), "Nuova connessione: '%s' (riga %d, colonna %d).", nickname, row, col);
+    log_event(log_buf);
     return slot;
 }
 
@@ -242,7 +241,9 @@ void game_remove_player(int index) {
 
     if (fd >= 0) {
         close(fd);
-        log_event("Disconnessione: '%s'.", nick);
+        char log_buf[128];
+        snprintf(log_buf, sizeof(log_buf), "Disconnessione: '%s'.", nick);
+        log_event(log_buf);
     }
 }
 
@@ -302,12 +303,15 @@ void game_move(int index, char direction) {
     pthread_mutex_unlock(&g_game.mutex);
 
     const char *notice = NULL;
+    char log_buf[128];
     if (collected) {
-        log_event("%s ha raccolto un oggetto in (%d,%d), punteggio=%d.", nick, nr, nc, score);
+        snprintf(log_buf, sizeof(log_buf), "%s ha raccolto un oggetto in (%d,%d), punteggio=%d.", nick, nr, nc, score);
+        log_event(log_buf);
         notice = "Hai raccolto un oggetto! (+1 punto)";
     }
     if (reached_exit) {
-        log_event("%s ha raggiunto l'uscita con punteggio=%d.", nick, score);
+        snprintf(log_buf, sizeof(log_buf), "%s ha raggiunto l'uscita con punteggio=%d.", nick, score);
+        log_event(log_buf);
         notice = "Hai raggiunto l'uscita!";
     }
 
@@ -469,7 +473,9 @@ void game_broadcast_game_over(void) {
     if (g_game.winner >= 0) {
         strncpy(msg.nickname, g_game.players[g_game.winner].nickname, MAX_NICK - 1);
         msg.score = g_game.players[g_game.winner].score;
-        log_event("Fine partita. Vincitore: %s con %d oggetti.", msg.nickname, msg.score);
+        char log_buf[128];
+        snprintf(log_buf, sizeof(log_buf), "Fine partita. Vincitore: %s con %d oggetti.", msg.nickname, msg.score);
+        log_event(log_buf);
     } else {
         log_event("Fine partita. Nessun vincitore.");
     }
