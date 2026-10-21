@@ -58,7 +58,7 @@ static void generate_maze(Labirinto *m) {
             m->cells[cr][cc] = CELL_FREE;
         }
 
-        /* Random Walk a croce: scava celle libere con pari probabilità nelle 4 direzioni */
+        /* Walk a croce: scava celle libere con pari probabilità nelle 4 direzioni */
         int curr_r = r;
         int curr_c = c;
         int passi = 100;
