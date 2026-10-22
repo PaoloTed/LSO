@@ -1,13 +1,13 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
-/* Dimensioni del labirinto e della vista locale */
+/* Dimensioni */
 #define MAP_ROWS    21
 #define MAP_COLS    41
 #define LOCAL_VIEW  5
 #define VIEW_RADIUS (LOCAL_VIEW / 2)
 
-/* Simboli utilizzati per le celle del labirinto */
+/* Simboli del labirinto */
 #define CELL_WALL   '#'
 #define CELL_FREE   '.'
 #define CELL_EXIT   'E'
@@ -15,50 +15,52 @@
 #define CELL_PLAYER 'P'
 #define CELL_HIDDEN '?'
 
-/* Limiti dimensionali */
-#define MAX_NICK    32
-#define MAX_TEXT    128
-#define MAX_PLAYERS 32
+/* Limiti buffer */
+#define MAX_NICK         32
+#define MAX_PASS         32
+#define MAX_TEXT         128
+#define MAX_LIST_PLAYERS 64
 
-/* Tipi di messaggio (protocollo applicativo) */
-#define MSG_LOGIN          1   /* Client -> Server: invio nickname */
-#define MSG_MOVE           2   /* Client -> Server: tasto direzione */
-#define MSG_LIST           3   /* Client -> Server: richiesta lista giocatori */
-#define MSG_QUIT           4   /* Client -> Server: disconnessione */
+/* Tipi di messaggio */
+#define MSG_LOGIN          1   /* Login */
+#define MSG_MOVE           2   /* Movimento */
+#define MSG_LIST           3   /* Richiesta lista */
+#define MSG_QUIT           4   /* Uscita */
 
-#define MSG_OK             10  /* Server -> Client: operazione confermata */
-#define MSG_ERROR          11  /* Server -> Client: messaggio di errore */
-#define MSG_MAPPA_LOCALE   12  /* Server -> Client: invio vista 5x5 */
-#define MSG_MAPPA_GLOBALE  13  /* Server -> Client: invio mappa globale periodica */
-#define MSG_LISTA          14  /* Server -> Client: elenco giocatori connessi */
-#define MSG_FINE_PARTITA   15  /* Server -> Client: vincitore e fine gioco */
-#define MSG_INFO           16  /* Server -> Client: messaggio informativo */
+#define MSG_OK             10  /* Conferma */
+#define MSG_ERROR          11  /* Errore */
+#define MSG_MAPPA_LOCALE   12  /* Mappa locale */
+#define MSG_MAPPA_GLOBALE  13  /* Mappa globale */
+#define MSG_LISTA          14  /* Elenco giocatori */
+#define MSG_FINE_PARTITA   15  /* Fine partita */
+#define MSG_INFO           16  /* Notifica */
 
-/* Struttura per ciascun giocatore nella lista giocatori */
+/* Info giocatore per lista */
 typedef struct {
     char nickname[MAX_NICK];
     int  score;
     int  exited;
 } InfoGiocatore;
 
-/* Struttura unica per tutti i messaggi scambiati tra Client e Server */
+/* Messaggio di rete */
 typedef struct {
-    int  type;                              /* Tipo di messaggio (MSG_*) */
-    char nickname[MAX_NICK];                /* Nickname per login o vincitore */
-    char direction;                         /* Direzione: 'w', 'a', 's', 'd' */
-    char text[MAX_TEXT];                    /* Testo descrittivo o messaggio di errore */
-    int  row;                               /* Riga corrente */
-    int  col;                               /* Colonna corrente */
-    int  score;                             /* Punteggio corrente */
+    int  type;                              /* Tipo messaggio */
+    char nickname[MAX_NICK];                /* Nickname */
+    char password[MAX_PASS];                /* Password */
+    char direction;                         /* Direzione */
+    char text[MAX_TEXT];                    /* Testo */
+    int  row;                               /* Riga */
+    int  col;                               /* Colonna */
+    int  score;                             /* Punteggio */
     
-    char local_map[LOCAL_VIEW][LOCAL_VIEW]; /* Vista locale 5x5 */
-    char global_map[MAP_ROWS][MAP_COLS];    /* Mappa globale 21x41 mascherata */
+    char local_map[LOCAL_VIEW][LOCAL_VIEW]; /* Vista locale */
+    char global_map[MAP_ROWS][MAP_COLS];    /* Mappa globale */
     
-    int  num_players;                       /* Numero di giocatori nella lista */
-    InfoGiocatore players[MAX_PLAYERS];     /* Array dei giocatori connessi */
+    int  num_players;                       /* Numero giocatori */
+    InfoGiocatore players[MAX_LIST_PLAYERS];/* Giocatori */
 } Messaggio;
 
-/* Funzioni di invio e ricezione messaggi TCP */
+/* Invio e ricezione messaggi */
 int invia_messaggio(int fd, const Messaggio *msg);
 int ricevi_messaggio(int fd, Messaggio *msg);
 

@@ -2,48 +2,40 @@
 #include <unistd.h>
 #include <errno.h>
 
-/*
- * Invia un Messaggio attraverso la socket.
- * Gestisce short write ed eventuali interruzioni da segnali (EINTR).
- */
+/* Invia un messaggio gestendo short write */
 int invia_messaggio(int fd, const Messaggio *msg) {
-    const char *ptr = (const char *)msg;
-    size_t rimanenti = sizeof(Messaggio);
-    size_t inviati = 0;
+    const char *p = (const char *)msg;
+    size_t remaining = sizeof(Messaggio);
 
-    while (rimanenti > 0) {
-        ssize_t scritti = write(fd, ptr + inviati, rimanenti);
-        if (scritti <= 0) {
-            if (scritti < 0 && errno == EINTR)
+    while (remaining > 0) {
+        ssize_t n = write(fd, p, remaining);
+        if (n <= 0) {
+            if (n < 0 && errno == EINTR)
                 continue;
             return -1;
         }
-        inviati += scritti;
-        rimanenti -= scritti;
+        p += n;
+        remaining -= n;
     }
     return 0;
 }
 
-/*
- * Riceve un Messaggio dalla socket.
- * Gestisce short read ed eventuali interruzioni da segnali (EINTR).
- */
+/* Riceve un messaggio gestendo short read */
 int ricevi_messaggio(int fd, Messaggio *msg) {
-    char *ptr = (char *)msg;
-    size_t rimanenti = sizeof(Messaggio);
-    size_t ricevuti = 0;
+    char *p = (char *)msg;
+    size_t remaining = sizeof(Messaggio);
 
-    while (rimanenti > 0) {
-        ssize_t letti = read(fd, ptr + ricevuti, rimanenti);
-        if (letti == 0)
-            return 0;   /* connessione chiusa dall'interlocutore */
-        if (letti < 0) {
+    while (remaining > 0) {
+        ssize_t n = read(fd, p, remaining);
+        if (n == 0)
+            return 0;
+        if (n < 0) {
             if (errno == EINTR)
                 continue;
             return -1;
         }
-        ricevuti += letti;
-        rimanenti -= letti;
+        p += n;
+        remaining -= n;
     }
     return 1;
 }

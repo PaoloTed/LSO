@@ -10,7 +10,9 @@ static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int log_open(const char *path) {
     log_fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0644);
-    return (log_fd < 0) ? -1 : 0;
+    if (log_fd < 0)
+        return -1;
+    return 0;
 }
 
 void log_event(const char *msg) {
@@ -19,12 +21,12 @@ void log_event(const char *msg) {
 
     pthread_mutex_lock(&log_mutex);
 
-    /* Data e ora correnti: [AAAA-MM-GG HH:MM:SS] */
+    /* Data e ora correnti */
     time_t now = time(NULL);
     char ts[32];
     strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", localtime(&now));
 
-    /* Prepara la riga e la scrive con write */
+    /* Scrittura su file */
     char line[512];
     int n = snprintf(line, sizeof(line), "[%s] %s\n", ts, msg);
     if (n > 0)

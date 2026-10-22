@@ -129,17 +129,18 @@ La comunicazione si basa su una struttura C fissa (`Messaggio`) scambiata tramit
 typedef struct {
     int  type;                              /* Tipo di messaggio (MSG_*) */
     char nickname[MAX_NICK];                /* Nickname per login o vincitore */
+    char password[MAX_PASS];                /* Password per login (in chiaro, senza hash) */
     char direction;                         /* Direzione: 'w', 'a', 's', 'd' */
     char text[MAX_TEXT];                    /* Testo descrittivo o messaggio di errore */
-    int  row;                               /* Riga corrente */
-    int  col;                               /* Colonna corrente */
+    int  row;                               /* Riga corrente (o offset lista giocatori) */
+    int  col;                               /* Colonna corrente (o totale giocatori) */
     int  score;                             /* Punteggio corrente */
     
     char local_map[LOCAL_VIEW][LOCAL_VIEW]; /* Vista locale 5x5 */
     char global_map[MAP_ROWS][MAP_COLS];    /* Mappa globale 21x41 mascherata */
     
-    int  num_players;                       /* Numero di giocatori nella lista */
-    InfoGiocatore players[MAX_PLAYERS];     /* Array dei giocatori connessi */
+    int  num_players;                       /* Numero di giocatori in questo blocco */
+    InfoGiocatore players[MAX_LIST_PLAYERS];/* Array dei giocatori per il blocco */
 } Messaggio;
 ```
 
@@ -149,12 +150,12 @@ L'invio e la ricezione avvengono tramite funzioni dedicate (`invia_messaggio` e 
 
 | Tipo | Costante | Descrizione |
 |------|:--------:|-------------|
-| `MSG_LOGIN` | `1` | Client invia il proprio nickname per accedere |
+| `MSG_LOGIN` | `1` | Client invia nickname e password per accedere (senza hash; registrazione automatica se nuovo) |
 | `MSG_MOVE` | `2` | Client invia la direzione di movimento (`w`/`a`/`s`/`d`) |
 | `MSG_LIST` | `3` | Client richiede la lista dei giocatori connessi |
 | `MSG_QUIT` | `4` | Client notifica la disconnessione volontaria |
 | `MSG_OK` | `10` | Server conferma il login con successo |
-| `MSG_ERROR` | `11` | Server segnala errore (es. nickname duplicato o partita finita) |
+| `MSG_ERROR` | `11` | Server segnala errore (es. password errata, nickname duplicato o partita finita) |
 | `MSG_MAPPA_LOCALE` | `12` | Server invia la vista 5x5 centrata sul giocatore |
 | `MSG_MAPPA_GLOBALE` | `13` | Server invia periodicamente la mappa globale mascherata |
 | `MSG_LISTA` | `14` | Server invia l'elenco dei giocatori e punteggi |
@@ -166,7 +167,7 @@ L'invio e la ricezione avvengono tramite funzioni dedicate (`invia_messaggio` e 
 ```
 CLIENT                                  SERVER
   |------- TCP connect() ---------------->|
-  |-- MSG_LOGIN (nickname) -------------->|
+  |-- MSG_LOGIN (nick, pass) ------------>|
   |<-- MSG_OK ----------------------------|
   |<-- MSG_MAPPA_GLOBALE (iniziale) ------|
   |-- MSG_MOVE (w) ---------------------->|

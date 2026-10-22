@@ -5,109 +5,102 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <unistd.h>
+
+#define USERS_FILE "users.txt"
 
 StatoGioco g_game;
 
-/* Punti di partenza per la generazione: 4 angoli e 4 centri dei lati (coordinate interne) */
-static const struct {
-    int r, c;
-} PUNTI_PARTENZA[8] = {
-    {1, 1},                       /* Angolo superiore sinistro */
-    {1, MAP_COLS - 2},            /* Angolo superiore destro */
-    {MAP_ROWS - 2, 1},            /* Angolo inferiore sinistro */
-    {MAP_ROWS - 2, MAP_COLS - 2}, /* Angolo inferiore destro */
-    {1, MAP_COLS / 2},            /* Centro lato superiore */
-    {MAP_ROWS - 2, MAP_COLS / 2}, /* Centro lato inferiore */
-    {MAP_ROWS / 2, 1},            /* Centro lato sinistro */
-    {MAP_ROWS / 2, MAP_COLS - 2}  /* Centro lato destro */
-};
-
-/* Genera proceduralmente il labirinto con cammini casuali a croce dagli 8 punti */
+/* Generazione labirinto */
 static void generate_maze(Labirinto *m) {
-    /* 1. Inizializza l'intera matrice con muri '#' */
+    /* Celle libere */
     for (int r = 0; r < MAP_ROWS; r++) {
         for (int c = 0; c < MAP_COLS; c++) {
-            m->cells[r][c] = CELL_WALL;
+            m->cells[r][c] = CELL_FREE;
             m->objects[r][c] = 0;
         }
     }
 
-    /* Centro del labirinto */
-    int center_r = MAP_ROWS / 2;
-    int center_c = MAP_COLS / 2;
-    m->cells[center_r][center_c] = CELL_FREE;
+    /* Muri perimetrali */
+    for (int c = 0; c < MAP_COLS; c++) {
+        m->cells[0][c] = CELL_WALL;
+        m->cells[MAP_ROWS - 1][c] = CELL_WALL;
+    }
+    for (int r = 0; r < MAP_ROWS; r++) {
+        m->cells[r][0] = CELL_WALL;
+        m->cells[r][MAP_COLS - 1] = CELL_WALL;
+    }
 
-    /* Direzioni a croce: Su, Giù, Sinistra, Destra */
-    const int dr[4] = {-1, 1, 0, 0};
-    const int dc[4] = {0, 0, -1, 1};
-
-    /* 2. Scava partendo dagli 8 punti (angoli e punti centrali dei lati) */
-    for (int i = 0; i < 8; i++) {
-        int r = PUNTI_PARTENZA[i].r;
-        int c = PUNTI_PARTENZA[i].c;
-        m->cells[r][c] = CELL_FREE;
-
-        /* Corridoio verso il centro per garantire mappa sempre connessa */
-        int cr = r, cc = c;
-        while (cr != center_r || cc != center_c) {
-            if (cr < center_r) cr++;
-            else if (cr > center_r) cr--;
-            else if (cc < center_c) cc++;
-            else if (cc > center_c) cc--;
-            m->cells[cr][cc] = CELL_FREE;
-        }
-
-        /* Walk a croce: scava celle libere con pari probabilità nelle 4 direzioni */
-        int curr_r = r;
-        int curr_c = c;
-        int passi = 100;
-        for (int step = 0; step < passi; step++) {
-            int dir = rand() % 4;
-            int nr = curr_r + dr[dir];
-            int nc = curr_c + dc[dir];
-
-            /* Se incontra i limiti esterni non li oltrepassa */
-            if (nr <= 0 || nr >= MAP_ROWS - 1 || nc <= 0 || nc >= MAP_COLS - 1)
-                continue;
-
-            curr_r = nr;
-            curr_c = nc;
-            m->cells[curr_r][curr_c] = CELL_FREE;
+    /* Ostacoli interni */
+    for (int r = 2; r < MAP_ROWS - 2; r += 2) {
+        for (int c = 2; c < MAP_COLS - 2; c += 2) {
+            if (rand() % 2 == 0) {
+                m->cells[r][c] = CELL_WALL;
+            }
         }
     }
 
-    /* 3. Posiziona 4 uscite 'E' sul perimetro collegate ai corridoi dei punti centrali */
-    m->cells[0][MAP_COLS / 2] = CELL_EXIT;            /* Uscita superiore */
-    m->cells[MAP_ROWS - 1][MAP_COLS / 2] = CELL_EXIT; /* Uscita inferiore */
-    m->cells[MAP_ROWS / 2][0] = CELL_EXIT;            /* Uscita sinistra */
-    m->cells[MAP_ROWS / 2][MAP_COLS - 1] = CELL_EXIT; /* Uscita destra */
+    /* Uscite */
+    m->cells[0][MAP_COLS / 2] = CELL_EXIT;
+    m->cells[MAP_ROWS - 1][MAP_COLS / 2] = CELL_EXIT;
+    m->cells[MAP_ROWS / 2][0] = CELL_EXIT;
+    m->cells[MAP_ROWS / 2][MAP_COLS - 1] = CELL_EXIT;
 
-    /* 4. Distribuisce casualmente 15 oggetti raccoglibili 'O' su celle libere*/
-    int objects = 15;
-    while (objects > 0) {
+    /* Oggetti */
+    for (int o = 0; o < 15; ) {
         int r = 1 + rand() % (MAP_ROWS - 2);
         int c = 1 + rand() % (MAP_COLS - 2);
-
         if (m->cells[r][c] == CELL_FREE && m->objects[r][c] == 0) {
             m->objects[r][c] = 1;
-            objects--;
+            o++;
         }
     }
 }
 
+/* Verifica credenziali o registrazione */
+static int auth_check_user(const char *nickname, const char *password) {
+    FILE *f = fopen(USERS_FILE, "r");
+    char stored_nick[MAX_NICK];
+    char stored_pass[MAX_PASS];
+
+    if (f != NULL) {
+        while (fscanf(f, "%s %s", stored_nick, stored_pass) == 2) {
+            if (strcmp(stored_nick, nickname) == 0) {
+                fclose(f);
+                return (strcmp(stored_pass, password) == 0);
+            }
+        }
+        fclose(f);
+    }
+
+    /* Registrazione utente */
+    f = fopen(USERS_FILE, "a");
+    if (!f)
+        return -1;
+    fprintf(f, "%s %s\n", nickname, password);
+    fflush(f);
+    fclose(f);
+
+    char log_buf[128];
+    snprintf(log_buf, sizeof(log_buf), "Nuovo utente registrato: '%s'.", nickname);
+    log_event(log_buf);
+
+    return 1;
+}
+
 void game_init(int timeout, int interval) {
     srand((unsigned)time(NULL));
+    free(g_game.players);
     memset(&g_game, 0, sizeof(g_game));
     pthread_mutex_init(&g_game.mutex, NULL);
     g_game.timeout = timeout;
     g_game.interval = interval;
     g_game.winner = -1;
-    g_game.start_time = time(NULL);
     generate_maze(&g_game.maze);
 }
 
-/* Rende visibili le celle nel raggio VIEW_RADIUS attorno al giocatore */
+/* Celle scoperte attorno al giocatore */
 static void reveal_around(Giocatore *p) {
     for (int dr = -VIEW_RADIUS; dr <= VIEW_RADIUS; dr++) {
         for (int dc = -VIEW_RADIUS; dc <= VIEW_RADIUS; dc++) {
@@ -119,23 +112,23 @@ static void reveal_around(Giocatore *p) {
     }
 }
 
-/* Calcola il vincitore (da chiamare con g_game.mutex bloccato) */
+/* Calcola il vincitore */
 static int find_winner_locked(void) {
     int exited_count = 0, exited_idx = -1;
-    for (int i = 0; i < MAX_PLAYERS; i++) {
-        if (g_game.players[i].joined && g_game.players[i].exited) {
+    for (int i = 0; i < g_game.players_count; i++) {
+        if (g_game.players[i].exited) {
             exited_count++;
             exited_idx = i;
         }
     }
 
-    /* Se un solo giocatore e' uscito, vince lui */
+    /* Singolo giocatore uscito */
     if (exited_count == 1)
         return exited_idx;
 
-    /* Altrimenti vince chi ha raccolto piu' oggetti */
+    /* Confronto punteggi */
     int best = -1, best_score = -1;
-    for (int i = 0; i < MAX_PLAYERS; i++) {
+    for (int i = 0; i < g_game.players_count; i++) {
         Giocatore *p = &g_game.players[i];
         if (!p->joined)
             continue;
@@ -150,9 +143,9 @@ static int find_winner_locked(void) {
 /* Controlla se tutti i giocatori partecipanti sono usciti */
 static int all_exited_locked(void) {
     int any = 0;
-    for (int i = 0; i < MAX_PLAYERS; i++) {
+    for (int i = 0; i < g_game.players_count; i++) {
         Giocatore *p = &g_game.players[i];
-        if (!p->active || !p->joined)
+        if (!p->active)
             continue;
         any = 1;
         if (!p->exited)
@@ -173,7 +166,7 @@ int game_finish(void) {
     return 1;
 }
 
-int game_add_player(int fd, const char *nickname) {
+int game_add_player(int fd, const char *nickname, const char *password) {
     pthread_mutex_lock(&g_game.mutex);
 
     if (g_game.game_over) {
@@ -181,31 +174,58 @@ int game_add_player(int fd, const char *nickname) {
         return -1;
     }
 
-    /* Verifica se il nickname e' gia' occupato da un giocatore connesso */
-    for (int i = 0; i < MAX_PLAYERS; i++) {
+    /* Verifica credenziali */
+    int auth_res = auth_check_user(nickname, password);
+    if (auth_res == 0) {
+        pthread_mutex_unlock(&g_game.mutex);
+        char log_buf[128];
+        snprintf(log_buf, sizeof(log_buf), "Tentativo di login fallito per '%s': password errata.", nickname);
+        log_event(log_buf);
+        return -4; /* Password errata */
+    } else if (auth_res < 0) {
+        pthread_mutex_unlock(&g_game.mutex);
+        return -3;
+    }
+
+    /* Controllo nickname */
+    for (int i = 0; i < g_game.players_count; i++) {
         if (g_game.players[i].active && strcmp(g_game.players[i].nickname, nickname) == 0) {
             pthread_mutex_unlock(&g_game.mutex);
-            return -2;
+            return -2; /* Gia' connesso */
         }
     }
 
-    /* Cerca uno slot libero */
+    /* Cerca slot libero */
     int slot = -1;
-    for (int i = 0; i < MAX_PLAYERS; i++) {
+    for (int i = 0; i < g_game.players_count; i++) {
         if (!g_game.players[i].active) {
             slot = i;
             break;
         }
     }
+
+    /* Espansione array */
     if (slot < 0) {
-        pthread_mutex_unlock(&g_game.mutex);
-        return -3;
+        int new_count = 8;
+        if (g_game.players_count > 0)
+            new_count = g_game.players_count * 2;
+        Giocatore *new_players = realloc(g_game.players, new_count * sizeof(Giocatore));
+        if (!new_players) {
+            pthread_mutex_unlock(&g_game.mutex);
+            return -3;
+        }
+        memset(new_players + g_game.players_count, 0, (new_count - g_game.players_count) * sizeof(Giocatore));
+        slot = g_game.players_count;
+        g_game.players = new_players;
+        g_game.players_count = new_count;
     }
 
-    /* Assegna casualmente uno degli 8 punti di partenza dei walker */
-    int idx = rand() % 8;
-    int row = PUNTI_PARTENZA[idx].r;
-    int col = PUNTI_PARTENZA[idx].c;
+    /* Posiziona il giocatore in una cella libera casuale */
+    int row, col;
+    do {
+        row = 1 + rand() % (MAP_ROWS - 2);
+        col = 1 + rand() % (MAP_COLS - 2);
+    } while (g_game.maze.cells[row][col] != CELL_FREE);
 
     Giocatore *p = &g_game.players[slot];
     p->fd = fd;
@@ -216,35 +236,28 @@ int game_add_player(int fd, const char *nickname) {
     p->col = col;
     p->score = 0;
     strncpy(p->nickname, nickname, MAX_NICK - 1);
+    p->nickname[MAX_NICK - 1] = '\0';
     memset(p->discovered, 0, sizeof(p->discovered));
     reveal_around(p);
 
     pthread_mutex_unlock(&g_game.mutex);
 
     char log_buf[128];
-    snprintf(log_buf, sizeof(log_buf), "Nuova connessione: '%s' (riga %d, colonna %d).", nickname, row, col);
+    snprintf(log_buf, sizeof(log_buf), "Nuova connessione: '%s' (riga %d, colonna %d, slot %d).", nickname, row, col, slot);
     log_event(log_buf);
     return slot;
 }
 
 void game_remove_player(int index) {
-    char nick[MAX_NICK];
-    int fd = -1;
-
     pthread_mutex_lock(&g_game.mutex);
     if (g_game.players[index].active) {
         g_game.players[index].active = 0;
-        fd = g_game.players[index].fd;
-        strncpy(nick, g_game.players[index].nickname, MAX_NICK - 1);
-    }
-    pthread_mutex_unlock(&g_game.mutex);
-
-    if (fd >= 0) {
-        close(fd);
+        close(g_game.players[index].fd);
         char log_buf[128];
-        snprintf(log_buf, sizeof(log_buf), "Disconnessione: '%s'.", nick);
+        snprintf(log_buf, sizeof(log_buf), "Disconnessione: '%s'.", g_game.players[index].nickname);
         log_event(log_buf);
     }
+    pthread_mutex_unlock(&g_game.mutex);
 }
 
 void game_move(int index, char direction) {
@@ -258,16 +271,15 @@ void game_move(int index, char direction) {
 
     int nr = p->row, nc = p->col;
     int invalid = 0;
-    switch (direction) {
-        case 'w': case 'W': nr--; break;
-        case 's': case 'S': nr++; break;
-        case 'a': case 'A': nc--; break;
-        case 'd': case 'D': nc++; break;
+    switch (tolower((unsigned char)direction)) {
+        case 'w': nr--; break;
+        case 's': nr++; break;
+        case 'a': nc--; break;
+        case 'd': nc++; break;
         default: invalid = 1; break;
     }
 
-    if (invalid || nr < 0 || nr >= MAP_ROWS || nc < 0 || nc >= MAP_COLS ||
-        g_game.maze.cells[nr][nc] == CELL_WALL) {
+    if (invalid || g_game.maze.cells[nr][nc] == CELL_WALL) {
         pthread_mutex_unlock(&g_game.mutex);
         game_send_local_map(index, "Sei andato verso un muro, prova un'altra direzione.");
         return;
@@ -291,7 +303,7 @@ void game_move(int index, char direction) {
     }
 
     char nick[MAX_NICK];
-    strncpy(nick, p->nickname, MAX_NICK - 1);
+    strncpy(nick, p->nickname, sizeof(nick));
     int score = p->score;
 
     int over = 0;
@@ -321,9 +333,29 @@ void game_move(int index, char direction) {
         game_broadcast_game_over();
 }
 
+/* Costruisce la vista locale 5x5 */
+static void build_local_view(const Giocatore *p, char local_map[LOCAL_VIEW][LOCAL_VIEW]) {
+    for (int dr = -VIEW_RADIUS; dr <= VIEW_RADIUS; dr++) {
+        for (int dc = -VIEW_RADIUS; dc <= VIEW_RADIUS; dc++) {
+            int r = p->row + dr;
+            int c = p->col + dc;
+            int vr = dr + VIEW_RADIUS;
+            int vc = dc + VIEW_RADIUS;
+
+            if (r < 0 || r >= MAP_ROWS || c < 0 || c >= MAP_COLS || !p->discovered[r][c])
+                local_map[vr][vc] = CELL_HIDDEN;
+            else if (r == p->row && c == p->col)
+                local_map[vr][vc] = CELL_PLAYER;
+            else if (g_game.maze.objects[r][c])
+                local_map[vr][vc] = CELL_OBJECT;
+            else
+                local_map[vr][vc] = g_game.maze.cells[r][c];
+        }
+    }
+}
+
 void game_send_local_map(int index, const char *notice) {
-    Messaggio msg;
-    memset(&msg, 0, sizeof(msg));
+    Messaggio msg = {0};
     msg.type = MSG_MAPPA_LOCALE;
     if (notice)
         strncpy(msg.text, notice, MAX_TEXT - 1);
@@ -338,25 +370,8 @@ void game_send_local_map(int index, const char *notice) {
     msg.row = p->row;
     msg.col = p->col;
     msg.score = p->score;
+    build_local_view(p, msg.local_map);
 
-    /* Costruisce la vista locale 5x5 */
-    for (int dr = -VIEW_RADIUS; dr <= VIEW_RADIUS; dr++) {
-        for (int dc = -VIEW_RADIUS; dc <= VIEW_RADIUS; dc++) {
-            int r = p->row + dr;
-            int c = p->col + dc;
-            int vr = dr + VIEW_RADIUS;
-            int vc = dc + VIEW_RADIUS;
-
-            if (r < 0 || r >= MAP_ROWS || c < 0 || c >= MAP_COLS || !p->discovered[r][c])
-                msg.local_map[vr][vc] = CELL_HIDDEN;
-            else if (r == p->row && c == p->col)
-                msg.local_map[vr][vc] = CELL_PLAYER;
-            else if (g_game.maze.objects[r][c])
-                msg.local_map[vr][vc] = CELL_OBJECT;
-            else
-                msg.local_map[vr][vc] = g_game.maze.cells[r][c];
-        }
-    }
     int fd = p->fd;
     pthread_mutex_unlock(&g_game.mutex);
 
@@ -364,8 +379,7 @@ void game_send_local_map(int index, const char *notice) {
 }
 
 void game_send_global_map(int index) {
-    Messaggio msg;
-    memset(&msg, 0, sizeof(msg));
+    Messaggio msg = {0};
     msg.type = MSG_MAPPA_GLOBALE;
 
     pthread_mutex_lock(&g_game.mutex);
@@ -378,27 +392,9 @@ void game_send_global_map(int index) {
     msg.row = p->row;
     msg.col = p->col;
     msg.score = p->score;
+    build_local_view(p, msg.local_map);
 
-    /* Costruisce la vista locale 5x5 */
-    for (int dr = -VIEW_RADIUS; dr <= VIEW_RADIUS; dr++) {
-        for (int dc = -VIEW_RADIUS; dc <= VIEW_RADIUS; dc++) {
-            int r = p->row + dr;
-            int c = p->col + dc;
-            int vr = dr + VIEW_RADIUS;
-            int vc = dc + VIEW_RADIUS;
-
-            if (r < 0 || r >= MAP_ROWS || c < 0 || c >= MAP_COLS || !p->discovered[r][c])
-                msg.local_map[vr][vc] = CELL_HIDDEN;
-            else if (r == p->row && c == p->col)
-                msg.local_map[vr][vc] = CELL_PLAYER;
-            else if (g_game.maze.objects[r][c])
-                msg.local_map[vr][vc] = CELL_OBJECT;
-            else
-                msg.local_map[vr][vc] = g_game.maze.cells[r][c];
-        }
-    }
-
-    /* Costruisce la mappa globale mascherata */
+    /* Mappa globale */
     for (int r = 0; r < MAP_ROWS; r++) {
         for (int c = 0; c < MAP_COLS; c++) {
             if (!p->discovered[r][c])
@@ -418,19 +414,22 @@ void game_send_global_map(int index) {
 }
 
 void game_send_player_list(int index) {
-    Messaggio msg;
-    memset(&msg, 0, sizeof(msg));
+    Messaggio msg = {0};
     msg.type = MSG_LISTA;
 
     pthread_mutex_lock(&g_game.mutex);
+    if (!g_game.players[index].active) {
+        pthread_mutex_unlock(&g_game.mutex);
+        return;
+    }
+
     int count = 0;
-    for (int i = 0; i < MAX_PLAYERS; i++) {
-        Giocatore *p = &g_game.players[i];
-        if (!p->active)
+    for (int i = 0; i < g_game.players_count && count < MAX_LIST_PLAYERS; i++) {
+        if (!g_game.players[i].active)
             continue;
-        strncpy(msg.players[count].nickname, p->nickname, MAX_NICK - 1);
-        msg.players[count].score = p->score;
-        msg.players[count].exited = p->exited;
+        strncpy(msg.players[count].nickname, g_game.players[i].nickname, MAX_NICK - 1);
+        msg.players[count].score = g_game.players[i].score;
+        msg.players[count].exited = g_game.players[i].exited;
         count++;
     }
     msg.num_players = count;
@@ -440,33 +439,15 @@ void game_send_player_list(int index) {
     invia_messaggio(fd, &msg);
 }
 
-void game_send_info(int index, const char *text) {
-    Messaggio msg;
-    memset(&msg, 0, sizeof(msg));
-    msg.type = MSG_INFO;
-    strncpy(msg.text, text, MAX_TEXT - 1);
-
-    pthread_mutex_lock(&g_game.mutex);
-    int fd = g_game.players[index].active ? g_game.players[index].fd : -1;
-    pthread_mutex_unlock(&g_game.mutex);
-
-    if (fd >= 0)
-        invia_messaggio(fd, &msg);
-}
-
 void game_broadcast_global_maps(void) {
-    for (int i = 0; i < MAX_PLAYERS; i++) {
-        pthread_mutex_lock(&g_game.mutex);
-        int active = g_game.players[i].active;
-        pthread_mutex_unlock(&g_game.mutex);
-        if (active)
+    for (int i = 0; i < g_game.players_count; i++) {
+        if (g_game.players[i].active)
             game_send_global_map(i);
     }
 }
 
 void game_broadcast_game_over(void) {
-    Messaggio msg;
-    memset(&msg, 0, sizeof(msg));
+    Messaggio msg = {0};
     msg.type = MSG_FINE_PARTITA;
 
     pthread_mutex_lock(&g_game.mutex);
@@ -480,14 +461,9 @@ void game_broadcast_game_over(void) {
         log_event("Fine partita. Nessun vincitore.");
     }
 
-    int fds[MAX_PLAYERS];
-    int count = 0;
-    for (int i = 0; i < MAX_PLAYERS; i++) {
+    for (int i = 0; i < g_game.players_count; i++) {
         if (g_game.players[i].active)
-            fds[count++] = g_game.players[i].fd;
+            invia_messaggio(g_game.players[i].fd, &msg);
     }
     pthread_mutex_unlock(&g_game.mutex);
-
-    for (int i = 0; i < count; i++)
-        invia_messaggio(fds[i], &msg);
 }

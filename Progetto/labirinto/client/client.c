@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
@@ -37,7 +38,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    /* Ignora SIGPIPE per evitare terminazione in caso di scrittura su socket chiusa */
+    /* Ignora SIGPIPE */
     signal(SIGPIPE, SIG_IGN);
 
 
@@ -48,9 +49,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    /* Configurazione indirizzo del server */
-    struct sockaddr_in server_addr;
-    memset(&server_addr, 0, sizeof(server_addr));
+    /* Configurazione indirizzo server */
+    struct sockaddr_in server_addr = {0};
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons((uint16_t)port);
 
@@ -69,19 +69,25 @@ int main(int argc, char *argv[]) {
 
     printf("Connesso al server %s:%d\n", host, port);
 
-    /* Richiesta del nickname */
+    /* Richiesta credenziali */
     char nickname[MAX_NICK];
+    char password[MAX_PASS];
+
     printf("Inserisci il tuo nickname: ");
     fflush(stdout);
     scanf("%s", nickname);
+
+    printf("Inserisci la tua password: ");
+    fflush(stdout);
+    scanf("%s", password);
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
 
-    /* Invio del messaggio di login con il nickname */
-    Messaggio msg;
-    memset(&msg, 0, sizeof(msg));
+    /* Invio login */
+    Messaggio msg = {0};
     msg.type = MSG_LOGIN;
     strncpy(msg.nickname, nickname, MAX_NICK - 1);
+    strncpy(msg.password, password, MAX_PASS - 1);
 
     if (invia_messaggio(sock_fd, &msg) < 0) {
         fprintf(stderr, "Errore durante l'invio del login.\n");
@@ -96,27 +102,20 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (msg.type == MSG_ERROR) {
-        printf("Accesso rifiutato: %s\n", msg.text);
-        close(sock_fd);
-        return 1;
-    }
-
     if (msg.type != MSG_OK) {
-        printf("Risposta inattesa dal server.\n");
+        printf("Accesso rifiutato: %s\n", msg.text);
         close(sock_fd);
         return 1;
     }
 
     printf("Accesso effettuato come '%s'.\n", nickname);
 
-
-    /* Loop principale con select(): multiplexing tra tastiera e socket */
+    /* Loop principale con select */
     fd_set master_fds, read_fds;
     FD_ZERO(&master_fds);
     FD_SET(STDIN_FILENO, &master_fds);
     FD_SET(sock_fd, &master_fds);
-    int max_fd = (sock_fd > STDIN_FILENO) ? sock_fd : STDIN_FILENO;
+    int max_fd = sock_fd;
 
     /* Gestione segnali: intercetta SIGINT (Ctrl+C) e SIGTERM per inviare MSG_QUIT */
     signal(SIGINT, handle_sigint);
@@ -135,33 +134,30 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        /* 1) Input da tastiera dell'utente */
+        /* Input tastiera */
         if (FD_ISSET(STDIN_FILENO, &read_fds)) {
             char buffer[64];
-            /* EOF (Ctrl+D): disconnessione */
+            /* Disconnessione su EOF */
             if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
                 loop = 0;
                 break;
             }
 
-            char cmd = buffer[0];
-            if (cmd == 'w' || cmd == 'W' || cmd == 'a' || cmd == 'A' ||
-                cmd == 's' || cmd == 'S' || cmd == 'd' || cmd == 'D') {
-                memset(&msg, 0, sizeof(msg));
-                msg.type = MSG_MOVE;
-                msg.direction = cmd;
-                invia_messaggio(sock_fd, &msg);
-            } else if (cmd == 'l' || cmd == 'L') {
-                memset(&msg, 0, sizeof(msg));
-                msg.type = MSG_LIST;
-                invia_messaggio(sock_fd, &msg);
-            } else if (cmd == 'h' || cmd == 'H' || cmd == '?') {
+            char cmd = (char)tolower((unsigned char)buffer[0]);
+            Messaggio out_msg = {0};
+            if (cmd == 'w' || cmd == 'a' || cmd == 's' || cmd == 'd') {
+                out_msg.type = MSG_MOVE;
+                out_msg.direction = cmd;
+                invia_messaggio(sock_fd, &out_msg);
+            } else if (cmd == 'l') {
+                out_msg.type = MSG_LIST;
+                invia_messaggio(sock_fd, &out_msg);
+            } else if (cmd == 'h') {
                 display_help();
                 display_prompt();
-            } else if (cmd == 'q' || cmd == 'Q') {
-                memset(&msg, 0, sizeof(msg));
-                msg.type = MSG_QUIT;
-                invia_messaggio(sock_fd, &msg);
+            } else if (cmd == 'q') {
+                out_msg.type = MSG_QUIT;
+                invia_messaggio(sock_fd, &out_msg);
                 printf("Arrivederci!\n");
                 break;
             } else if (cmd != '\n' && cmd != '\r') {
@@ -170,7 +166,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        /* 2) Messaggio ricevuto dal server */
+        /* Messaggio dal server */
         if (FD_ISSET(sock_fd, &read_fds)) {
             int ret = ricevi_messaggio(sock_fd, &msg);
             if (ret <= 0) {
@@ -218,12 +214,12 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    /* Se usciti a causa di un segnale (EOF Ctrl+D / Ctrl+C / SIGINT / SIGTERM), invia MSG_QUIT al server */
+    /* Invio disconnessione in uscita (Ctrl+D / Ctrl+C / SIGINT / SIGTERM)*/
     if (!loop) {
         printf("\nRicevuto segnale di interruzione: disconnessione in corso...\n");
-        memset(&msg, 0, sizeof(msg));
-        msg.type = MSG_QUIT;
-        invia_messaggio(sock_fd, &msg);
+        Messaggio quit_msg = {0};
+        quit_msg.type = MSG_QUIT;
+        invia_messaggio(sock_fd, &quit_msg);
     }
 
     close(sock_fd);

@@ -2,11 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Colori ANSI per il terminale */
+/* Colori ANSI */
 #define COL_BLUE   "\033[34m" /* Blu */
 #define COL_RED    "\033[31m" /* Rosso */
 #define COL_YELLOW "\033[33m" /* Giallo */
-#define COL_RESET  "\033[0m"  /* Ripristina i colori di default del terminale*/
+#define COL_RESET  "\033[0m"  /* Reset */
 
 static void print_cell(char ch, int in_local_view) {
     if (ch == CELL_PLAYER)
@@ -27,7 +27,7 @@ void display_help(void) {
            "  q             : esci dal gioco\n\n");
 }
 
-/* Stampa la mappa locale (se clear_screen != 0 pulisce prima lo schermo con system("clear")) */
+/* Vista locale */
 void display_local_map(int row, int col, int score, const char map[LOCAL_VIEW][LOCAL_VIEW], const char *notice, int clear_screen) {
     if (clear_screen)
         system("clear");
@@ -47,7 +47,7 @@ void display_local_map(int row, int col, int score, const char map[LOCAL_VIEW][L
     fflush(stdout);
 }
 
-/* Stampa la mappa globale pulendo prima lo schermo con system("clear") */
+/* Mappa globale */
 void display_global_map(int row, int col, const char map[MAP_ROWS][MAP_COLS]) {
     system("clear");
     printf("\n--- Mappa globale (celle non ancora viste: '%c') ---\n", CELL_HIDDEN);
@@ -69,6 +69,9 @@ void display_global_map(int row, int col, const char map[MAP_ROWS][MAP_COLS]) {
 void display_player_list(const InfoGiocatore *players, int count) {
     printf("\nGiocatori connessi (%d):\n", count);
     for (int i = 0; i < count; i++) {
-        printf("  - %s: %d oggetti (%s)\n", players[i].nickname, players[i].score, players[i].exited ? "disconnesso" : "connesso");
+        const char *status = "in gioco";
+        if (players[i].exited)
+            status = "uscito dal labirinto";
+        printf("  - %s: %d oggetti (%s)\n", players[i].nickname, players[i].score, status);
     }
 }
