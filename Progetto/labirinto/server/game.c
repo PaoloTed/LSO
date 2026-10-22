@@ -90,7 +90,7 @@ static int auth_check_user(const char *nickname, const char *password) {
 }
 
 void game_init(int timeout, int interval) {
-    srand((unsigned)time(NULL));
+    srand(time(NULL));
     free(g_game.players);
     memset(&g_game, 0, sizeof(g_game));
     pthread_mutex_init(&g_game.mutex, NULL);
@@ -271,7 +271,7 @@ void game_move(int index, char direction) {
 
     int nr = p->row, nc = p->col;
     int invalid = 0;
-    switch (tolower((unsigned char)direction)) {
+    switch (tolower(direction)) {
         case 'w': nr--; break;
         case 's': nr++; break;
         case 'a': nc--; break;

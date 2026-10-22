@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     /* Configurazione indirizzo server */
     struct sockaddr_in server_addr = {0};
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons((uint16_t)port);
+    server_addr.sin_port = htons(port);
 
     if (inet_pton(AF_INET, host, &server_addr.sin_addr) <= 0) {
         fprintf(stderr, "Indirizzo IP non valido: %s\n", host);
@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
                 break;
             }
 
-            char cmd = (char)tolower((unsigned char)buffer[0]);
+            char cmd = tolower(buffer[0]);
             Messaggio out_msg = {0};
             if (cmd == 'w' || cmd == 'a' || cmd == 's' || cmd == 'd') {
                 out_msg.type = MSG_MOVE;

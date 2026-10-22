@@ -30,7 +30,7 @@ void log_event(const char *msg) {
     char line[512];
     int n = snprintf(line, sizeof(line), "[%s] %s\n", ts, msg);
     if (n > 0)
-        write(log_fd, line, (size_t)n);
+        write(log_fd, line, n);
 
     pthread_mutex_unlock(&log_mutex);
 }
