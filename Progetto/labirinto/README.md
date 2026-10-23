@@ -127,20 +127,20 @@ La comunicazione si basa su una struttura C fissa (`Messaggio`) scambiata tramit
 
 ```c
 typedef struct {
-    int  type;                              /* Tipo di messaggio (MSG_*) */
-    char nickname[MAX_NICK];                /* Nickname per login o vincitore */
-    char password[MAX_PASS];                /* Password per login (in chiaro, senza hash) */
-    char direction;                         /* Direzione: 'w', 'a', 's', 'd' */
-    char text[MAX_TEXT];                    /* Testo descrittivo o messaggio di errore */
-    int  row;                               /* Riga corrente (o offset lista giocatori) */
-    int  col;                               /* Colonna corrente (o totale giocatori) */
-    int  score;                             /* Punteggio corrente */
+    int  tipo;                                          /* Tipo di messaggio (MSG_*) */
+    char nickname[MAX_NICK];                            /* Nickname per login o vincitore */
+    char password[MAX_PASS];                            /* Password per login (in chiaro, senza hash) */
+    char direzione;                                     /* Direzione: 'w', 'a', 's', 'd' */
+    char testo[MAX_TESTO];                              /* Testo descrittivo o messaggio di errore */
+    int  riga;                                          /* Riga corrente */
+    int  colonna;                                       /* Colonna corrente */
+    int  punteggio;                                     /* Punteggio corrente */
     
-    char local_map[LOCAL_VIEW][LOCAL_VIEW]; /* Vista locale 5x5 */
-    char global_map[MAP_ROWS][MAP_COLS];    /* Mappa globale 21x41 mascherata */
+    char mappa_locale[VISTA_LOCALE][VISTA_LOCALE];      /* Vista locale 5x5 */
+    char mappa_globale[RIGHE_MAPPA][COLONNE_MAPPA];     /* Mappa globale 21x41 mascherata */
     
-    int  num_players;                       /* Numero di giocatori in questo blocco */
-    InfoGiocatore players[MAX_LIST_PLAYERS];/* Array dei giocatori per il blocco */
+    int  num_giocatori;                                 /* Numero di giocatori in questo blocco */
+    InfoGiocatore giocatori[MAX_LISTA_GIOCATORI];       /* Array dei giocatori per il blocco */
 } Messaggio;
 ```
 
@@ -150,49 +150,48 @@ L'invio e la ricezione avvengono tramite funzioni dedicate (`invia_messaggio` e 
 
 | Tipo | Costante | Descrizione |
 |------|:--------:|-------------|
-| `MSG_LOGIN` | `1` | Client invia nickname e password per accedere (senza hash; registrazione automatica se nuovo) |
-| `MSG_MOVE` | `2` | Client invia la direzione di movimento (`w`/`a`/`s`/`d`) |
-| `MSG_LIST` | `3` | Client richiede la lista dei giocatori connessi |
-| `MSG_QUIT` | `4` | Client notifica la disconnessione volontaria |
-| `MSG_OK` | `10` | Server conferma il login con successo |
-| `MSG_ERROR` | `11` | Server segnala errore (es. password errata, nickname duplicato o partita finita) |
+| `MSG_ACCESSO` | `1` | Client invia nickname e password per accedere (registrazione automatica se nuovo) |
+| `MSG_MOVIMENTO` | `2` | Client invia la direzione di movimento (`w`/`a`/`s`/`d`) |
+| `MSG_RICHIEDI_LISTA` | `3` | Client richiede la lista dei giocatori connessi |
+| `MSG_ESCI` | `4` | Client notifica la disconnessione volontaria |
+| `MSG_OK` | `10` | Server conferma l'accesso con successo |
+| `MSG_ERRORE` | `11` | Server segnala errore (es. password errata, nickname duplicato o partita finita) |
 | `MSG_MAPPA_LOCALE` | `12` | Server invia la vista 5x5 centrata sul giocatore |
 | `MSG_MAPPA_GLOBALE` | `13` | Server invia periodicamente la mappa globale mascherata |
 | `MSG_LISTA` | `14` | Server invia l'elenco dei giocatori e punteggi |
 | `MSG_FINE_PARTITA` | `15` | Server notifica la fine della partita e il vincitore |
-| `MSG_INFO` | `16` | Server invia un messaggio informativo |
+| `MSG_NOTIFICA` | `16` | Server invia un messaggio informativo / notifica |
 
 ### Sequenza tipica di comunicazione
 
 ```
 CLIENT                                  SERVER
   |------- TCP connect() ---------------->|
-  |-- MSG_LOGIN (nick, pass) ------------>|
+  |-- MSG_ACCESSO (nick, pass) ---------->|
   |<-- MSG_OK ----------------------------|
   |<-- MSG_MAPPA_GLOBALE (iniziale) ------|
-  |-- MSG_MOVE (w) ---------------------->|
+  |-- MSG_MOVIMENTO (w) ----------------->|
   |<-- MSG_MAPPA_LOCALE ------------------|
   |           ...                         |
   |<-- MSG_MAPPA_GLOBALE (ogni T sec) ----|
-  |-- MSG_QUIT (o Ctrl+C) --------------->|
+  |-- MSG_ESCI (o Ctrl+C) --------------->|
   |<-- chiusura socket -------------------|
 ```
 
 ## Note implementative e scelte tecniche
 
-- **Concorrenza Multithread**: il server gestisce le connessioni con un ciclo `while (1)` e alloca un thread per client (`pthread_create` + `pthread_detach`). Un thread dedicato `timer_thread` gestisce il conteggio dei secondi per il timeout e i broadcast periodici.
-- **Sincronizzazione**: un **unico mutex globale** `g_game.mutex` protegge lo stato della partita, il labirinto e i giocatori, garantendo assenza di race condition e prevenendo deadlock.
+- **Concorrenza Multithread**: il server gestisce le connessioni con un ciclo `while (1)` e alloca un thread per client (`pthread_create` + `pthread_detach`) affidato a `client_handler`. Un thread dedicato `timer_thread` gestisce il conteggio dei secondi per il timeout e i broadcast periodici.
+- **Sincronizzazione**: un **unico mutex globale** `g_gioco.mutex` protegge lo stato della partita, il labirinto e i giocatori, garantendo assenza di race condition e prevenendo deadlock.
 - **Logging Thread-Safe (`log.c`)**:
   - Usa la classica system call a basso livello `open("server.log", O_WRONLY | O_CREAT | O_APPEND, 0644)` e `write()`.
   - Data e ora formattate con `strftime` (`[AAAA-MM-GG HH:MM:SS]`).
   - Composizione sicura con `snprintf` a prova di buffer overflow.
   - Protetto da un mutex dedicato `log_mutex` per impedire l'interleaving dei caratteri sul file tra thread concorrenti.
 - **Generazione Labirinto Dinamico (`game.c`)**:
-  - Algoritmo a cammini casuali (random walk) da 8 punti perimetrali verso l'hub centrale, garantendo percorsi sempre aperti e connessi.
-  - 4 uscite (`E`) posizionate casualmente sui 4 bordi, verificate come adiacenti a celle calpestabili e distinte dai punti di spawn.
+  - Funzione `genera_labirinto`: inizializzazione ostacoli e 4 uscite (`CELLA_USCITA`).
 - **Gestione Segnali nel Client (`client.c`)**:
-  - `signal(SIGINT, handle_sigint)` e `signal(SIGTERM, handle_sigint)`: alla pressione di `Ctrl+C` il client invia automaticamente `MSG_QUIT` al server prima di terminare, garantendo la rimozione pulita del giocatore dalla partita.
+  - `signal(SIGINT, sigint_handler)` e `signal(SIGTERM, sigint_handler)`: alla pressione di `Ctrl+C` il client invia automaticamente `MSG_ESCI` al server prima di terminare, garantendo la rimozione pulita del giocatore dalla partita.
 - **I/O Multiplexing con `select()`**:
-  - Il client usa `select()` su `STDIN_FILENO` e `sock_fd` per ricevere la mappa globale periodica dal server senza bloccarsi nell'attesa dell'input da tastiera.
+  - Il client usa `select()` con pattern standard `master_set` e `read_set` su `STDIN_FILENO` e `sock_fd` per ricevere la mappa globale periodica dal server senza bloccarsi nell'attesa dell'input da tastiera.
 - **I/O di Rete Robusto (`protocol.c`)**:
   - Cicli `while (rimanenti > 0)` su `write()` e `read()` con gestione delle short read/write e ripresa su `errno == EINTR`.

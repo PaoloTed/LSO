@@ -15,12 +15,12 @@
 
 static int loop = 1;
 
-static void handle_sigint(int sig) {
+static void sigint_handler(int sig) {
     (void)sig;
     loop = 0;
 }
 
-static void display_prompt(void) {
+static void mostra_prompt(void) {
     printf("Inserisci il comando + ENTER: ");
     fflush(stdout);
 }
@@ -40,7 +40,6 @@ int main(int argc, char *argv[]) {
 
     /* Ignora SIGPIPE */
     signal(SIGPIPE, SIG_IGN);
-
 
     /* Creazione socket TCP */
     int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -80,50 +79,63 @@ int main(int argc, char *argv[]) {
     printf("Inserisci la tua password: ");
     fflush(stdout);
     scanf("%s", password);
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
 
-    /* Invio login */
+    /* Invio richiesta di accesso */
     Messaggio msg = {0};
-    msg.type = MSG_LOGIN;
+    msg.tipo = MSG_ACCESSO;
     strncpy(msg.nickname, nickname, MAX_NICK - 1);
     strncpy(msg.password, password, MAX_PASS - 1);
 
     if (invia_messaggio(sock_fd, &msg) < 0) {
-        fprintf(stderr, "Errore durante l'invio del login.\n");
+        perror("invia_messaggio");
         close(sock_fd);
         return 1;
     }
 
-    /* Ricezione della risposta dal server */
+    /* Attesa esito accesso */
     if (ricevi_messaggio(sock_fd, &msg) <= 0) {
-        printf("Connessione chiusa dal server.\n");
+        fprintf(stderr, "Disconnessione dal server durante l'accesso.\n");
         close(sock_fd);
         return 1;
     }
 
-    if (msg.type != MSG_OK) {
-        printf("Accesso rifiutato: %s\n", msg.text);
+    if (msg.tipo == MSG_ERRORE) {
+        printf("Accesso rifiutato: %s\n", msg.testo);
+        close(sock_fd);
+        return 1;
+    }
+    if (msg.tipo != MSG_OK) {
+        printf("Risposta inattesa dal server (tipo=%d).\n", msg.tipo);
         close(sock_fd);
         return 1;
     }
 
-    printf("Accesso effettuato come '%s'.\n", nickname);
+    printf("Accesso eseguito con successo!\n");
 
-    /* Loop principale con select */
-    fd_set master_fds, read_fds;
-    FD_ZERO(&master_fds);
-    FD_SET(STDIN_FILENO, &master_fds);
-    FD_SET(sock_fd, &master_fds);
-    int max_fd = sock_fd;
+    /* Ricezione della mappa globale iniziale */
+    if (ricevi_messaggio(sock_fd, &msg) <= 0 || msg.tipo != MSG_MAPPA_GLOBALE) {
+        fprintf(stderr, "Errore nella ricezione della mappa iniziale.\n");
+        close(sock_fd);
+        return 1;
+    }
 
-    /* Gestione segnali: intercetta SIGINT (Ctrl+C) e SIGTERM per inviare MSG_QUIT */
-    signal(SIGINT, handle_sigint);
-    signal(SIGTERM, handle_sigint);
+    mostra_mappa_globale(msg.riga, msg.colonna, msg.mappa_globale);
+    mostra_mappa_locale(msg.riga, msg.colonna, msg.punteggio, msg.mappa_locale, NULL, 0);
+
+    /* Pattern Master Set vs Working Set da Guida LSO riga 4603 */
+    fd_set master_set, read_set;
+    FD_ZERO(&master_set);
+    FD_SET(STDIN_FILENO, &master_set);
+    FD_SET(sock_fd, &master_set);
+    int max_fd = (sock_fd > STDIN_FILENO) ? sock_fd : STDIN_FILENO;
+
+    /* Gestione segnali: intercetta SIGINT (Ctrl+C) e SIGTERM per inviare MSG_ESCI */
+    signal(SIGINT, sigint_handler);
+    signal(SIGTERM, sigint_handler);
     
     while (loop) {
-        read_fds = master_fds;
-        int activity = select(max_fd + 1, &read_fds, NULL, NULL, NULL);
+        read_set = master_set;
+        int activity = select(max_fd + 1, &read_set, NULL, NULL, NULL);
         if (activity < 0) {
             if (errno == EINTR) {
                 if (!loop)
@@ -135,7 +147,7 @@ int main(int argc, char *argv[]) {
         }
 
         /* Input tastiera */
-        if (FD_ISSET(STDIN_FILENO, &read_fds)) {
+        if (FD_ISSET(STDIN_FILENO, &read_set)) {
             char buffer[64];
             /* Disconnessione su EOF */
             if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
@@ -143,66 +155,66 @@ int main(int argc, char *argv[]) {
                 break;
             }
 
-            char cmd = tolower(buffer[0]);
-            Messaggio out_msg = {0};
-            if (cmd == 'w' || cmd == 'a' || cmd == 's' || cmd == 'd') {
-                out_msg.type = MSG_MOVE;
-                out_msg.direction = cmd;
-                invia_messaggio(sock_fd, &out_msg);
-            } else if (cmd == 'l') {
-                out_msg.type = MSG_LIST;
-                invia_messaggio(sock_fd, &out_msg);
-            } else if (cmd == 'h') {
-                display_help();
-                display_prompt();
-            } else if (cmd == 'q') {
-                out_msg.type = MSG_QUIT;
-                invia_messaggio(sock_fd, &out_msg);
+            char comando = tolower(buffer[0]);
+            Messaggio msg_invio = {0};
+            if (comando == 'w' || comando == 'a' || comando == 's' || comando == 'd') {
+                msg_invio.tipo = MSG_MOVIMENTO;
+                msg_invio.direzione = comando;
+                invia_messaggio(sock_fd, &msg_invio);
+            } else if (comando == 'l') {
+                msg_invio.tipo = MSG_RICHIEDI_LISTA;
+                invia_messaggio(sock_fd, &msg_invio);
+            } else if (comando == 'h') {
+                mostra_aiuto();
+                mostra_prompt();
+            } else if (comando == 'q') {
+                msg_invio.tipo = MSG_ESCI;
+                invia_messaggio(sock_fd, &msg_invio);
                 printf("Arrivederci!\n");
                 break;
-            } else if (cmd != '\n' && cmd != '\r') {
+            } else if (comando != '\n' && comando != '\r') {
                 printf("Comando non riconosciuto (premi 'h' per l'aiuto).\n");
-                display_prompt();
+                mostra_prompt();
             }
         }
 
         /* Messaggio dal server */
-        if (FD_ISSET(sock_fd, &read_fds)) {
+        if (FD_ISSET(sock_fd, &read_set)) {
             int ret = ricevi_messaggio(sock_fd, &msg);
             if (ret <= 0) {
                 printf("Connessione chiusa dal server.\n");
                 break;
             }
 
-            switch (msg.type) {
+            switch (msg.tipo) {
                 case MSG_MAPPA_LOCALE:
-                    display_local_map(msg.row, msg.col, msg.score, msg.local_map, msg.text, 1);
+                    mostra_mappa_locale(msg.riga, msg.colonna, msg.punteggio, msg.mappa_locale, msg.testo, 1);
                     break;
 
                 case MSG_MAPPA_GLOBALE:
-                    display_global_map(msg.row, msg.col, msg.global_map);
-                    display_local_map(msg.row, msg.col, msg.score, msg.local_map, msg.text, 0);
+                    mostra_mappa_globale(msg.riga, msg.colonna, msg.mappa_globale);
+                    mostra_mappa_locale(msg.riga, msg.colonna, msg.punteggio, msg.mappa_locale, msg.testo, 0);
                     break;
 
                 case MSG_LISTA:
-                    display_player_list(msg.players, msg.num_players);
-                    display_prompt();
+                    mostra_lista_giocatori(msg.giocatori, msg.num_giocatori);
+                    mostra_prompt();
                     break;
 
-                case MSG_INFO:
-                    printf("\n[server] %s\n", msg.text);
-                    display_prompt();
+                case MSG_NOTIFICA:
+                    printf("\n[server] %s\n", msg.testo);
+                    mostra_prompt();
                     break;
 
-                case MSG_ERROR:
-                    printf("\n[server] Errore: %s\n", msg.text);
-                    display_prompt();
+                case MSG_ERRORE:
+                    printf("\n[server] Errore: %s\n", msg.testo);
+                    mostra_prompt();
                     break;
 
                 case MSG_FINE_PARTITA:
                     if (msg.nickname[0] != '\0')
                         printf("\n*** Partita terminata. Vincitore: %s con %d oggetti raccolti! ***\n",
-                               msg.nickname, msg.score);
+                               msg.nickname, msg.punteggio);
                     else
                         printf("\n*** Partita terminata. Nessun vincitore. ***\n");
                     close(sock_fd);
@@ -217,9 +229,9 @@ int main(int argc, char *argv[]) {
     /* Invio disconnessione in uscita (Ctrl+D / Ctrl+C / SIGINT / SIGTERM)*/
     if (!loop) {
         printf("\nRicevuto segnale di interruzione: disconnessione in corso...\n");
-        Messaggio quit_msg = {0};
-        quit_msg.type = MSG_QUIT;
-        invia_messaggio(sock_fd, &quit_msg);
+        Messaggio msg_uscita = {0};
+        msg_uscita.tipo = MSG_ESCI;
+        invia_messaggio(sock_fd, &msg_uscita);
     }
 
     close(sock_fd);

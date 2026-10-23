@@ -3,23 +3,23 @@
 #include <stdlib.h>
 
 /* Colori ANSI */
-#define COL_BLUE   "\033[34m" /* Blu */
-#define COL_RED    "\033[31m" /* Rosso */
-#define COL_YELLOW "\033[33m" /* Giallo */
+#define COL_BLU    "\033[34m" /* Blu */
+#define COL_ROSSO  "\033[31m" /* Rosso */
+#define COL_GIALLO "\033[33m" /* Giallo */
 #define COL_RESET  "\033[0m"  /* Reset */
 
-static void print_cell(char ch, int in_local_view) {
-    if (ch == CELL_PLAYER)
-        printf(COL_RED "%c " COL_RESET, ch);
-    else if (ch == CELL_OBJECT)
-        printf(COL_YELLOW "%c " COL_RESET, ch);
-    else if (in_local_view)
-        printf(COL_BLUE "%c " COL_RESET, ch);
+static void stampa_cella(char cella, int in_vista_locale) {
+    if (cella == CELLA_GIOCATORE)
+        printf(COL_ROSSO "%c " COL_RESET, cella);
+    else if (cella == CELLA_OGGETTO)
+        printf(COL_GIALLO "%c " COL_RESET, cella);
+    else if (in_vista_locale)
+        printf(COL_BLU "%c " COL_RESET, cella);
     else
-        printf("%c ", ch);
+        printf("%c ", cella);
 }
 
-void display_help(void) {
+void mostra_aiuto(void) {
     printf("\nComandi disponibili:\n"
            "  w / a / s / d : muovi su / sinistra / giu' / destra\n"
            "  l             : lista dei giocatori connessi\n"
@@ -28,19 +28,19 @@ void display_help(void) {
 }
 
 /* Vista locale */
-void display_local_map(int row, int col, int score, const char map[LOCAL_VIEW][LOCAL_VIEW], const char *notice, int clear_screen) {
-    if (clear_screen)
+void mostra_mappa_locale(int riga, int colonna, int punteggio, const char mappa[VISTA_LOCALE][VISTA_LOCALE], const char *avviso, int pulisci_schermo) {
+    if (pulisci_schermo)
         system("clear");
 
-    printf("\nPosizione: (riga %d, colonna %d)   Oggetti raccolti: %d\n", row, col, score);
-    for (int r = 0; r < LOCAL_VIEW; r++) {
+    printf("\nPosizione: (riga %d, colonna %d)   Oggetti raccolti: %d\n", riga, colonna, punteggio);
+    for (int r = 0; r < VISTA_LOCALE; r++) {
         printf("  ");
-        for (int c = 0; c < LOCAL_VIEW; c++)
-            print_cell(map[r][c], 1);
+        for (int c = 0; c < VISTA_LOCALE; c++)
+            stampa_cella(mappa[r][c], 1);
         putchar('\n');
     }
-    if (notice && notice[0] != '\0') {
-        printf(COL_YELLOW "\n%s" COL_RESET "\n", notice);
+    if (avviso && avviso[0] != '\0') {
+        printf(COL_GIALLO "\n%s" COL_RESET "\n", avviso);
     }
     printf("\nComandi: [w/a/s/d] muovi | [l] lista giocatori | [h] aiuto | [q] esci\n");
     printf("Inserisci il comando + ENTER: ");
@@ -48,30 +48,28 @@ void display_local_map(int row, int col, int score, const char map[LOCAL_VIEW][L
 }
 
 /* Mappa globale */
-void display_global_map(int row, int col, const char map[MAP_ROWS][MAP_COLS]) {
+void mostra_mappa_globale(int riga, int colonna, const char mappa[RIGHE_MAPPA][COLONNE_MAPPA]) {
     system("clear");
-    printf("\n--- Mappa globale (celle non ancora viste: '%c') ---\n", CELL_HIDDEN);
+    printf("\n--- Mappa globale (celle non ancora viste: '%c') ---\n", CELLA_NASCOSTA);
 
-    for (int r = 0; r < MAP_ROWS; r++) {
+    for (int r = 0; r < RIGHE_MAPPA; r++) {
         printf("  ");
-        for (int c = 0; c < MAP_COLS; c++) {
-            /* Controlla se la cella si trova all'interno della vista locale 
-            controllando che la cella "map[r][c]" sia in nell'intervallo 
-            [row - VIEW_RADIUS, row + VIEW_RADIUS] e [col - VIEW_RADIUS, col + VIEW_RADIUS]*/
-            int in_view = (r >= row - VIEW_RADIUS && r <= row + VIEW_RADIUS &&
-                            c >= col - VIEW_RADIUS && c <= col + VIEW_RADIUS);
-            print_cell(map[r][c], in_view);
+        for (int c = 0; c < COLONNE_MAPPA; c++) {
+            /* Controlla se la cella si trova all'interno della vista locale */
+            int in_vista = (r >= riga - RAGGIO_VISIBILITA && r <= riga + RAGGIO_VISIBILITA &&
+                            c >= colonna - RAGGIO_VISIBILITA && c <= colonna + RAGGIO_VISIBILITA);
+            stampa_cella(mappa[r][c], in_vista);
         }
         putchar('\n');
     }
 }
 
-void display_player_list(const InfoGiocatore *players, int count) {
-    printf("\nGiocatori connessi (%d):\n", count);
-    for (int i = 0; i < count; i++) {
-        const char *status = "in gioco";
-        if (players[i].exited)
-            status = "uscito dal labirinto";
-        printf("  - %s: %d oggetti (%s)\n", players[i].nickname, players[i].score, status);
+void mostra_lista_giocatori(const InfoGiocatore *giocatori, int totale) {
+    printf("\nGiocatori connessi (%d):\n", totale);
+    for (int i = 0; i < totale; i++) {
+        const char *stato = "in gioco";
+        if (giocatori[i].uscito)
+            stato = "uscito dal labirinto";
+        printf("  - %s: %d oggetti (%s)\n", giocatori[i].nickname, giocatori[i].punteggio, stato);
     }
 }

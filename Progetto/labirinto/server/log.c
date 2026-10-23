@@ -27,10 +27,10 @@ void log_event(const char *msg) {
     strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", localtime(&now));
 
     /* Scrittura su file */
-    char line[512];
-    int n = snprintf(line, sizeof(line), "[%s] %s\n", ts, msg);
+    char log_line[512];
+    int n = snprintf(log_line, sizeof(log_line), "[%s] %s\n", ts, msg);
     if (n > 0)
-        write(log_fd, line, n);
+        write(log_fd, log_line, n);
 
     pthread_mutex_unlock(&log_mutex);
 }

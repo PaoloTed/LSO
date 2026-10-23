@@ -7,58 +7,58 @@
 
 /* Struttura del labirinto */
 typedef struct {
-    char cells[MAP_ROWS][MAP_COLS];
-    char objects[MAP_ROWS][MAP_COLS];
+    char celle[RIGHE_MAPPA][COLONNE_MAPPA];
+    char oggetti[RIGHE_MAPPA][COLONNE_MAPPA];
 } Labirinto;
 
 /* Dati del giocatore */
 typedef struct {
-    int  fd;                                /* Socket */
-    int  active;                            /* Giocatore attivo */
-    int  joined;                            /* Partecipante */
-    int  exited;                            /* Raggiunta uscita */
+    int  fd;                                        /* Socket */
+    int  attivo;                                    /* Giocatore attivo */
+    int  partecipante;                              /* Partecipante */
+    int  uscito;                                    /* Raggiunta uscita */
     char nickname[MAX_NICK];
-    int  row, col;                          /* Posizione */
-    int  score;                             /* Punteggio */
-    char discovered[MAP_ROWS][MAP_COLS];    /* Celle scoperte */
+    int  riga, colonna;                             /* Posizione */
+    int  punteggio;                                 /* Punteggio */
+    char scoperte[RIGHE_MAPPA][COLONNE_MAPPA];      /* Celle scoperte */
 } Giocatore;
 
 /* Stato globale della partita */
 typedef struct {
-    Labirinto maze;
-    Giocatore *players;                     /* Array giocatori */
-    int  players_count;                     /* Numero giocatori */
-    int  game_over;                         /* Fine partita (valore 1 se terminata) */
-    int  winner;                            /* Indice vincitore */
-    int  timeout;                           /* Timeout partita */
-    int  interval;                          /* Intervallo broadcast */
-    pthread_mutex_t mutex;                  /* Mutex per sincronizzazione */
+    Labirinto labirinto;
+    Giocatore *giocatori;                           /* Array giocatori */
+    int  num_giocatori;                             /* Numero giocatori */
+    int  partita_finita;                            /* Fine partita (valore 1 se terminata) */
+    int  vincitore;                                 /* Indice vincitore */
+    int  timeout;                                   /* Timeout partita */
+    int  intervallo;                                /* Intervallo broadcast */
+    pthread_mutex_t mutex;                          /* Mutex per sincronizzazione */
 } StatoGioco;
 
-extern StatoGioco g_game;
+extern StatoGioco g_gioco;
 
 /* Inizializza il gioco */
-void game_init(int timeout, int interval);
+void inizializza_gioco(int timeout, int intervallo);
 
 /* Aggiunge un giocatore verificando le credenziali */
-int  game_add_player(int fd, const char *nickname, const char *password);
+int  aggiungi_giocatore(int fd, const char *nickname, const char *password);
 
 /* Rimuove un giocatore */
-void game_remove_player(int index);
+void rimuovi_giocatore(int indice);
 
 /* Movimento del giocatore */
-void game_move(int index, char direction);
+void muovi_giocatore(int indice, char direzione);
 
 /* Invio messaggi */
-void game_send_local_map(int index, const char *notice);
-void game_send_global_map(int index);
-void game_send_player_list(int index);
+void invia_mappa_locale(int indice, const char *avviso);
+void invia_mappa_globale(int indice);
+void invia_lista_giocatori(int indice);
 
 /* Invio broadcast */
-void game_broadcast_global_maps(void);
-void game_broadcast_game_over(void);
+void broadcast_mappe_globali(void);
+void broadcast_fine_partita(void);
 
 /* Conclude la partita e calcola il vincitore */
-int  game_finish(void);
+int  termina_partita(void);
 
 #endif

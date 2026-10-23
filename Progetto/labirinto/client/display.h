@@ -3,9 +3,9 @@
 
 #include "protocol.h"
 
-void display_help(void);
-void display_local_map(int row, int col, int score, const char map[LOCAL_VIEW][LOCAL_VIEW], const char *notice, int clear_screen);
-void display_global_map(int row, int col, const char map[MAP_ROWS][MAP_COLS]);
-void display_player_list(const InfoGiocatore *players, int count);
+void mostra_aiuto(void);
+void mostra_mappa_locale(int riga, int colonna, int punteggio, const char mappa[VISTA_LOCALE][VISTA_LOCALE], const char *avviso, int pulisci_schermo);
+void mostra_mappa_globale(int riga, int colonna, const char mappa[RIGHE_MAPPA][COLONNE_MAPPA]);
+void mostra_lista_giocatori(const InfoGiocatore *giocatori, int totale);
 
 #endif
