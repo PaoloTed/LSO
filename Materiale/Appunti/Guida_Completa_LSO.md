@@ -4033,7 +4033,7 @@ Spesso si fa confusione tra queste funzioni perché entrambe hanno a che fare co
 > * **NO se hai una stringa testuale come `"192.168.1.1"`**:
 >   ```c
 >   // ERRORE GRAVE: un letterale stringa è un puntatore 'char *'!
->   // addr.sin_addr.s_addr = htonl("192.168.1.1"); // ERRORE! Invertirebbe i byte dell'indirizzo del puntatore in memoria!
+>   addr.sin_addr.s_addr = htonl("192.168.1.1"); // ERRORE! Invertirebbe i byte dell'indirizzo del puntatore in memoria!
 >   
 >   // CORRETTO:
 >   inet_pton(AF_INET, "192.168.1.1", &addr.sin_addr);
