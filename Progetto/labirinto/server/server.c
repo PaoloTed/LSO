@@ -115,14 +115,14 @@ static void *timer_thread(void *arg) {
     (void)arg;
     int secondi = 0;
 
-    while (!g_gioco.partita_finita) {
+    while (!partita.partita_finita) {
         sleep(1);
         secondi++;
 
         /* Scadenza timeout */
-        if (secondi >= g_gioco.timeout) {
+        if (secondi >= partita.timeout) {
             char log_buf[128];
-            snprintf(log_buf, sizeof(log_buf), "Partita terminata per timeout (%d secondi).", g_gioco.timeout);
+            snprintf(log_buf, sizeof(log_buf), "Partita terminata per timeout (%d secondi).", partita.timeout);
             log_event(log_buf);
             termina_partita();
             broadcast_fine_partita();
@@ -130,7 +130,7 @@ static void *timer_thread(void *arg) {
         }
 
         /* Invio periodico mappa */
-        if (secondi % g_gioco.intervallo == 0) {
+        if (secondi % partita.intervallo == 0) {
             broadcast_mappe_globali();
         }
     }

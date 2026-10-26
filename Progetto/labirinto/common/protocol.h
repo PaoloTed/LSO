@@ -1,6 +1,8 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
+#include <stddef.h>
+
 /* Dimensioni */
 #define RIGHE_MAPPA       21
 #define COLONNE_MAPPA     41
@@ -19,7 +21,6 @@
 #define MAX_NICK            32
 #define MAX_PASS            32
 #define MAX_TESTO           128
-#define MAX_LISTA_GIOCATORI 64
 
 /* Tipi di messaggio */
 #define MSG_ACCESSO         1   /* Login */
@@ -56,12 +57,15 @@ typedef struct {
     char mappa_locale[VISTA_LOCALE][VISTA_LOCALE];      /* Vista locale */
     char mappa_globale[RIGHE_MAPPA][COLONNE_MAPPA];     /* Mappa globale */
     
-    int  num_giocatori;                                 /* Numero giocatori */
-    InfoGiocatore giocatori[MAX_LISTA_GIOCATORI];       /* Giocatori */
+    int  num_giocatori;                                 /* Numero di InfoGiocatore che seguono il messaggio (MSG_LISTA) */
 } Messaggio;
 
 /* Invio e ricezione messaggi */
 int invia_messaggio(int fd, const Messaggio *msg);
 int ricevi_messaggio(int fd, Messaggio *msg);
+
+/* Invio e ricezione di un numero qualunque di byte (gestiscono short write/read) */
+int invia_dati(int fd, const void *buf, size_t len);
+int ricevi_dati(int fd, void *buf, size_t len);
 
 #endif

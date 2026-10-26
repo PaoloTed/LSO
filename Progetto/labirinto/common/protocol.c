@@ -2,10 +2,10 @@
 #include <unistd.h>
 #include <errno.h>
 
-/* Invia un messaggio gestendo short write */
-int invia_messaggio(int fd, const Messaggio *msg) {
-    const char *p = (const char *)msg;
-    size_t rimanenti = sizeof(Messaggio);
+/* Invia len byte gestendo short write */
+int invia_dati(int fd, const void *buf, size_t len) {
+    const char *p = (const char *)buf;
+    size_t rimanenti = len;
 
     while (rimanenti > 0) {
         ssize_t n = write(fd, p, rimanenti);
@@ -20,10 +20,10 @@ int invia_messaggio(int fd, const Messaggio *msg) {
     return 0;
 }
 
-/* Riceve un messaggio gestendo short read */
-int ricevi_messaggio(int fd, Messaggio *msg) {
-    char *p = (char *)msg;
-    size_t rimanenti = sizeof(Messaggio);
+/* Riceve len byte gestendo short read */
+int ricevi_dati(int fd, void *buf, size_t len) {
+    char *p = (char *)buf;
+    size_t rimanenti = len;
 
     while (rimanenti > 0) {
         ssize_t n = read(fd, p, rimanenti);
@@ -38,4 +38,14 @@ int ricevi_messaggio(int fd, Messaggio *msg) {
         rimanenti -= n;
     }
     return 1;
+}
+
+/* Invia un messaggio gestendo short write */
+int invia_messaggio(int fd, const Messaggio *msg) {
+    return invia_dati(fd, msg, sizeof(Messaggio));
+}
+
+/* Riceve un messaggio gestendo short read */
+int ricevi_messaggio(int fd, Messaggio *msg) {
+    return ricevi_dati(fd, msg, sizeof(Messaggio));
 }

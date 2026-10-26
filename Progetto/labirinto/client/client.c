@@ -9,6 +9,7 @@
 #include <sys/select.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 
 #include "protocol.h"
 #include "display.h"
@@ -27,7 +28,7 @@ static void mostra_prompt(void) {
 
 int main(int argc, char *argv[]) {
     if (argc < 3) {
-        fprintf(stderr, "Uso: %s <indirizzo_ip> <porta>\n", argv[0]);
+        fprintf(stderr, "Uso: %s <nome_host|indirizzo_ip> <porta>\n", argv[0]);
         return 1;
     }
 
@@ -41,30 +42,39 @@ int main(int argc, char *argv[]) {
     /* Ignora SIGPIPE */
     signal(SIGPIPE, SIG_IGN);
 
-    /* Creazione socket TCP */
-    int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock_fd < 0) {
-        perror("socket");
+    /* Risoluzione del nome host o dell'indirizzo IP con getaddrinfo() */
+    struct addrinfo hints, *res, *p;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family   = AF_INET;      /* Il server ascolta su IPv4 */
+    hints.ai_socktype = SOCK_STREAM;  /* TCP */
+
+    char port_str[16];
+    snprintf(port_str, sizeof(port_str), "%d", port);
+
+    int err = getaddrinfo(host, port_str, &hints, &res);
+    if (err != 0) {
+        fprintf(stderr, "Impossibile risolvere l'host %s: %s\n", host, gai_strerror(err));
         return 1;
     }
 
-    /* Configurazione indirizzo server */
-    struct sockaddr_in server_addr = {0};
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(port);
-
-    if (inet_pton(AF_INET, host, &server_addr.sin_addr) <= 0) {
-        fprintf(stderr, "Indirizzo IP non valido: %s\n", host);
+    /* Creazione socket TCP e connessione al primo indirizzo utilizzabile */
+    int sock_fd;
+    for (p = res; p != NULL; p = p->ai_next) {
+        sock_fd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+        if (sock_fd < 0)
+            continue;
+        if (connect(sock_fd, p->ai_addr, p->ai_addrlen) == 0)
+            break;
         close(sock_fd);
-        return 1;
     }
 
-    /* Connessione al server */
-    if (connect(sock_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("connect");
-        close(sock_fd);
+    /* Se il ciclo e' terminato senza break nessun indirizzo ha accettato la connessione */
+    if (p == NULL) {
+        fprintf(stderr, "Impossibile connettersi a %s:%d\n", host, port);
+        freeaddrinfo(res);
         return 1;
     }
+    freeaddrinfo(res);
 
     printf("Connesso al server %s:%d\n", host, port);
 
@@ -196,10 +206,29 @@ int main(int argc, char *argv[]) {
                     mostra_mappa_locale(msg.riga, msg.colonna, msg.punteggio, msg.mappa_locale, msg.testo, 0);
                     break;
 
-                case MSG_LISTA:
-                    mostra_lista_giocatori(msg.giocatori, msg.num_giocatori);
+                case MSG_LISTA: {
+                    /* Dopo il messaggio arrivano num_giocatori strutture InfoGiocatore */
+                    InfoGiocatore *lista = NULL;
+                    if (msg.num_giocatori > 0) {
+                        lista = malloc(msg.num_giocatori * sizeof(InfoGiocatore));
+                        if (!lista) {
+                            perror("malloc");
+                            close(sock_fd);
+                            return 1;
+                        }
+
+                        if (ricevi_dati(sock_fd, lista, msg.num_giocatori * sizeof(InfoGiocatore)) <= 0) {
+                            free(lista);
+                            printf("Connessione chiusa dal server.\n");
+                            close(sock_fd);
+                            return 1;
+                        }
+                    }
+                    mostra_lista_giocatori(lista, msg.num_giocatori);
+                    free(lista);
                     mostra_prompt();
                     break;
+                }
 
                 case MSG_NOTIFICA:
                     printf("\n[server] %s\n", msg.testo);

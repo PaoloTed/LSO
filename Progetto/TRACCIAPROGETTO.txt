@@ -9,7 +9,10 @@ La partita termina allo scadere di un timeout globale oppure quando tutti i gioc
 * se escono più giocatori prima del timeout → vince chi ha raccolto più oggetti;
 * se nessuno esce → vince chi ha raccolto più oggetti.
 Per accedere al gioco ogni utente dovrà prima registrarsi al sito indicando password e nickname. Non c'è un limite a priori al numero di utenti che si possono collegare con il server.
-Il server mantiene l'intera mappa del gioco e, per ogni giocatore, l'insieme delle celle da lui scoperte. Quando riceve un comando (ad esempio un movimento), il server aggiorna la posizione del giocatore, rivela nuove celle e restituisce al client una mappa locale: una finestra (es. 4x4) centrata sul giocatore contenente solo le celle da lui scoperte.
+Il server mantiene l'intera mappa del gioco e, per ogni giocatore, 
+l'insieme delle celle da lui scoperte. 
+Quando riceve un comando (ad esempio un movimento), il server aggiorna la posizione del giocatore, 
+rivela nuove celle e restituisce al client una mappa locale: una finestra (es. 4x4) centrata sul giocatore contenente solo le celle da lui scoperte.
 Indipendentemente dalle azioni dei client, il server invia periodicamente (ogni T secondi) a ciascun giocatore una mappa globale mascherata (l'intera matrice di gioco), in cui le celle da lui non ancora viste sono indicate con un simbolo speciale. Il server deve gestire simultaneamente: nuove connessioni, comandi dei client già connessi, l'invio periodico della mappa globale, senza bloccare i client. Il server sarà di tipo concorrente, ovvero in grado di servire più client simultaneamente. Durante il suo regolare funzionamento, il server effettuerà il logging delle attività principali in un file apposito. Ad esempio, memorizzando la data e l'ora di connessione dei client e il loro nome simbolico (se disponibile, altrimenti l'indirizzo IP) e la data e l'ora delle conquiste.
 Il client consentirà all'utente di collegarsi ad un server di comunicazione, indicando tramite riga di comando il nome o l'indirizzo IP di tale server e la porta da utilizzare. Una volta collegato ad un server l'utente potrà accedere al servizio come utente con un nickname. Il client permetterà all'utente di: spostarsi sulla mappa, disconnettersi, vedere la lista degli utenti collegati, visualizzare la mappa locale e quella globale.
 Regole generali

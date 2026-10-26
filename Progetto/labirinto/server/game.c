@@ -10,7 +10,7 @@
 
 #define FILE_UTENTI "users.txt"
 
-StatoGioco g_gioco;
+StatoGioco partita;
 
 /* Generazione labirinto */
 static void genera_labirinto(Labirinto *m) {
@@ -91,13 +91,13 @@ static int autentica_utente(const char *nickname, const char *password) {
 
 void inizializza_gioco(int timeout, int intervallo) {
     srand(time(NULL));
-    free(g_gioco.giocatori);
-    memset(&g_gioco, 0, sizeof(g_gioco));
-    pthread_mutex_init(&g_gioco.mutex, NULL);
-    g_gioco.timeout = timeout;
-    g_gioco.intervallo = intervallo;
-    g_gioco.vincitore = -1;
-    genera_labirinto(&g_gioco.labirinto);
+    free(partita.giocatori);
+    memset(&partita, 0, sizeof(partita));
+    pthread_mutex_init(&partita.mutex, NULL);
+    partita.timeout = timeout;
+    partita.intervallo = intervallo;
+    partita.vincitore = -1;
+    genera_labirinto(&partita.labirinto);
 }
 
 /* Celle scoperte attorno al giocatore */
@@ -112,39 +112,52 @@ static void scopri_dintorni(Giocatore *p) {
     }
 }
 
-/* Calcola il vincitore */
-static int trova_vincitore_bloccato(void) {
-    int conteggio_usciti = 0, indice_uscito = -1;
-    for (int i = 0; i < g_gioco.num_giocatori; i++) {
-        if (g_gioco.giocatori[i].uscito) {
-            conteggio_usciti++;
-            indice_uscito = i;
+/* Calcola il vincitore secondo le regole della traccia */
+static int trova_vincitore(void) {
+    int usciti = 0;
+    int ultimo_uscito = -1;
+
+    for (int i = 0; i < partita.num_giocatori; i++) {
+        if (partita.giocatori[i].uscito) {
+            usciti++;
+            ultimo_uscito = i;
         }
     }
 
-    /* Singolo giocatore uscito */
-    if (conteggio_usciti == 1)
-        return indice_uscito;
+    /* se è uscito un solo giocatore, vince lui */
+    if (usciti == 1)
+        return ultimo_uscito;
 
-    /* Confronto punteggi */
-    int migliore = -1, punteggio_migliore = -1;
-    for (int i = 0; i < g_gioco.num_giocatori; i++) {
-        Giocatore *p = &g_gioco.giocatori[i];
-        if (!p->partecipante)
-            continue;
-        if (p->punteggio > punteggio_migliore) {
-            punteggio_migliore = p->punteggio;
+    int migliore = -1;
+    int punteggio_max = -1;
+
+    /* se sono usciti in più di uno, vince chi ha più oggetti tra gli usciti */
+    if (usciti > 1) {
+        for (int i = 0; i < partita.num_giocatori; i++) {
+            if (partita.giocatori[i].uscito && partita.giocatori[i].punteggio > punteggio_max) {
+                punteggio_max = partita.giocatori[i].punteggio;
+                migliore = i;
+            }
+        }
+        return migliore;
+    }
+
+    /* se nessuno è uscito, vince chi ha più oggetti tra tutti i partecipanti */
+    for (int i = 0; i < partita.num_giocatori; i++) {
+        if (partita.giocatori[i].partecipante && partita.giocatori[i].punteggio > punteggio_max) {
+            punteggio_max = partita.giocatori[i].punteggio;
             migliore = i;
         }
     }
     return migliore;
 }
 
+
 /* Controlla se tutti i giocatori partecipanti sono usciti */
-static int tutti_usciti_bloccato(void) {
+static int tutti_usciti(void) {
     int almeno_uno = 0;
-    for (int i = 0; i < g_gioco.num_giocatori; i++) {
-        Giocatore *p = &g_gioco.giocatori[i];
+    for (int i = 0; i < partita.num_giocatori; i++) {
+        Giocatore *p = &partita.giocatori[i];
         if (!p->attivo)
             continue;
         almeno_uno = 1;
@@ -155,50 +168,50 @@ static int tutti_usciti_bloccato(void) {
 }
 
 int termina_partita(void) {
-    pthread_mutex_lock(&g_gioco.mutex);
-    if (g_gioco.partita_finita) {
-        pthread_mutex_unlock(&g_gioco.mutex);
+    pthread_mutex_lock(&partita.mutex);
+    if (partita.partita_finita) {
+        pthread_mutex_unlock(&partita.mutex);
         return 0;
     }
-    g_gioco.partita_finita = 1;
-    g_gioco.vincitore = trova_vincitore_bloccato();
-    pthread_mutex_unlock(&g_gioco.mutex);
+    partita.partita_finita = 1;
+    partita.vincitore = trova_vincitore();
+    pthread_mutex_unlock(&partita.mutex);
     return 1;
 }
 
 int aggiungi_giocatore(int fd, const char *nickname, const char *password) {
-    pthread_mutex_lock(&g_gioco.mutex);
+    pthread_mutex_lock(&partita.mutex);
 
-    if (g_gioco.partita_finita) {
-        pthread_mutex_unlock(&g_gioco.mutex);
+    if (partita.partita_finita) {
+        pthread_mutex_unlock(&partita.mutex);
         return -1;
     }
 
     /* Verifica credenziali */
     int esito_auth = autentica_utente(nickname, password);
     if (esito_auth == 0) {
-        pthread_mutex_unlock(&g_gioco.mutex);
+        pthread_mutex_unlock(&partita.mutex);
         char log_buf[128];
         snprintf(log_buf, sizeof(log_buf), "Tentativo di login fallito per '%s': password errata.", nickname);
         log_event(log_buf);
         return -4; /* Password errata */
     } else if (esito_auth < 0) {
-        pthread_mutex_unlock(&g_gioco.mutex);
+        pthread_mutex_unlock(&partita.mutex);
         return -3;
     }
 
     /* Controllo nickname */
-    for (int i = 0; i < g_gioco.num_giocatori; i++) {
-        if (g_gioco.giocatori[i].attivo && strcmp(g_gioco.giocatori[i].nickname, nickname) == 0) {
-            pthread_mutex_unlock(&g_gioco.mutex);
+    for (int i = 0; i < partita.num_giocatori; i++) {
+        if (partita.giocatori[i].attivo && strcmp(partita.giocatori[i].nickname, nickname) == 0) {
+            pthread_mutex_unlock(&partita.mutex);
             return -2; /* Gia' connesso */
         }
     }
 
     /* Cerca slot libero */
     int slot = -1;
-    for (int i = 0; i < g_gioco.num_giocatori; i++) {
-        if (!g_gioco.giocatori[i].attivo) {
+    for (int i = 0; i < partita.num_giocatori; i++) {
+        if (!partita.giocatori[i].attivo) {
             slot = i;
             break;
         }
@@ -207,17 +220,17 @@ int aggiungi_giocatore(int fd, const char *nickname, const char *password) {
     /* Espansione array */
     if (slot < 0) {
         int nuovo_totale = 8;
-        if (g_gioco.num_giocatori > 0)
-            nuovo_totale = g_gioco.num_giocatori * 2;
-        Giocatore *nuovi_giocatori = realloc(g_gioco.giocatori, nuovo_totale * sizeof(Giocatore));
+        if (partita.num_giocatori > 0)
+            nuovo_totale = partita.num_giocatori * 2;
+        Giocatore *nuovi_giocatori = realloc(partita.giocatori, nuovo_totale * sizeof(Giocatore));
         if (!nuovi_giocatori) {
-            pthread_mutex_unlock(&g_gioco.mutex);
+            pthread_mutex_unlock(&partita.mutex);
             return -3;
         }
-        memset(nuovi_giocatori + g_gioco.num_giocatori, 0, (nuovo_totale - g_gioco.num_giocatori) * sizeof(Giocatore));
-        slot = g_gioco.num_giocatori;
-        g_gioco.giocatori = nuovi_giocatori;
-        g_gioco.num_giocatori = nuovo_totale;
+        memset(nuovi_giocatori + partita.num_giocatori, 0, (nuovo_totale - partita.num_giocatori) * sizeof(Giocatore));
+        slot = partita.num_giocatori;
+        partita.giocatori = nuovi_giocatori;
+        partita.num_giocatori = nuovo_totale;
     }
 
     /* Posiziona il giocatore in una cella libera casuale */
@@ -225,9 +238,9 @@ int aggiungi_giocatore(int fd, const char *nickname, const char *password) {
     do {
         riga = 1 + rand() % (RIGHE_MAPPA - 2);
         colonna = 1 + rand() % (COLONNE_MAPPA - 2);
-    } while (g_gioco.labirinto.celle[riga][colonna] != CELLA_LIBERA);
+    } while (partita.labirinto.celle[riga][colonna] != CELLA_LIBERA);
 
-    Giocatore *p = &g_gioco.giocatori[slot];
+    Giocatore *p = &partita.giocatori[slot];
     p->fd = fd;
     p->attivo = 1;
     p->partecipante = 1;
@@ -240,7 +253,7 @@ int aggiungi_giocatore(int fd, const char *nickname, const char *password) {
     memset(p->scoperte, 0, sizeof(p->scoperte));
     scopri_dintorni(p);
 
-    pthread_mutex_unlock(&g_gioco.mutex);
+    pthread_mutex_unlock(&partita.mutex);
 
     char log_buf[128];
     snprintf(log_buf, sizeof(log_buf), "Nuova connessione: '%s' (riga %d, colonna %d, slot %d).", nickname, riga, colonna, slot);
@@ -249,23 +262,23 @@ int aggiungi_giocatore(int fd, const char *nickname, const char *password) {
 }
 
 void rimuovi_giocatore(int indice) {
-    pthread_mutex_lock(&g_gioco.mutex);
-    if (g_gioco.giocatori[indice].attivo) {
-        g_gioco.giocatori[indice].attivo = 0;
-        close(g_gioco.giocatori[indice].fd);
+    pthread_mutex_lock(&partita.mutex);
+    if (partita.giocatori[indice].attivo) {
+        partita.giocatori[indice].attivo = 0;
+        close(partita.giocatori[indice].fd);
         char log_buf[128];
-        snprintf(log_buf, sizeof(log_buf), "Disconnessione: '%s'.", g_gioco.giocatori[indice].nickname);
+        snprintf(log_buf, sizeof(log_buf), "Disconnessione: '%s'.", partita.giocatori[indice].nickname);
         log_event(log_buf);
     }
-    pthread_mutex_unlock(&g_gioco.mutex);
+    pthread_mutex_unlock(&partita.mutex);
 }
 
 void muovi_giocatore(int indice, char direzione) {
-    pthread_mutex_lock(&g_gioco.mutex);
-    Giocatore *p = &g_gioco.giocatori[indice];
+    pthread_mutex_lock(&partita.mutex);
+    Giocatore *p = &partita.giocatori[indice];
 
-    if (!p->attivo || p->uscito || g_gioco.partita_finita) {
-        pthread_mutex_unlock(&g_gioco.mutex);
+    if (!p->attivo || p->uscito || partita.partita_finita) {
+        pthread_mutex_unlock(&partita.mutex);
         return;
     }
 
@@ -279,8 +292,8 @@ void muovi_giocatore(int indice, char direzione) {
         default: non_valido = 1; break;
     }
 
-    if (non_valido || g_gioco.labirinto.celle[nuova_riga][nuova_colonna] == CELLA_MURO) {
-        pthread_mutex_unlock(&g_gioco.mutex);
+    if (non_valido || partita.labirinto.celle[nuova_riga][nuova_colonna] == CELLA_MURO) {
+        pthread_mutex_unlock(&partita.mutex);
         invia_mappa_locale(indice, "Sei andato verso un muro, prova un'altra direzione.");
         return;
     }
@@ -290,14 +303,14 @@ void muovi_giocatore(int indice, char direzione) {
     scopri_dintorni(p);
 
     int raccolto = 0;
-    if (g_gioco.labirinto.oggetti[nuova_riga][nuova_colonna]) {
-        g_gioco.labirinto.oggetti[nuova_riga][nuova_colonna] = 0;
+    if (partita.labirinto.oggetti[nuova_riga][nuova_colonna]) {
+        partita.labirinto.oggetti[nuova_riga][nuova_colonna] = 0;
         p->punteggio++;
         raccolto = 1;
     }
 
     int raggiunta_uscita = 0;
-    if (g_gioco.labirinto.celle[nuova_riga][nuova_colonna] == CELLA_USCITA) {
+    if (partita.labirinto.celle[nuova_riga][nuova_colonna] == CELLA_USCITA) {
         p->uscito = 1;
         raggiunta_uscita = 1;
     }
@@ -307,12 +320,12 @@ void muovi_giocatore(int indice, char direzione) {
     int punteggio = p->punteggio;
 
     int terminata = 0;
-    if ((raccolto || raggiunta_uscita) && tutti_usciti_bloccato()) {
-        g_gioco.partita_finita = 1;
-        g_gioco.vincitore = trova_vincitore_bloccato();
+    if ((raccolto || raggiunta_uscita) && tutti_usciti()) {
+        partita.partita_finita = 1;
+        partita.vincitore = trova_vincitore();
         terminata = 1;
     }
-    pthread_mutex_unlock(&g_gioco.mutex);
+    pthread_mutex_unlock(&partita.mutex);
 
     const char *avviso = NULL;
     char log_buf[128];
@@ -346,10 +359,10 @@ static void componi_vista_locale(const Giocatore *p, char mappa_locale[VISTA_LOC
                 mappa_locale[vr][vc] = CELLA_NASCOSTA;
             else if (r == p->riga && c == p->colonna)
                 mappa_locale[vr][vc] = CELLA_GIOCATORE;
-            else if (g_gioco.labirinto.oggetti[r][c])
+            else if (partita.labirinto.oggetti[r][c])
                 mappa_locale[vr][vc] = CELLA_OGGETTO;
             else
-                mappa_locale[vr][vc] = g_gioco.labirinto.celle[r][c];
+                mappa_locale[vr][vc] = partita.labirinto.celle[r][c];
         }
     }
 }
@@ -360,10 +373,10 @@ void invia_mappa_locale(int indice, const char *avviso) {
     if (avviso)
         strncpy(msg.testo, avviso, MAX_TESTO - 1);
 
-    pthread_mutex_lock(&g_gioco.mutex);
-    Giocatore *p = &g_gioco.giocatori[indice];
+    pthread_mutex_lock(&partita.mutex);
+    Giocatore *p = &partita.giocatori[indice];
     if (!p->attivo) {
-        pthread_mutex_unlock(&g_gioco.mutex);
+        pthread_mutex_unlock(&partita.mutex);
         return;
     }
 
@@ -373,7 +386,7 @@ void invia_mappa_locale(int indice, const char *avviso) {
     componi_vista_locale(p, msg.mappa_locale);
 
     int fd = p->fd;
-    pthread_mutex_unlock(&g_gioco.mutex);
+    pthread_mutex_unlock(&partita.mutex);
 
     invia_messaggio(fd, &msg);
 }
@@ -382,10 +395,10 @@ void invia_mappa_globale(int indice) {
     Messaggio msg = {0};
     msg.tipo = MSG_MAPPA_GLOBALE;
 
-    pthread_mutex_lock(&g_gioco.mutex);
-    Giocatore *p = &g_gioco.giocatori[indice];
+    pthread_mutex_lock(&partita.mutex);
+    Giocatore *p = &partita.giocatori[indice];
     if (!p->attivo) {
-        pthread_mutex_unlock(&g_gioco.mutex);
+        pthread_mutex_unlock(&partita.mutex);
         return;
     }
 
@@ -401,47 +414,70 @@ void invia_mappa_globale(int indice) {
                 msg.mappa_globale[r][c] = CELLA_NASCOSTA;
             else if (r == p->riga && c == p->colonna)
                 msg.mappa_globale[r][c] = CELLA_GIOCATORE;
-            else if (g_gioco.labirinto.oggetti[r][c])
+            else if (partita.labirinto.oggetti[r][c])
                 msg.mappa_globale[r][c] = CELLA_OGGETTO;
             else
-                msg.mappa_globale[r][c] = g_gioco.labirinto.celle[r][c];
+                msg.mappa_globale[r][c] = partita.labirinto.celle[r][c];
         }
     }
     int fd = p->fd;
-    pthread_mutex_unlock(&g_gioco.mutex);
+    pthread_mutex_unlock(&partita.mutex);
 
     invia_messaggio(fd, &msg);
 }
 
-void invia_lista_giocatori(int indice) {
-    Messaggio msg = {0};
-    msg.tipo = MSG_LISTA;
+/* Messaggio MSG_LISTA seguito in memoria dalla lista dei giocatori (array flessibile) */
+typedef struct {
+    Messaggio msg;
+    InfoGiocatore lista[];
+} MessaggioLista;
 
-    pthread_mutex_lock(&g_gioco.mutex);
-    if (!g_gioco.giocatori[indice].attivo) {
-        pthread_mutex_unlock(&g_gioco.mutex);
+void invia_lista_giocatori(int indice) {
+    pthread_mutex_lock(&partita.mutex);
+    if (!partita.giocatori[indice].attivo) {
+        pthread_mutex_unlock(&partita.mutex);
         return;
     }
 
-    int conteggio = 0;
-    for (int i = 0; i < g_gioco.num_giocatori && conteggio < MAX_LISTA_GIOCATORI; i++) {
-        if (!g_gioco.giocatori[i].attivo)
-            continue;
-        strncpy(msg.giocatori[conteggio].nickname, g_gioco.giocatori[i].nickname, MAX_NICK - 1);
-        msg.giocatori[conteggio].punteggio = g_gioco.giocatori[i].punteggio;
-        msg.giocatori[conteggio].uscito = g_gioco.giocatori[i].uscito;
-        conteggio++;
+    /* 1. Conta i giocatori attivi */
+    int totale = 0;
+    for (int i = 0; i < partita.num_giocatori; i++) {
+        if (partita.giocatori[i].attivo)
+            totale++;
     }
-    msg.num_giocatori = conteggio;
-    int fd = g_gioco.giocatori[indice].fd;
-    pthread_mutex_unlock(&g_gioco.mutex);
 
-    invia_messaggio(fd, &msg);
+    /* 2. Alloca e azzera il messaggio seguito da 'totale' InfoGiocatore */
+    size_t dimensione = sizeof(MessaggioLista) + totale * sizeof(InfoGiocatore);
+    MessaggioLista *ml = malloc(dimensione);
+    if (!ml) {
+        pthread_mutex_unlock(&partita.mutex);
+        return;
+    }
+    memset(ml, 0, dimensione);
+    ml->msg.tipo = MSG_LISTA;
+    ml->msg.num_giocatori = totale;
+
+    /* 3. Copia i dati dei giocatori attivi */
+    int k = 0;
+    for (int i = 0; i < partita.num_giocatori; i++) {
+        if (!partita.giocatori[i].attivo)
+            continue;
+        strncpy(ml->lista[k].nickname, partita.giocatori[i].nickname, MAX_NICK - 1);
+        ml->lista[k].punteggio = partita.giocatori[i].punteggio;
+        ml->lista[k].uscito = partita.giocatori[i].uscito;
+        k++;
+    }
+    int fd = partita.giocatori[indice].fd;
+    pthread_mutex_unlock(&partita.mutex);
+
+    /* Messaggio e lista sono contigui: un solo invio */
+    invia_dati(fd, ml, dimensione);
+    free(ml);
 }
 
 void broadcast_mappe_globali(void) {
-    for (int i = 0; i < g_gioco.num_giocatori; i++) {
-        if (g_gioco.giocatori[i].attivo)
+    for (int i = 0; i < partita.num_giocatori; i++) {
+        if (partita.giocatori[i].attivo)
             invia_mappa_globale(i);
     }
 }
@@ -450,10 +486,10 @@ void broadcast_fine_partita(void) {
     Messaggio msg = {0};
     msg.tipo = MSG_FINE_PARTITA;
 
-    pthread_mutex_lock(&g_gioco.mutex);
-    if (g_gioco.vincitore >= 0) {
-        strncpy(msg.nickname, g_gioco.giocatori[g_gioco.vincitore].nickname, MAX_NICK - 1);
-        msg.punteggio = g_gioco.giocatori[g_gioco.vincitore].punteggio;
+    pthread_mutex_lock(&partita.mutex);
+    if (partita.vincitore >= 0) {
+        strncpy(msg.nickname, partita.giocatori[partita.vincitore].nickname, MAX_NICK - 1);
+        msg.punteggio = partita.giocatori[partita.vincitore].punteggio;
         char log_buf[128];
         snprintf(log_buf, sizeof(log_buf), "Fine partita. Vincitore: %s con %d oggetti.", msg.nickname, msg.punteggio);
         log_event(log_buf);
@@ -461,9 +497,9 @@ void broadcast_fine_partita(void) {
         log_event("Fine partita. Nessun vincitore.");
     }
 
-    for (int i = 0; i < g_gioco.num_giocatori; i++) {
-        if (g_gioco.giocatori[i].attivo)
-            invia_messaggio(g_gioco.giocatori[i].fd, &msg);
+    for (int i = 0; i < partita.num_giocatori; i++) {
+        if (partita.giocatori[i].attivo)
+            invia_messaggio(partita.giocatori[i].fd, &msg);
     }
-    pthread_mutex_unlock(&g_gioco.mutex);
+    pthread_mutex_unlock(&partita.mutex);
 }

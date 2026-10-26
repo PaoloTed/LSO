@@ -35,7 +35,7 @@ typedef struct {
     pthread_mutex_t mutex;                          /* Mutex per sincronizzazione */
 } StatoGioco;
 
-extern StatoGioco g_gioco;
+extern StatoGioco partita;
 
 /* Inizializza il gioco */
 void inizializza_gioco(int timeout, int intervallo);
