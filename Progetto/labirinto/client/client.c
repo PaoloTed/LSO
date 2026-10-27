@@ -132,14 +132,13 @@ int main(int argc, char *argv[]) {
     mostra_mappa_globale(msg.riga, msg.colonna, msg.mappa_globale);
     mostra_mappa_locale(msg.riga, msg.colonna, msg.punteggio, msg.mappa_locale, NULL, 0);
 
-    /* Pattern Master Set vs Working Set da Guida LSO riga 4603 */
     fd_set master_set, read_set;
     FD_ZERO(&master_set);
     FD_SET(STDIN_FILENO, &master_set);
     FD_SET(sock_fd, &master_set);
     int max_fd = (sock_fd > STDIN_FILENO) ? sock_fd : STDIN_FILENO;
 
-    /* Gestione segnali: intercetta SIGINT (Ctrl+C) e SIGTERM per inviare MSG_ESCI */
+    /* intercetta SIGINT (Ctrl+C) e SIGTERM per inviare MSG_ESCI */
     signal(SIGINT, sigint_handler);
     signal(SIGTERM, sigint_handler);
     
@@ -257,7 +256,7 @@ int main(int argc, char *argv[]) {
 
     /* Invio disconnessione in uscita (Ctrl+D / Ctrl+C / SIGINT / SIGTERM)*/
     if (!loop) {
-        printf("\nRicevuto segnale di interruzione: disconnessione in corso...\n");
+        printf("\n Disconnessione in corso...\n");
         Messaggio msg_uscita = {0};
         msg_uscita.tipo = MSG_ESCI;
         invia_messaggio(sock_fd, &msg_uscita);

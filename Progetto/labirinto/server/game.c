@@ -66,8 +66,11 @@ static int autentica_utente(const char *nickname, const char *password) {
 
     if (f != NULL) {
         while (fscanf(f, "%s %s", nick_salvato, pass_salvata) == 2) {
+            /* Se il nickname e' gia presente, controlla la password */
             if (strcmp(nick_salvato, nickname) == 0) {
                 fclose(f);
+                /* Se la password non e' corretta, restituisce 0, 
+                    se corretta 1 */
                 return (strcmp(pass_salvata, password) == 0);
             }
         }
@@ -112,7 +115,7 @@ static void scopri_dintorni(Giocatore *p) {
     }
 }
 
-/* Calcola il vincitore secondo le regole della traccia */
+/* Calcola il vincitore */
 static int trova_vincitore(void) {
     int usciti = 0;
     int ultimo_uscito = -1;
@@ -155,17 +158,13 @@ static int trova_vincitore(void) {
 
 /* Controlla se tutti i giocatori partecipanti sono usciti */
 static int tutti_usciti(void) {
-    int almeno_uno = 0;
     for (int i = 0; i < partita.num_giocatori; i++) {
-        Giocatore *p = &partita.giocatori[i];
-        if (!p->attivo)
-            continue;
-        almeno_uno = 1;
-        if (!p->uscito)
-            return 0;
+        if (partita.giocatori[i].attivo && !partita.giocatori[i].uscito)
+            return 0;  /* Qualcuno è ancora dentro il labirinto */
     }
-    return almeno_uno;
+    return 1;  /* Tutti i giocatori attivi sono usciti */
 }
+
 
 int termina_partita(void) {
     pthread_mutex_lock(&partita.mutex);
@@ -426,7 +425,7 @@ void invia_mappa_globale(int indice) {
     invia_messaggio(fd, &msg);
 }
 
-/* Messaggio MSG_LISTA seguito in memoria dalla lista dei giocatori (array flessibile) */
+/* Messaggio MSG_LISTA con lista dei giocatori */
 typedef struct {
     Messaggio msg;
     InfoGiocatore lista[];
@@ -439,14 +438,13 @@ void invia_lista_giocatori(int indice) {
         return;
     }
 
-    /* 1. Conta i giocatori attivi */
+    /* Conta i giocatori attivi */
     int totale = 0;
     for (int i = 0; i < partita.num_giocatori; i++) {
         if (partita.giocatori[i].attivo)
             totale++;
     }
 
-    /* 2. Alloca e azzera il messaggio seguito da 'totale' InfoGiocatore */
     size_t dimensione = sizeof(MessaggioLista) + totale * sizeof(InfoGiocatore);
     MessaggioLista *ml = malloc(dimensione);
     if (!ml) {
@@ -457,7 +455,7 @@ void invia_lista_giocatori(int indice) {
     ml->msg.tipo = MSG_LISTA;
     ml->msg.num_giocatori = totale;
 
-    /* 3. Copia i dati dei giocatori attivi */
+    /* Copia i dati dei giocatori attivi */
     int k = 0;
     for (int i = 0; i < partita.num_giocatori; i++) {
         if (!partita.giocatori[i].attivo)
@@ -470,7 +468,6 @@ void invia_lista_giocatori(int indice) {
     int fd = partita.giocatori[indice].fd;
     pthread_mutex_unlock(&partita.mutex);
 
-    /* Messaggio e lista sono contigui: un solo invio */
     invia_dati(fd, ml, dimensione);
     free(ml);
 }
@@ -488,8 +485,11 @@ void broadcast_fine_partita(void) {
 
     pthread_mutex_lock(&partita.mutex);
     if (partita.vincitore >= 0) {
-        strncpy(msg.nickname, partita.giocatori[partita.vincitore].nickname, MAX_NICK - 1);
-        msg.punteggio = partita.giocatori[partita.vincitore].punteggio;
+        int vincitoreIndice = partita.vincitore;
+
+        strncpy(msg.nickname, partita.giocatori[vincitoreIndice].nickname, MAX_NICK - 1);
+        msg.punteggio = partita.giocatori[vincitoreIndice].punteggio;
+        
         char log_buf[128];
         snprintf(log_buf, sizeof(log_buf), "Fine partita. Vincitore: %s con %d oggetti.", msg.nickname, msg.punteggio);
         log_event(log_buf);

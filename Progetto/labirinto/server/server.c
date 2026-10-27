@@ -44,7 +44,7 @@ static int create_server_socket(int port) {
     return server_fd;
 }
 
-/* Thread dedicato al singolo client connesso (client_handler) */
+/* Thread dedicato al singolo client connesso */
 static void *client_handler(void *arg) {
     int client_fd = *(int *)arg;
     free(arg);
