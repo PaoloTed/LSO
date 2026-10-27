@@ -166,15 +166,13 @@ static int tutti_usciti(void) {
 }
 
 
+/* Termina la partita */
 int termina_partita(void) {
-    pthread_mutex_lock(&partita.mutex);
-    if (partita.partita_finita) {
-        pthread_mutex_unlock(&partita.mutex);
+    if (partita.partita_finita)
         return 0;
-    }
+
     partita.partita_finita = 1;
     partita.vincitore = trova_vincitore();
-    pthread_mutex_unlock(&partita.mutex);
     return 1;
 }
 
@@ -318,11 +316,8 @@ void muovi_giocatore(int indice, char direzione) {
     strncpy(nick, p->nickname, sizeof(nick));
     int punteggio = p->punteggio;
 
-    int terminata = 0;
-    if ((raccolto || raggiunta_uscita) && tutti_usciti()) {
-        partita.partita_finita = 1;
-        partita.vincitore = trova_vincitore();
-        terminata = 1;
+    if (raggiunta_uscita && tutti_usciti()) {
+        termina_partita();
     }
     pthread_mutex_unlock(&partita.mutex);
 
@@ -341,7 +336,7 @@ void muovi_giocatore(int indice, char direzione) {
 
     invia_mappa_locale(indice, avviso);
 
-    if (terminata)
+    if (partita.partita_finita)
         broadcast_fine_partita();
 }
 

@@ -124,14 +124,18 @@ static void *timer_thread(void *arg) {
             char log_buf[128];
             snprintf(log_buf, sizeof(log_buf), "Partita terminata per timeout (%d secondi).", partita.timeout);
             log_event(log_buf);
-            termina_partita();
-            broadcast_fine_partita();
-            break;
-        }
 
-        /* Invio periodico mappa */
-        if (secondi % partita.intervallo == 0) {
-            broadcast_mappe_globali();
+            pthread_mutex_lock(&partita.mutex);
+            termina_partita();
+            pthread_mutex_unlock(&partita.mutex);
+            
+            broadcast_fine_partita();
+        }
+        else{
+            /* Invio periodico mappa */
+            if (secondi % partita.intervallo == 0) {
+                broadcast_mappe_globali();
+            }
         }
     }
     return NULL;

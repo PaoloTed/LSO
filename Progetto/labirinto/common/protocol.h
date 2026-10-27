@@ -43,7 +43,7 @@ typedef struct {
     int  uscito;
 } InfoGiocatore;
 
-/* Messaggio di rete */
+/* Messaggio tra client e server */
 typedef struct {
     int  tipo;                                          /* Tipo messaggio */
     char nickname[MAX_NICK];                            /* Nickname */
