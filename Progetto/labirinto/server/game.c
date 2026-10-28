@@ -248,7 +248,7 @@ int aggiungi_giocatore(int fd, const char *nickname, const char *password) {
     strncpy(p->nickname, nickname, MAX_NICK - 1);
     p->nickname[MAX_NICK - 1] = '\0';
     memset(p->scoperte, 0, sizeof(p->scoperte));
-    scopri_dintorni(p);
+    p->scoperte[riga][colonna] = 1;
 
     pthread_mutex_unlock(&partita.mutex);
 
