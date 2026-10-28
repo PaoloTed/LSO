@@ -479,6 +479,7 @@ void broadcast_fine_partita(void) {
     msg.tipo = MSG_FINE_PARTITA;
 
     pthread_mutex_lock(&partita.mutex);
+
     if (partita.vincitore >= 0) {
         int vincitoreIndice = partita.vincitore;
 
@@ -492,9 +493,23 @@ void broadcast_fine_partita(void) {
         log_event("Fine partita. Nessun vincitore.");
     }
 
-    for (int i = 0; i < partita.num_giocatori; i++) {
-        if (partita.giocatori[i].attivo)
-            invia_messaggio(partita.giocatori[i].fd, &msg);
+    int count = 0;
+    int *fd_giocatori_attivi = malloc(partita.num_giocatori * sizeof(int));
+    
+    if (fd_giocatori_attivi) {
+        for (int i = 0; i < partita.num_giocatori; i++) {
+            if (partita.giocatori[i].attivo) {
+                fd_giocatori_attivi[count++] = partita.giocatori[i].fd;
+            }
+        }
     }
+
     pthread_mutex_unlock(&partita.mutex);
+
+    if (fd_giocatori_attivi) {
+        for (int i = 0; i < count; i++) {
+            invia_messaggio(fd_giocatori_attivi[i], &msg);
+        }
+        free(fdfd_giocatori_attivis);
+    }
 }
