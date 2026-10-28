@@ -3,10 +3,10 @@
 #include <stdlib.h>
 
 /* Colori ANSI */
-#define COL_BLU    "\033[34m" /* Blu */
-#define COL_ROSSO  "\033[31m" /* Rosso */
-#define COL_GIALLO "\033[33m" /* Giallo */
-#define COL_RESET  "\033[0m"  /* Reset */
+#define COL_BLU    "\033[34m"
+#define COL_ROSSO  "\033[31m"
+#define COL_GIALLO "\033[33m"
+#define COL_RESET  "\033[0m"
 
 static void stampa_cella(char cella, int in_vista_locale) {
     if (cella == CELLA_GIOCATORE)

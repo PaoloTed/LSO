@@ -64,7 +64,7 @@ typedef struct {
 int invia_messaggio(int fd, const Messaggio *msg);
 int ricevi_messaggio(int fd, Messaggio *msg);
 
-/* Invio e ricezione di un numero qualunque di byte (gestiscono short write/read) */
+/* Invio e ricezione di un numero qualunque di byte */
 int invia_dati(int fd, const void *buf, size_t len);
 int ricevi_dati(int fd, void *buf, size_t len);
 
