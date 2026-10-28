@@ -37,16 +37,13 @@ typedef struct {
 
 extern StatoGioco partita;
 
-/* Inizializza il gioco */
 void inizializza_gioco(int timeout, int intervallo);
 
 /* Aggiunge un giocatore verificando le credenziali */
 int  aggiungi_giocatore(int fd, const char *nickname, const char *password);
 
-/* Rimuove un giocatore */
 void rimuovi_giocatore(int indice);
 
-/* Movimento del giocatore */
 void muovi_giocatore(int indice, char direzione);
 
 /* Invio messaggi */

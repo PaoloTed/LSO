@@ -21,7 +21,6 @@ void log_event(const char *msg) {
 
     pthread_mutex_lock(&log_mutex);
 
-    /* Data e ora correnti */
     time_t now = time(NULL);
     char ts[32];
     strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", localtime(&now));

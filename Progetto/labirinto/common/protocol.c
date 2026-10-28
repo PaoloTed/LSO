@@ -40,12 +40,10 @@ int ricevi_dati(int fd, void *buf, size_t len) {
     return 1;
 }
 
-/* Invia un messaggio gestendo short write */
 int invia_messaggio(int fd, const Messaggio *msg) {
     return invia_dati(fd, msg, sizeof(Messaggio));
 }
 
-/* Riceve un messaggio gestendo short read */
 int ricevi_messaggio(int fd, Messaggio *msg) {
     return ricevi_dati(fd, msg, sizeof(Messaggio));
 }

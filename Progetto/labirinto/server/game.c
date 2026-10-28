@@ -12,7 +12,6 @@
 
 StatoGioco partita;
 
-/* Generazione labirinto */
 static void genera_labirinto(Labirinto *m) {
     /* Celle libere */
     for (int r = 0; r < RIGHE_MAPPA; r++) {
@@ -103,7 +102,6 @@ void inizializza_gioco(int timeout, int intervallo) {
     genera_labirinto(&partita.labirinto);
 }
 
-/* Celle scoperte attorno al giocatore */
 static void scopri_dintorni(Giocatore *p) {
     for (int dr = -RAGGIO_VISIBILITA; dr <= RAGGIO_VISIBILITA; dr++) {
         for (int dc = -RAGGIO_VISIBILITA; dc <= RAGGIO_VISIBILITA; dc++) {
@@ -115,7 +113,6 @@ static void scopri_dintorni(Giocatore *p) {
     }
 }
 
-/* Calcola il vincitore */
 static int trova_vincitore(void) {
     int usciti = 0;
     int ultimo_uscito = -1;
@@ -155,7 +152,6 @@ static int trova_vincitore(void) {
     return migliore;
 }
 
-
 /* Controlla se tutti i giocatori partecipanti sono usciti */
 static int tutti_usciti(void) {
     for (int i = 0; i < partita.num_giocatori; i++) {
@@ -165,8 +161,6 @@ static int tutti_usciti(void) {
     return 1;  /* Tutti i giocatori attivi sono usciti */
 }
 
-
-/* Termina la partita */
 int termina_partita(void) {
     if (partita.partita_finita)
         return 0;
@@ -340,7 +334,6 @@ void muovi_giocatore(int indice, char direzione) {
         broadcast_fine_partita();
 }
 
-/* Costruisce la vista locale 5x5 */
 static void componi_vista_locale(const Giocatore *p, char mappa_locale[VISTA_LOCALE][VISTA_LOCALE]) {
     for (int dr = -RAGGIO_VISIBILITA; dr <= RAGGIO_VISIBILITA; dr++) {
         for (int dc = -RAGGIO_VISIBILITA; dc <= RAGGIO_VISIBILITA; dc++) {
