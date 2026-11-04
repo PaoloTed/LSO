@@ -123,12 +123,16 @@ int main(int argc, char *argv[]) {
     printf("Accesso eseguito con successo!\n");
 
     /* Ricezione della mappa globale iniziale */
-    if (ricevi_messaggio(sock_fd, &msg) <= 0 || msg.tipo != MSG_MAPPA_GLOBALE) {
+    if (ricevi_messaggio(sock_fd, &msg) <= 0) {
         fprintf(stderr, "Errore nella ricezione della mappa iniziale.\n");
         close(sock_fd);
         return 1;
     }
-
+    if (msg.tipo != MSG_MAPPA_GLOBALE) {
+        printf("Risposta inattesa dal server (tipo=%d).\n", msg.tipo);
+        close(sock_fd);
+        return 1;
+    }
     mostra_mappa_globale(msg.riga, msg.colonna, msg.mappa_globale);
     mostra_mappa_locale(msg.riga, msg.colonna, msg.punteggio, msg.mappa_locale, NULL, 0);
 
