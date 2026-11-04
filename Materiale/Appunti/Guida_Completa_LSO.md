@@ -2,9 +2,8 @@
 
 > **Corso di Laurea in Informatica — A.A. 2025-2026**  
 > **Prof. Alberto Finzi**  
-> Questa guida copre **tutti gli argomenti** delle lezioni 1–31.
-
----
+> Guida di studio alle lezioni e agli esercizi del corso; contiene adattamenti, integrazioni e rettifiche tecniche. Non sostituisce il corpus originale.
+> **Revisione:** 4 novembre 2026
 
 ## Indice
 
@@ -118,14 +117,14 @@ L'esame di Laboratorio di Sistemi Operativi è composto da **due parti obbligato
    - Redazione di una **relazione tecnica** allegata che documenti l'architettura, le problematiche affrontate, le scelte implementative e i protocolli adottati.
    - I progetti vengono svolti in **gruppi composti da al più 2 studenti** (ammessi singoli solo in casi particolari, es. studenti lavoratori).
    - **Discussione Orale del Progetto:** Tutti i membri del gruppo devono partecipare alla discussione congiunta del codice, illustrando i dettagli implementativi e rispondendo a domande teoriche collegate.
-   - **Regola di consegna:** Il progetto deve essere consegnato prima della prova scritta (con deroga per la sessione anticipata/primo appello). Il voto finale valuta congiuntamente lo scritto e il progetto.
+   - **Regola di consegna:** Il progetto deve essere consegnato prima della prova scritta (con deroga per il primo appello, entro marzo, secondo la slide 9 della presentazione). Il voto finale valuta congiuntamente lo scritto e il progetto.
 
-### 0.3 Prove Parziali vs Appelli Ordinari
-- **Prove Parziali (PA):** Durante il semestre di lezione vengono erogate prove intermedie parziali al calcolatore. Il superamento delle prove parziali esonera lo studente dalla prova scritta complessiva negli appelli della sessione d'esame.
-- **Appelli Ordinari:** Negli appelli ufficiali (Gennaio/Febbraio, Giugno/Luglio, Settembre) è possibile sostenere la prova scritta completa in un'unica soluzione. I membri di uno stesso gruppo di progetto possono sostenere la prova scritta in appelli diversi, ferma restando la discussione congiunta del progetto.
+### 0.3 Prove Parziali e Avvisi d'Esame
+
+Il materiale comprende una simulazione di prova parziale (Lezione 28). Questo non dimostra una regola generale di esonero dallo scritto. Calendario, validità dei parziali e modalità dei singoli appelli vanno ricavati dall'avviso ufficiale relativo all'appello; non sono deducibili dai PDF disponibili.
 
 ### 0.4 Ambiente di Sviluppo di Riferimento
-- **Sistema Operativo:** Distribuzione Linux raccomandata **Ubuntu LTS** (22.04 LTS o 24.04 LTS) o Debian.
+- **Sistema Operativo:** Le slide indicano **Ubuntu 24.04 LTS**, ammettendo altre distribuzioni/versioni. Gli strumenti e le configurazioni seguenti sono suggerimenti aggiuntivi della guida, non requisiti attestati dalle slide.
 - **Toolchain di Compilazione e Debug:**
   - Compilatore: `gcc` (GNU Compiler Collection) con flag raccomandati `-Wall -Wextra -pthread`.
   - Debugger e Tracing: `gdb`, `strace`, `valgrind` (rilevamento memory leak).
@@ -133,7 +132,7 @@ L'esame di Laboratorio di Sistemi Operativi è composto da **due parti obbligato
 - **Opzioni di Configurazione su PC Personale:**
   1. *Dual Boot nativo:* Partizione Linux dedicata (consigliata per le massime prestazioni e pieno accesso alle chiamate di sistema del kernel).
   2. *Macchina Virtuale:* Linux ospitato tramite VirtualBox, VMware Workstation o KVM.
-  3. *WSL2 (Windows Subsystem for Linux 2):* Ubuntu su WSL2 con supporto a systemd e Docker Desktop abilitato.
+  3. *WSL2 (Windows Subsystem for Linux 2):* Linux su WSL2; systemd e Docker Desktop dipendono dalle attività e dalla configurazione scelta.
 
 ---
 
@@ -300,6 +299,17 @@ rwx rwx rwx
 rwx = 7, rw- = 6, r-x = 5, r-- = 4, -wx = 3, -w- = 2, --x = 1, --- = 0
 ```
 
+#### Permessi iniziali e `umask`
+
+In assenza di ACL predefinite, i permessi di creazione sono `mode & ~umask`: `open(..., O_CREAT, 0666)` con umask `0022` crea normalmente `0644`; una directory richiesta con `0777` nasce `0755`. `umask` elimina bit, non ne aggiunge; non rende eseguibile un file richiesto con `0666`. ACL predefinite possono modificare questo calcolo. `chmod` successiva non applica la umask.
+
+**Provenienza del codice:** esempio aggiuntivo della guida sui comandi `umask`; non trascritto dalle slide.
+
+```bash
+umask          # visualizza la maschera corrente
+umask 022      # influenza le creazioni successive nella shell e nei figli
+```
+
 ### 2.9 Link
 
 **Hard link** (`ln name1 name2`):
@@ -363,7 +373,10 @@ La **shell** è un **interprete di comandi** che si interpone tra l'utente e il 
 ### 3.2 File di Inizializzazione
 
 - Shell **interattiva, non login** → legge `~/.bashrc`
-- Shell **interattiva, login** → legge uno tra: `/etc/profile`, `~/.bash_profile`, `~/.bash_login`, `~/.profile`
+- Shell **login** → legge prima `/etc/profile`, poi il primo file esistente e leggibile fra `~/.bash_profile`, `~/.bash_login`, `~/.profile`, in quest’ordine.
+- Shell **non interattiva** → se `BASH_ENV` è impostata, ne espande il valore e legge il file indicato; non legge normalmente `~/.bashrc`.
+
+**Rettifica alle slide (Lezione 3):** `/etc/profile` non è un’alternativa ai profili personali; precede la ricerca del profilo utente.
 
 ### 3.3 Variabili di Shell
 
@@ -499,12 +512,13 @@ ls | grep -v pluto | tail -3 | head -1  # come funziona e cosa fa verra' spiegat
 find /home -name "*.sh" -exec rm -i {} \;
 ```
 
-### 4.3 Comandi di Utilità su Testo <span style="float:right; font-size: 0.6em;">[Torna all'indice](#indice)</span>
+### 4.3 Comandi di Utilità su Testo
+<div align="right"><em><a href="#indice">Torna all’indice</a></em></div>
 
 | Comando | Funzione |
 |---------|----------|
 | `cat [-n] [-b] file` | Concatena e visualizza (`-n`: numera tutte le righe, `-b`: numera solo righe non vuote) |
-| `wc [-l] [-w] [-c] file` | Conta: righe (`-l`), parole (`-w`), caratteri (`-c`) |
+| `wc [-l] [-w] [-c] file` | Conta: righe (`-l`), parole (`-w`), byte (`-c`), caratteri (`-m`) |
 | `cut -d: -f1,5 file` | Estrae colonne (`-d:`: definisce delimitatore, `-f`: indica quali campi/colonne estrarre) |
 | `paste file1 file2` | Compone file affiancandoli |
 | `sort [-n] [-r] [-t:] [-k] file` | Ordina righe (`-n`: numerico, `-r`: inverso, `-t:`: delimitatore, `-k`: numero del campo da usare come chiave di ordinamento) |
@@ -581,7 +595,7 @@ grep -i -n "errore di sistema" /var/log/syslog
 | Opzione | Significato |
 |---------|-------------|
 | `-v` | Stampa le righe che **non** corrispondono |
-| `-c` | Solo il numero di occorrenze |
+| `-c` | Numero di righe selezionate (non numero di match nella stessa riga) |
 | `-i` | Case-insensitive |
 | `-n` | Mostra numero di riga |
 
@@ -770,23 +784,23 @@ done
 
 **for:**
 ```bash
-for a in 1 2 3; do   output: argomenti su righe separate
+for a in 1 2 3; do # output: argomenti su righe separate
     echo $a
 done
 
-for a in $(ls); do    output: argomenti su righe separate
+for a in $(ls); do # output: argomenti su righe separate
     echo $a
 done
 
-for a in "$@"; do output: argomenti su righe separate
+for a in "$@"; do # output: argomenti su righe separate
     echo $a
 done
 
-for a in "$*"; do output: argomenti su una sola stringa
+for a in "$*"; do # output: argomenti su una sola stringa
     echo $a
 done
 
-for a in *.txt; do    output: file .txt nella directory corrente
+for a in *.txt; do # output: file .txt nella directory corrente
     echo $a
 done
 ```
@@ -806,12 +820,59 @@ esac
 a=7
 echo $(( a + 1 ))         # 8
 echo $(( a * 3 > 8 ))     # 1 (vero)
-echo $(( a++ ))  echo $a  # 7, poi a diventa 8
+echo $(( a++ )); echo "$a"  # Correzione: ; separa due comandi. Stampa 7, poi 8.
 ```
 
 Operatori: `+`, `-`, `/`, `*`, `%`, `**`, `<<`, `>>`, `&`, `|`, `~`, `<`, `<=`, `==`, `!=`, `>`, `>=`, `&&`, `||`, `!`
 
 ---
+
+### 6.7 Input Interattivo con `read`
+
+Fonti: Lezione 5, p. 23; Lezione 8, funzioni-bash, p. 4. Il builtin Bash `read` legge una riga, la suddivide secondo `IFS` e assegna i campi alle variabili; l'ultima riceve anche i campi rimanenti. Senza nomi usa `REPLY`. `-r` conserva i backslash, `-p` mostra un prompt. Restituisce un valore non nullo su EOF/errore.
+
+**Provenienza del codice:** esempio aggiuntivo della guida. Lezioni 5 e 8 trattano `read`, ma prompt, ciclo `IFS= read -r` e gestione dell’ultima riga qui mostrati sono una composizione della guida.
+
+```bash
+if IFS= read -r -p 'Nome completo: ' nome; then
+    printf 'Ciao %s\n' "$nome"
+fi
+# Conserva spazi e backslash, e anche l'ultima riga priva di newline:
+while IFS= read -r riga || [ -n "$riga" ]; do
+    printf '%s\n' "$riga"
+done < dati.txt
+```
+
+### 6.8 Approfondimenti dal Manuale Bash Supplementare
+
+Questi costrutti completano il supporto allo studio; il manuale supplementare non determina da solo il programma d'esame.
+
+- **Scope ed esportazione:** `x=valore` crea una variabile della shell; `export x` la include nell'ambiente dei programmi figli. `local x` limita la variabile alla funzione Bash e alle funzioni da essa chiamate; il figlio non può cambiare l'ambiente del padre.
+- **Espansioni:** `${x:-default}` usa un valore alternativo se x è vuota/non definita; `${x:=default}` lo assegna; `${x#pattern}`/`${x##pattern}` eliminano il più breve/lungo prefisso, `%`/`%%` il suffisso. Le espansioni non quotate possono subire word splitting e globbing: usare `"$x"` e `"$@"`.
+- **Array:** `a=(uno "due tre")`, `"${a[@]}"` conserva gli elementi separati; `${#a[@]}` ne conta gli elementi. `declare -A m` crea un array associativo in Bash.
+- **Argomenti:** `shift` elimina `$1` e rinumera i successivi; `getopts` analizza opzioni brevi, usando `OPTARG` per il valore e `OPTIND` per la posizione.
+- **Job control:** in shell interattiva `comando &`, `jobs`, `fg`, `bg`; Ctrl+Z sospende il job in foreground. Negli script usare PID (`$!`) e `wait` senza presumere il job control interattivo.
+- **Trap:** `trap 'pulizia' EXIT` registra la pulizia all'uscita; `trap '...' INT TERM` gestisce segnali. Non si possono catturare KILL e STOP.
+
+**Provenienza del codice:** esempio aggiuntivo della guida su `getopts`, ispirato alle funzionalità del manuale Bash supplementare; non è un sorgente del professore.
+
+```bash
+#!/bin/bash
+verbose=0
+output=risultato.txt
+# Legge un'opzione alla volta: -v senza valore, -o seguito dal nome del file.
+while getopts ':vo:' opt; do
+    case "$opt" in
+        v) verbose=1 ;;
+        o) output=$OPTARG ;;
+        :) printf 'Manca il valore di -%s\n' "$OPTARG" >&2; exit 2 ;;
+        \?) printf 'Opzione sconosciuta: -%s\n' "$OPTARG" >&2; exit 2 ;;
+    esac
+done
+# Toglie gli argomenti già consumati da getopts.
+shift "$((OPTIND - 1))"
+printf 'verbose=%s output=%s argomenti=%s\n' "$verbose" "$output" "$#"
+```
 
 ## 7. Sed e Awk
 <div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
@@ -902,6 +963,48 @@ sed -e 's/.*/lui dice: &/' file
 # ovunque si trovi, & prenderà esattamente la parola trovata.
 sed 's/errore/[&]/g' file
 ```
+
+#### Sed Avanzato: Registri, Salti e File
+
+Fonte: Lezione 6, pp. 6–8 e 25–26. Il **pattern space** contiene il testo del ciclo corrente; l'**hold space** conserva dati fra cicli. I comandi minuscoli sostituiscono, quelli maiuscoli aggiungono separando con newline.
+
+| Comando | Effetto |
+|---|---|
+| `h` / `H` | Copia / accoda il pattern space nell'hold space |
+| `g` / `G` | Copia / accoda l'hold space nel pattern space |
+| `x` | Scambia i due registri |
+| `N` | Aggiunge la riga successiva al pattern space |
+| `D` | Elimina fino al primo newline e riparte dallo script sul residuo, senza nuova lettura; senza newline equivale a `d` |
+| `:nome` | Definisce un'etichetta |
+| `b nome` | Salto incondizionato; senza nome va a fine script |
+| `t nome` | Salta se una sostituzione è riuscita dalla lettura della riga o dall'ultimo `t` |
+| `r file` | Accoda in output il contenuto del file |
+| `w file` | Scrive il pattern space nel file |
+| `c\testo` | Sostituisce le righe selezionate con testo (usare la forma su nuova riga sotto) |
+| `y/abc/ABC/` | Traslittera i singoli caratteri corrispondenti |
+
+In BRE `\(...\)` cattura un gruppo; `\1`, `\2`, ecc. richiamano i gruppi nel pattern o nella sostituzione. `&` nella sostituzione richiama invece l'intero match. Con `sed -E` i gruppi usano `(...)`.
+
+**Provenienza del codice:** esempi aggiuntivi della guida sui comandi della Lezione 6. La slide 25 mostra invece la trasformazione di tre gruppi in `Sig \1-\2 Da \3`; i casi Ada/Lovelace, hold space, salti e finestre qui sotto non sono trascrizioni di quella slide.
+
+```bash
+# Scambia nome e cognome: "Ada Lovelace" -> "Lovelace, Ada"
+sed 's/^\([^ ]*\) \([^ ]*\)$/\2, \1/' nomi.txt
+# Ricorda la prima riga, poi la accoda alla seconda: output "seconda\nprima"
+printf 'prima\nseconda\n' | sed -n '1h;2{G;p;}'
+# Riduce sequenze di spazi ripetendo finché s riesce
+printf 'a    b\n' | sed ':ripeti;s/  / /;t ripeti'
+# Finestre di due righe: D conserva la seconda per il ciclo seguente
+sed -n 'N;p;D' dati.txt
+# Inserisce un file dopo la seconda riga; scrive le righe ERROR in un altro file
+sed '2r aggiunta.txt' dati.txt
+sed -n '/ERROR/w errori.txt' dati.txt
+sed '2c\
+riga sostituita' dati.txt
+printf 'abc cab\n' | sed 'y/abc/ABC/'
+```
+
+`w` apre il file di output per la sessione Sed: non è un accumulo persistente fra invocazioni. Evitare di usare lo stesso file come input e destinazione della redirezione shell, che lo troncherebbe prima della lettura.
 
 ### 7.2 Awk — Linguaggio di Elaborazione Testuale
 
@@ -1163,6 +1266,23 @@ awk '{ print $1 | "sort -u" }' file.txt
 
 ---
 
+#### Awk: `next` e Redirezioni su File
+
+Fonti: Lezione 6, pp. 43–44; Lezione 7, p. 19. `next` termina l'elaborazione del record corrente e legge il successivo, saltando le regole rimanenti. `print ... > file` scrive su file, `>>` accoda, `|` invia a un comando. Awk mantiene aperta la destinazione fino a `close(file)` o alla fine del programma; `>` non tronca a ogni record, ma alla prima apertura.
+
+**Provenienza del codice:** esempio aggiuntivo della guida. `next` e redirezioni sono trattati nelle lezioni citate; il filtro con destinazione `validi.txt` è stato scritto per la guida.
+
+```bash
+awk '
+    /^[[:space:]]*#/ { next } # Salta i commenti: non esegue le regole successive.
+    NF == 0 { next }         # Salta le righe vuote.
+    { print $0 > "validi.txt" } # Le altre righe vanno nel file.
+    END { close("validi.txt") }
+' dati.txt
+```
+
+Se si chiude e riapre la stessa destinazione con `>`, si rischia di troncare quanto già scritto: per quell'uso scegliere `>>`.
+
 ## 8. Funzioni in Bash
 <div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
@@ -1231,7 +1351,7 @@ count_processes () {
 Per chi proviene da linguaggi ad alto livello come Java, il C presenta alcune differenze architetturali critiche:
 - **Paradigma**: Il C è puramente procedurale. Non ha classi o oggetti nativi, solo funzioni e `struct` (record di dati).
 - **Gestione Memoria Manuale**: Non c'è il Garbage Collector. La memoria va allocata (`malloc`, `calloc`) e liberata (`free`) esplicitamente, pena memory leak.
-- **Puntatori**: Una variabile che memorizza l'indirizzo fisico di memoria di un'altra variabile (o funzione). 
+- **Puntatori**: Una variabile che memorizza l'indirizzo virtuale di un oggetto o funzione nello spazio del processo.
 - **Array e Stringhe**: Gli array sono solo blocchi contigui di memoria, privi di controlli di limite (nessun "Index Out of Bounds" automatico; se sfori, corrompi la memoria). Le stringhe sono array di char terminati dal carattere nullo `'\0'`.
 - **Il Preprocessore**: Fase precedente alla compilazione in cui vengono risolte le macro e le inclusioni. Ad esempio, `#include <stdio.h>` copia e incolla letteralmente le firme delle funzioni, e `#define MAX 10` sostituisce testualmente ogni "MAX" con "10" prima ancora che il compilatore veda il codice.
 
@@ -1498,11 +1618,39 @@ int fd = open("prova.txt", O_RDONLY);
 off_t currpos = lseek(fd, 0, SEEK_CUR);
 ```
 
+#### File con Buchi (Sparse File)
+
+Fonte: Lezione 9, pp. 25–26. `lseek` oltre EOF sposta soltanto l'offset; non estende da sola il file. Una successiva scrittura estende la dimensione logica, e la zona intermedia viene letta come byte zero. Su filesystem che supportano file sparsi quei blocchi possono non essere allocati: dimensione logica e spazio occupato differiscono.
+
+**Provenienza del codice:** esempio `file.hole` della Lezione 9, pp. 25–26: ripristinati i due buffer e l’offset 20 del professore al posto della variante A/Z della guida. Sono commentati solo il troncamento del file riutilizzato e l’uscita in caso di errore. Per semplicità, come nell’originale, una scrittura incompleta è segnalata come errore.
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+
+char buf1[] = "abcdefghij";
+char buf2[] = "ABCDEFGHIJ";
+
+int main(void) {
+    // Correzione: O_TRUNC evita di lasciare in fondo dati di un file precedente.
+    int fd = open("file.hole", O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
+    if (fd < 0) { perror("open"); return 1; } // Senza file aperto non proseguire.
+    if (write(fd, buf1, 10) != 10) { perror("write buf1"); close(fd); return 1; }
+    // L'offset passa da 10 a 20: i dieci byte intermedi sono il buco.
+    if (lseek(fd, 20, SEEK_SET) == -1) { perror("lseek"); close(fd); return 1; }
+    if (write(fd, buf2, 10) != 10) { perror("write buf2"); close(fd); return 1; }
+    close(fd); // Se le operazioni riescono, la dimensione logica è 30 byte.
+    return 0;
+}
+```
+
 ### 10.4 Gestione Errori con `errno` e `perror`
 
 Quando una system call fallisce, **non lancia un'eccezione** come in altri linguaggi. Invece:
 1. La funzione restituisce **-1** (o `NULL` per funzioni che ritornano puntatori).
-2. Il kernel imposta la variabile globale **`errno`** con un codice numerico che identifica il tipo di errore.
+2. La funzione imposta **`errno`**, locale al thread, con un codice numerico che identifica il tipo di errore. Leggerla solo dopo un ritorno che segnala un errore; una chiamata riuscita non è tenuta ad azzerarla. Le funzioni pthread in genere restituiscono direttamente il codice d’errore: usare `strerror(rc)`, non `perror()`, per quel codice.
 
 ```c
 #include <errno.h>
@@ -1634,44 +1782,111 @@ fstat(fd, &filestat_fd);     // eseguiamo la stat sul file descriptor
 printf("permessi: %o\n", filestat_fd.st_mode);
 ```
 
-### 10.8 Esempio Completo: Copia tra File
+### 10.8 Esempio: Copia tra File con Scritture Parziali
 
+Adattamento dell'esempio didattico: `copia dest sorg`. Si assume che sorgente e destinazione identifichino file distinti (non due hard link allo stesso file).
+
+**Provenienza del codice:** esercizio `copia.c` della Lezione 10, esercitazione I/O, pp. 24–26, nella forma già presente nella guida. Sono mantenuti argomenti, nomi e permessi `0777`; le sole correzioni funzionali (header, scritture parziali ed errori di I/O) sono spiegate nei commenti.
 ```c
 #include <stdlib.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <unistd.h> // Correzione: dichiara read, write e close.
+#include <errno.h>  // Serve per riconoscere una chiamata interrotta.
 #define BUFDIM 1000
 
 int main(int argc, char **argv) {
     int infile, outfile, nread;
     char buffer[BUFDIM];
-    if (argc != 3) { 
-        printf("Uso: copia dest sorg\n"); 
-        exit(1); 
+    if (argc != 3) {
+        printf("Uso: copia dest sorg\n");
+        exit(1);
     }
     if ((infile = open(argv[2], O_RDONLY)) < 0) {
         perror("apertura sorgente");
-        exit(1); 
+        exit(1);
     }
-    if ((outfile = creat(argv[1], 0777)) < 0) { 
-        perror("apertura dest"); 
-        close(infile); 
-        exit(1); 
+    if ((outfile = creat(argv[1], 0777)) < 0) {
+        perror("apertura dest");
+        close(infile);
+        exit(1);
     }
-    while ((nread = read(infile, buffer, BUFDIM)) > 0) {
-        if (write(outfile, buffer, nread) == -1) {
-            close(infile); 
-            close(outfile);
-            exit(1);
+    for (;;) {
+        nread = read(infile, buffer, BUFDIM);
+        if (nread < 0 && errno == EINTR) continue; // Ripeti la lettura interrotta.
+        if (nread <= 0) break;                    // EOF oppure errore.
+
+        // Correzione: write può scrivere meno di nread byte.
+        // Riparti dal primo byte non ancora scritto, senza perdere dati.
+        ssize_t scritti = 0;
+        while (scritti < nread) {
+            ssize_t n = write(outfile, buffer + scritti, nread - scritti);
+            if (n < 0 && errno == EINTR) continue;
+            if (n <= 0) {
+                fprintf(stderr, "Errore durante la scrittura\n");
+                close(infile);
+                close(outfile);
+                return 1;
+            }
+            scritti += n;
         }
     }
-    close(infile); 
-    close(outfile);
-    return 0;
+    // Correzione: prima l'errore finale di read veniva ignorato.
+    if (nread < 0) perror("read");
+    close(infile);
+    // Correzione: alcuni errori di scrittura possono emergere solo alla chiusura.
+    if (close(outfile) < 0) { perror("close dest"); return 1; }
+    return nread < 0 ? 1 : 0;
 }
 ```
 
 ---
+
+### 10.9 Tipi di File e API sui Permessi
+
+Fonte: Lezione 9, pp. 49–62. `<sys/stat.h>` fornisce macro che verificano i bit di tipo in `st_mode`:
+
+| Macro | Tipo |
+|---|---|
+| `S_ISREG(m)` | File regolare |
+| `S_ISDIR(m)` | Directory |
+| `S_ISCHR(m)` / `S_ISBLK(m)` | Dispositivo a caratteri / blocchi |
+| `S_ISFIFO(m)` | FIFO o pipe |
+| `S_ISLNK(m)` | Link simbolico |
+| `S_ISSOCK(m)` | Socket |
+
+`stat` segue i symlink; `lstat` descrive il link stesso; `fstat` opera sul descrittore aperto. Per riconoscere un symlink usare `lstat` con `S_ISLNK(st.st_mode)`. I bit di permesso si testano con `S_IRUSR`, `S_IWGRP`, ecc.; non confrontare `st_mode` intero con una singola costante di tipo.
+
+**Provenienza del codice:** riepilogo delle dichiarazioni delle API trattate in Lezione 9, pp. 54–62; non è un programma originale del docente.
+
+```c
+#include <unistd.h>
+#include <sys/stat.h>
+int access(const char *path, int mode); // F_OK o R_OK|W_OK|X_OK
+int chmod(const char *path, mode_t mode);
+int fchmod(int fd, mode_t mode);
+int chown(const char *path, uid_t owner, gid_t group);
+int fchown(int fd, uid_t owner, gid_t group);
+int lchown(const char *path, uid_t owner, gid_t group);
+```
+
+Tutte restituiscono 0 oppure -1 con `errno`. `access` verifica usando UID/GID **reali** (con regole particolari per privilegi/capability), mentre l'apertura ordinaria usa le credenziali effettive del processo: su Linux contano filesystem UID/GID, gruppi supplementari, capability e ACL. Per un processo ordinario si seleziona la classe proprietario, altrimenti gruppo se applicabile, altrimenti altri; non si sommano le tre classi.
+
+`chmod`/`fchmod` richiedono proprietà del file o privilegio appropriato; cambiare il proprietario richiede normalmente privilegio, e il cambio gruppo da parte del proprietario è limitato ai gruppi ammessi. `chown` segue i symlink, `lchown` cambia il link, `fchown` usa il file aperto; passando `(uid_t)-1` o `(gid_t)-1` si lascia invariato quel campo. Un cambio di proprietà può cancellare set-ID e capability del file.
+
+Non usare `access` seguito da `open` come autorizzazione sicura: fra le due operazioni il pathname può cambiare (TOCTOU). Eseguire l'operazione necessaria e gestirne direttamente l'errore; le API su fd riducono le ambiguità del pathname dopo l'apertura.
+
+### 10.10 I/O dei Dispositivi e Terminali
+
+Fonte: Lezione 10, in_out_dispositivi, pp. 1–4. Il kernel espone interfacce uniformi (`open/read/write/close`) tramite driver, ma i dispositivi hanno proprietà diverse.
+
+- **A blocchi:** HDD, SSD e altri dispositivi con accesso a blocchi indirizzabili. Il sottosistema a blocchi può accodare, unire e riordinare richieste tramite I/O scheduler e usare cache. Politiche e scheduler dipendono da driver e dispositivo.
+- **A caratteri:** interfacce a stream/eventi come terminali, `/dev/null`, `/dev/zero` e input. Non si deve dedurre che ogni character device sia privo di buffering o supporti le stesse operazioni: dipende dal driver.
+- **Di rete:** interfacce gestite dal sottosistema di rete, normalmente usate dall'applicazione tramite socket; non sono normali file a blocchi/carat­teri in `/dev`.
+
+I terminali usano strutture kernel come `tty_struct` per stato, code e controllo di flusso. La **line discipline** è il livello fra driver e processo che interpreta i caratteri: echo, editing, conversioni CR/LF e generazione di segnali (es. Ctrl+C al gruppo in foreground). Su Linux la disciplina ordinaria è `N_TTY`.
+
+In modalità **canonica** la lettura normalmente riceve righe dopo invio o un delimitatore; in modalità **non canonica** disponibilità e attesa dipendono anche da `VMIN`/`VTIME`. `termios`, `tcgetattr` e `tcsetattr` permettono di configurarle; `stty -a` mostra la configurazione. Stdin/stdout possono riferirsi a un terminale, a file o a pipe: non sono intrinsecamente terminali.
 
 ## 11. Processi Unix
 <div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
@@ -1707,7 +1922,9 @@ pid_t fork(void);
   - `-1` in caso di errore
 
 **Cosa ereditano e memorie separate:**
-- **Condividono:** Il codice sorgente (Text segment), le variabili di ambiente, la working directory e i **File Descriptor** aperti prima della `fork()`.
+- **Ereditano copie indipendenti:** ambiente, riferimento alla working directory e tabella dei descrittori. `chdir()` e modifiche all’ambiente nel figlio non modificano il padre.
+- **Condividono le open file descriptions:** i descrittori ereditati si riferiscono agli stessi oggetti kernel, quindi condividono offset e file status flags (`O_APPEND`, ecc.); i descriptor flags (`FD_CLOEXEC`) appartengono alle entry distinte.
+- **Text segment:** contiene codice macchina, non sorgente; le pagine possono essere condivise fisicamente. Le regioni `MAP_SHARED` restano condivise.
 - **Copia indipendente:** Il figlio riceve una *copia* esatta dei dati (variabili, heap, stack) del padre. Dopo la fork, queste memorie sono isolate: se un processo modifica una variabile, l'altro non vedrà la modifica.
 
 **Come gestire il flusso (Valore di ritorno):**
@@ -1740,37 +1957,26 @@ if (pid < 0) {
 
 ### 11.3.1 `vfork()`
 
-Simile a `fork()`, ma:
-- **Non copia** lo spazio di indirizzamento
-- Il figlio esegue nello spazio del padre
-- Il figlio esegue **per primo** fino a `exec()` o `_exit()`
-- Usato tipicamente prima di `exec()` per efficienza
+Su Linux sospende il thread chiamante nel padre finché il figlio esegue `exec` o `_exit`; il figlio usa temporaneamente lo stesso spazio di indirizzamento. È un'interfaccia storica con vincoli molto più stretti di `fork`.
 
-**Esempio vfork vs fork:**
+**Rettifica alle slide (Lezione 11, processiUnix2, pp. 62–64):** l'esempio che modifica una variabile e chiama `printf()` nel figlio non è un programma portabile: il comportamento è indefinito secondo la descrizione storica POSIX. Non si può garantire che il padre stampi 100. Il figlio non deve modificare dati (salvo la variabile `pid_t` che riceve il ritorno), tornare dalla funzione chiamante o chiamare funzioni diverse da `exec` e `_exit` prima di sostituire il programma/terminare.
+
+Frammento didattico minimo (preferire `fork` o `posix_spawn` nei programmi ordinari):
+
+**Provenienza del codice:** frammento aggiuntivo della guida per illustrare i vincoli di `vfork`. Sostituisce il confronto storico della Lezione 11, processiUnix2, pp. 62–64; non è il codice di quelle slide.
 
 ```c
-// Esempio fork (copia memoria)
-int variabile_condivisa = 10;
-pid_t pid = fork();
-if (pid == 0) {
-    printf("Figlio (fork): modifica variabile...");
-    variabile_condivisa = 100; // modifica locale, non impatta il padre
-    _exit(0);
-}
-wait(NULL); // Non ci interessa il valore del figlio
-printf("Padre (fork): variabile=%d\n", variabile_condivisa); // sempre 10
-
-// Esempio vfork (condivide memoria finché non c'è exec)
-int variabile_condivisa = 10;
 pid_t pid = vfork();
 if (pid == 0) {
-    printf("Figlio (vfork): modifica variabile...");
-    variabile_condivisa = 100; // modifica VISIBILE al padre!
-    _exit(0);
+    // Correzione: qui niente printf o modifiche a variabili del padre, solo exec/_exit.
+    execl("/bin/true", "true", (char *)NULL);
+    _exit(127); // niente perror/printf/exit nel figlio
 }
-wait(NULL);
-printf("Padre (vfork): variabile=%d\n", variabile_condivisa); // vedrà 100
+if (pid < 0) perror("vfork");
+else while (waitpid(pid, NULL, 0) < 0 && errno == EINTR) { }
 ```
+
+[Riferimento: vfork(2)](https://man7.org/linux/man-pages/man2/vfork.2.html).
 
 ### 11.4 Terminazione di Processi
 
@@ -1818,8 +2024,8 @@ Un processo può terminare in due modalità:
 
 **Processo orfano:**
 - Un figlio il cui padre è terminato
-- Viene "adottato" da **init** (PID=1)
-- init chiama `wait()` → niente zombie
+- Su Linux viene adottato dal più vicino antenato vivo marcato **subreaper**, oppure da **init** (PID 1 del namespace) se non ne esiste uno idoneo
+- L’adottante può raccoglierlo con `wait()`/`waitpid()`; deve effettivamente farlo per evitare zombie (vedi §23.3)
 
 ### 11.6 `wait()` e `waitpid()`
 
@@ -1862,6 +2068,19 @@ Passando la costante `WNOHANG` come opzione, si ordina alla system call di compo
 - `WEXITSTATUS(status)` → exit status
 - `WIFSIGNALED(status)` → terminazione da segnale
 
+#### Stati Stop/Continue dei Figli
+
+Fonte: Lezione 11, processiUnix2, pp. 13–19. `waitpid(pid, &status, WUNTRACED | WCONTINUED)` osserva anche figli fermati e ripresi; `WNOHANG` rende il controllo non bloccante. Se restituisce 0 non c'è uno stato da decodificare, se -1 controllare `errno`.
+
+| Test dello stato | Informazione valida solo dopo quel test |
+|---|---|
+| `WIFEXITED(status)` | `WEXITSTATUS(status)` (8 bit di exit code) |
+| `WIFSIGNALED(status)` | `WTERMSIG(status)` |
+| `WIFSTOPPED(status)` | `WSTOPSIG(status)`; usare `WUNTRACED` per figli non tracciati |
+| `WIFCONTINUED(status)` | Ripresa mediante SIGCONT; richiede `WCONTINUED` |
+
+Uno stato stopped/continued non è una terminazione: il padre deve continuare a osservare il figlio fino a exit/segnale fatale se vuole raccoglierlo.
+
 ### 11.7 La Famiglia `exec`
 
 #### A cosa serve?
@@ -1873,7 +2092,8 @@ Passando la costante `WNOHANG` come opzione, si ordina alla system call di compo
 > Se `exec` ha successo, **non ritorna mai**: il vecchio codice è stato cancellato. Il codice dopo `exec()` viene eseguito solo in caso di errore.
 
 ```c
-// Ogni exec deve essere PRECEDUTA da una fork() o vfork(), viene chiamato dal figlio generato da fork()
+// exec può essere chiamata direttamente: sostituisce il programma chiamante.
+// fork + exec serve quando si vuole mantenere anche il processo originario.
 int execl(char *pathname, char *arg0, ... );            // lista argomenti, percorso esatto
 int execv(char *pathname, char *argv[]);                // array argomenti, percorso esatto
 int execlp(char *filename, char *arg0, ... );           // lista argomenti, cerca nel PATH
@@ -2041,10 +2261,11 @@ int main() {
 ```c
 #include <stdlib.h>
 int system(const char *command);
-// Ritorna: exit status del comando, -1 se fork/wait fallisce
+// Ritorna uno stato codificato come waitpid; -1 se creazione/attesa fallisce
 ```
 
 #### Esempio Base con `system()`
+**Provenienza del codice:** esempio già presente nella guida, mantenuto senza modifiche: controlla il fallimento di `system`. Per leggere il codice di uscita del comando occorrono separatamente `WIFEXITED(ret)` e poi `WEXITSTATUS(ret)`; `ret` non è direttamente l’exit code.
 ```c
 #include <stdlib.h>
 #include <stdio.h>
@@ -2276,7 +2497,7 @@ int chroot(const char *path);  // richiede privilegi root!
 // ritorna 0 successo, -1 errore
 ```
 
-`chroot` cambia quella che il processo percepisce come la **directory radice `/`**. Dopo la chiamata, il processo non riesce più ad accedere a nessun file al di fuori della nuova root: è **intrappolato** in quella directory e nelle sue sottodirectory. Questo è il concetto alla base del **sandboxing**.
+`chroot` cambia la **directory radice `/`** usata per risolvere i pathname. Non modifica CWD o descrittori aperti e non costituisce una sandbox completa: descrittori esterni e privilegi possono permettere accessi o evasione. Anche dopo `chdir("/")` non garantisce un confinamento assoluto. [Riferimento: chroot(2)](https://man7.org/linux/man-pages/man2/chroot.2.html).
 
 ```
 Filesystem reale:          Dopo chroot("/jail"):
@@ -2287,7 +2508,7 @@ Filesystem reale:          Dopo chroot("/jail"):
 │   ├── bin/
 │   ├── etc/
 │   └── lib/
-└── home/   ← inaccessibile al processo!
+└── home/   ← fuori dalla nuova root per i pathname assoluti
 ```
 
 ```c
@@ -2303,14 +2524,14 @@ if (chdir("/") == -1) {
     exit(1);
 }
 
-// Da qui in poi, il processo è bloccato dentro /var/jail
+// I pathname assoluti vengono risolti rispetto a /var/jail
 // Questo cercherà /var/jail/etc/passwd nel filesystem reale:
 open("/etc/passwd", O_RDONLY);
 ```
 
 > **Perché dopo `chroot()` bisogna fare SEMPRE `chdir("/")`?**  
 > La system call `chroot(path)` modifica **solo** il riferimento alla root directory (`/`) del processo, ma **NON tocca la directory di lavoro corrente (CWD)**!  
-> Se non si esegue subito `chdir("/")`, la CWD del processo rimane la cartella in cui si trovava prima della chiamata (che ora è *esterna* alla jail). Un attaccante potrebbe risalire l'albero con percorsi relativi (`../../`) ed **evadere dal sandbox** (*chroot escape / jailbreak*).
+> Se non si esegue subito `chdir("/")`, la CWD del processo rimane quella precedente, che potrebbe essere *esterna* alla jail. Un attaccante potrebbe risalire l'albero con percorsi relativi (`../../`) ed **evadere dal sandbox** (*chroot escape / jailbreak*).
 
 ---
 
@@ -2368,6 +2589,8 @@ Quando un processo riceve un segnale, può reagire in uno dei seguenti tre modi:
 
 ### 12.4 Catturare un Segnale — `signal()`
 
+**Provenienza del codice:** riscrittura correttiva della guida dell’esempio di gestione segnali (Lezione 12, p. 17): `write` e salvataggio di `errno` sostituiscono le stampe non async-signal-safe. Non è una trascrizione.
+
 ```c
 #include <signal.h>
 typedef void (*sighandler_t)(int);
@@ -2377,11 +2600,18 @@ sighandler_t signal(int signum, sighandler_t handler);
 
 **Esempio completo:**
 ```c
+#include <signal.h>
+#include <unistd.h>
+#include <errno.h>
+
 void foo(int num_segnale) {
-    if (num_segnale == SIGINT)
-        printf("Ricevuto SIGINT (%d)\n", num_segnale);
-    if (num_segnale == SIGUSR1)
-        printf("Ricevuto SIGUSR1 (%d)\n", num_segnale);
+    (void)num_segnale;
+    // Correzione: niente printf nell’handler, perché non è async-signal-safe.
+    // Conserva errno per non alterare il codice interrotto.
+    int saved = errno;
+    const char msg[] = "Segnale ricevuto\n";
+    (void)write(STDERR_FILENO, msg, sizeof msg - 1);
+    errno = saved;
 }
 
 int main(void) {
@@ -2485,8 +2715,9 @@ sigemptyset(&mask);  // mask ora non contiene nessun segnale
 // 2. Aggiungo SIGINT (segnale 2) alla maschera
 sigaddset(&mask, SIGINT);
 
-// Ora "mask" contiene solo SIGINT. Qualsiasi invio di SIGINT al processo
-// verrà bloccato fino a quando non rimuoverò SIGINT dalla maschera.
+// Questo modifica solo l’insieme locale: non blocca alcun segnale.
+// Il blocco effettivo richiede sigprocmask/pthread_sigmask; per sbloccare
+// occorre un’altra chiamata a tali API, non basta sigdelset su mask.
 ```
 
 Una volta preparato l'insieme (`sigset_t`), si deve utilizzare la funzione `sigprocmask` per applicarlo e modificare effettivamente la maschera attiva del processo:
@@ -2515,9 +2746,8 @@ if (sigprocmask(SIG_BLOCK, &mask, &oldmask) == -1) {
     perror("sigprocmask");
     exit(EXIT_FAILURE);
 }
-
-// Ora "mask" contiene solo SIGINT. Qualsiasi invio di SIGINT al processo
-// verrà bloccato fino a quando non rimuoverò SIGINT dalla maschera.
+// SIGINT ora è bloccato; ripristinare poi con SIG_SETMASK e oldmask.
+// sigdelset modifica solo l’insieme locale: non aggiorna il blocco attivo.
 ```
 
 > **Nota fondamentale sull'ambito di `sigprocmask`:**  
@@ -2526,13 +2756,13 @@ if (sigprocmask(SIG_BLOCK, &mask, &oldmask) == -1) {
 
 ### 12.8 Gestione Moderna dei Segnali — `sigaction()`
 
-Sebbene `signal()` sia la funzione storica del C per catturare i segnali, nei moderni sistemi operativi e nelle applicazioni concorrenti/di rete è considerata **obsoleta e inaffidabile**. Lo standard **POSIX** ha introdotto **`sigaction()`** per risolvere tutti i problemi di sincronizzazione e non-determinismo della vecchia interfaccia.
+Sebbene `signal()` sia la funzione storica del C per catturare i segnali, nei moderni sistemi operativi e nelle applicazioni concorrenti/di rete è considerata **obsoleta e inaffidabile**. Lo standard **POSIX** ha introdotto **`sigaction()`** per controllare esplicitamente maschere, flag e modalità di consegna.
 
 > **L'intuizione chiave:**  
 > In un certo senso, **`sigaction()` combina `signal()` e `sigprocmask()` in un'unica operazione atomica**:
 > 1. Specifica quale funzione eseguire all'arrivo del segnale (`sa_handler` $\rightarrow$ il compito di `signal`).
 > 2. Definisce un insieme di segnali da **bloccare temporaneamente** mentre l'handler è in esecuzione (`sa_mask` $\rightarrow$ il compito di `sigprocmask`).
-> 3. Il kernel applica la maschera **istantaneamente e atomicamente** appena salta all'handler, e la ripristina da solo all'uscita, eliminando qualsiasi finestra di vulnerabilità (*race condition*).
+> 3. Il kernel applica la maschera **istantaneamente e atomicamente** appena salta all'handler, e la ripristina da solo all'uscita, evitando una modifica separata della maschera all’ingresso nell’handler. Restano necessari handler async-signal-safe e un protocollo corretto per lo stato condiviso.
 
 #### I 4 Problemi Critici di `signal()` risolti da `sigaction()`
 
@@ -2548,8 +2778,8 @@ Sebbene `signal()` sia la funzione storica del C per catturare i segnali, nei mo
    Se il processo si trova bloccato su una chiamata lenta di I/O (es. `read()`, `write()`, `accept()`, `recv()`) e arriva un segnale:
    - Con `signal()`, il comportamento dipendeva dall'implementazione (alcuni Unix riavviavano, altri restituivano errore `EINTR`).
    - Con `sigaction()`, il programmatore ha il pieno controllo tramite i flag:
-     - **Con `SA_RESTART`**: il kernel riavvia automaticamente la system call non appena l'handler termina.
-     - **Senza `SA_RESTART`**: la system call fallisce restituendo `-1` e impostando `errno = EINTR`, permettendo al programma di gestire manualmente l'interruzione.
+     - **Con `SA_RESTART`**: il kernel riavvia solo le chiamate per cui è previsto; su Linux `select`, `poll` e `nanosleep` non vengono riavviate da questo flag.
+     - **Senza `SA_RESTART`**: una chiamata interrompibile può fallire con `-1` ed `EINTR`; il comportamento dipende dalla chiamata e dall’eventuale trasferimento parziale.
 
 4. **Metadati Avanzati sul Mittente (`SA_SIGINFO`):**  
    `signal()` passa all'handler solo un intero (`int signum`). Con `sigaction()`, abilitando il flag `SA_SIGINFO`, si può usare la firma estesa `sa_sigaction(int sig, siginfo_t *info, void *ucontext)`, potendo così ispezionare il **PID del processo mittente** (`info->si_pid`), l'UID, o la causa del segnale.
@@ -2575,16 +2805,23 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 
 #### Esempio Completo
 
+**Provenienza del codice:** esempio aggiuntivo/correttivo della guida su `sigaction`; il corpo dell’handler con `write` è della guida, non del docente.
+
 ```c
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <errno.h>
 
 void gestore_sigint(int sig) {
-    printf("\n[Handler] Ricevuto SIGINT (%d). Gestione sicura in corso...\n", sig);
-    sleep(1);
-    printf("[Handler] Fine gestione.\n");
+    (void)sig;
+    // Correzione: niente printf nell’handler, perché non è async-signal-safe.
+    // Conserva errno per non alterare il codice interrotto.
+    int saved = errno;
+    const char msg[] = "[Handler] Ricevuto SIGINT\n";
+    (void)write(STDERR_FILENO, msg, sizeof msg - 1);
+    errno = saved;
 }
 
 int main(void) {
@@ -2599,7 +2836,7 @@ int main(void) {
     sigaddset(&sa.sa_mask, SIGQUIT);
     sigaddset(&sa.sa_mask, SIGUSR1);
 
-    // 3. Flag: riavvia le chiamate bloccanti lente senza farle fallire con EINTR
+    // 3. Flag: riavvia le chiamate per cui SA_RESTART è supportato
     sa.sa_flags = SA_RESTART;
 
     // 4. Registrazione sicura su SIGINT (Ctrl+C)
@@ -2617,6 +2854,29 @@ int main(void) {
 }
 ```
 ---
+
+### 12.9 Segnali nei Thread ed Effetti di `fork`/`exec`
+
+Fonti: Lezione 16, pp. 56–61; Lezione 15, thread, pp. 53–56. Le **disposizioni** (handler, ignore, default) sono condivise dal processo; ogni thread ha invece una **maschera individuale** e può avere segnali pending diretti a lui. Un segnale diretto al processo può essere consegnato a un thread idoneo che non lo blocca; non viene eseguito un handler in tutti i thread.
+
+**Provenienza del codice:** riepilogo delle dichiarazioni delle API trattate in Lezione 16, pp. 58–61; non è un listato applicativo originale.
+
+```c
+#include <pthread.h>
+#include <signal.h>
+int pthread_kill(pthread_t thread, int sig);
+int pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset);
+```
+
+`pthread_kill` indirizza un segnale a un thread dello stesso processo; una disposizione fatale termina comunque il processo intero. `sig == 0` non invia il segnale; non usare ID di thread la cui durata di vita è finita. Queste API restituiscono direttamente un codice d'errore. Nei programmi multithread usare `pthread_sigmask`, non `sigprocmask`. I nuovi thread ereditano una copia della maschera del creatore.
+
+Un pattern utile è bloccare i segnali scelti **prima** di creare i worker, poi usare `sigwait` in un thread dedicato: gestisce l'evento in normale contesto di thread, senza i vincoli di un handler asincrono.
+
+- Dopo **fork** nel figlio rimane soltanto il thread chiamante, ma è copiata la memoria, inclusi mutex eventualmente acquisiti da thread scomparsi. Prima di exec il figlio può chiamare soltanto funzioni async-signal-safe; non assumere che `printf`, `malloc` o lock ordinari siano utilizzabili. `pthread_atfork` permette handler di preparazione/ripristino, ma non risolve automaticamente tutti i lock delle librerie.
+- **exec** chiamata da qualunque thread sostituisce l'intero programma del processo e termina gli altri thread. Il nuovo programma parte con un thread; non è una sostituzione del solo worker chiamante.
+- **Segnali ereditati:** fork conserva la maschera del chiamante e le disposizioni; il pending del figlio è inizialmente vuoto. Exec conserva maschera e pending; gli handler catturati tornano al default, le disposizioni ignorate restano normalmente ignorate.
+
+[Riferimento: signal(7)](https://man7.org/linux/man-pages/man7/signal.7.html).
 
 ## 13. IPC: Pipe, FIFO e Memoria Condivisa (mmap)
 <div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
@@ -2918,6 +3178,64 @@ int main() {
 
 ---
 
+### 13.4 `popen()` e `pclose()`
+
+Fonte: Lezione 14, pp. 16–20. `popen` riunisce pipe, creazione di un figlio e avvio di `/bin/sh -c comando`; restituisce un `FILE *`, oppure `NULL` su errore. La comunicazione è unidirezionale:
+
+- `"r"`: il chiamante legge lo **stdout del comando**; stderr non è automaticamente catturato.
+- `"w"`: il chiamante scrive sullo **stdin del comando**.
+
+`pclose` chiude lo stream e attende il processo associato. Non sostituirla con `fclose`: si perderebbe l'attesa prevista. Restituisce -1 su errore, altrimenti uno stato codificato come `waitpid`, da decodificare con `WIFEXITED`, `WEXITSTATUS`, `WIFSIGNALED`, `WTERMSIG`. Lo stato riguarda la shell; 127 può indicare mancata esecuzione della shell o uscita del comando con quel codice.
+
+**Provenienza del codice:** esempio pager della Lezione 14, pp. 19–20, mantenuto in modalità `w`. Il precedente programma aggiuntivo con `printf` è sostituito da quello del corso; sono esplicitate le correzioni necessarie alla compilazione (`stdlib.h` e dichiarazione dei due `FILE *`). L’esempio controlla l’errore di `pclose`; la decodifica dello stato è spiegata sopra.
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <stdlib.h> // Correzione: serve per dichiarare exit.
+
+#define MAXLINE 4096
+#define PAGER "${PAGER:-more}"
+
+int main(int argc, char *argv[]) {
+    char line[MAXLINE];
+    FILE *fpin, *fpout; // Due puntatori distinti: qui è necessaria la virgola.
+    if (argc != 2) {
+        printf("Uso: %s <file>\n", argv[0]);
+        exit(1);
+    }
+    if ((fpin = fopen(argv[1], "r")) == NULL) {
+        perror("fopen");
+        exit(1);
+    }
+    // Come nelle slide: scriviamo nello stdin del paginatore.
+    if ((fpout = popen(PAGER, "w")) == NULL) {
+        perror("popen");
+        exit(1);
+    }
+    while (fgets(line, MAXLINE, fpin) != NULL) {
+        if (fputs(line, fpout) == EOF) {
+            perror("fputs");
+            exit(1);
+        }
+    }
+    if (ferror(fpin)) {
+        perror("fgets");
+        exit(1);
+    }
+    // pclose chiude la pipe e aspetta il paginatore, come nell'originale.
+    if (pclose(fpout) == -1) {
+        perror("pclose");
+        exit(1);
+    }
+    exit(0);
+}
+```
+
+La shell interpreta wildcard, redirezioni e metacaratteri: non concatenare input non fidato nel comando. Per argomenti dati come array, senza interpretazione shell, usare pipe + fork + exec.
+
 ## 14. Thread e Concorrenza
 <div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
@@ -3025,6 +3343,29 @@ int main(void) {
 
 > **Compilazione**: `gcc -pthread -o prog prog.c`
 
+#### Confronto degli ID e Attributi di Creazione
+
+Fonti: Lezione 16, p. 27; Lezione 17, thread2, pp. 2–4. `pthread_t` è opaco: confrontare ID validi con `pthread_equal(a, b)` (non zero se uguali), non presumere interi confrontabili con `==`.
+
+**Provenienza del codice:** frammento aggiuntivo della guida che combina il ciclo degli attributi di creazione trattato in Lezione 17, thread2, pp. 2–4; non è una trascrizione.
+
+```c
+// Frammento nel creatore; routine è una funzione void *routine(void *).
+pthread_attr_t attr;
+pthread_t tid;
+// Prima prepara gli attributi, poi indica che il thread deve nascere detached.
+int rc = pthread_attr_init(&attr);
+if (rc != 0) { /* gestire rc */ }
+else {
+    rc = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    if (rc == 0) rc = pthread_create(&tid, &attr, routine, NULL);
+    pthread_attr_destroy(&attr); // l'oggetto non serve al thread creato
+    // Gestire rc; se creato, il thread è già detached: non fare join.
+}
+```
+
+Gli attributi comprendono anche stack e scheduling, soggetti a vincoli di sistema. Distruggere `attr` non termina il thread. Un detached libera automaticamente le risorse alla propria terminazione; se il main ritorna, termina comunque tutto il processo. Gli oggetti passati al thread devono vivere abbastanza a lungo.
+
 ### 14.5 Thread in Linux
 
 - Linux tratta i thread come **task** (unifica processi e thread)
@@ -3101,6 +3442,8 @@ Se un thread viene terminato forzatamente mentre detiene un mutex o risorse allo
 
 Per prevenire questo scenario, lo standard POSIX fornisce uno stack di **cleanup handlers** registrati tramite le macro `pthread_cleanup_push()` e `pthread_cleanup_pop()`.
 
+**Provenienza del codice:** frammento della guida per applicare i cleanup handler; corretti gli escape nelle stringhe. Il nome `worker_sicuro` non identifica un sorgente originale verificato del docente.
+
 ```c
 #include <pthread.h>
 
@@ -3119,8 +3462,7 @@ void pthread_cleanup_pop(int execute);
 void unlock_mutex(void *arg) {
     pthread_mutex_t *m = (pthread_mutex_t *)arg;
     pthread_mutex_unlock(m);
-    printf("[cleanup] Mutex sbloccato dal cleanup handler!
-");
+    printf("[cleanup] Mutex sbloccato dal cleanup handler!\n");
 }
 
 void *worker_sicuro(void *arg) {
@@ -3143,7 +3485,10 @@ void *worker_sicuro(void *arg) {
 #### Esempio Completo di Cancellazione Controllata (`thread_canc_test.c`)
 Dal materiale didattico delle slide (*Slide 821, 826*), ecco il pattern d'esame per gestire la cancellazione:
 
+**Provenienza del codice:** adattamento di `thread_canc_test.c` nell’Unificato, p. 826. L’originale attende INVIO con `getchar` e il main prova periodicamente la cancellazione; qui sono usati `sleep(2)`, una richiesta dopo tre secondi e il controllo `PTHREAD_CANCELED`. Queste modifiche erano già presenti nella guida; non è una copia letterale.
 ```c
+// Correzione rispetto alla vecchia guida: usare \n nelle stringhe,
+// non un a capo fra le virgolette: altrimenti il programma non compila.
 // thread_canc_test.c
 #include <pthread.h>
 #include <stdio.h>
@@ -3154,19 +3499,16 @@ void *worker(void *arg) {
     int oldstate;
     /* 1. Disabilito temporaneamente la cancellazione (sezione protetta) */
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &oldstate);
-    printf("[thread] Cancellazione disabilitata
-");
+    printf("[thread] Cancellazione disabilitata\n");
     sleep(2);
 
     /* 2. Riabilito la cancellazione */
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, &oldstate);
-    printf("[thread] Cancellazione abilitata, pronto a ricevere cancellazioni
-");
+    printf("[thread] Cancellazione abilitata, pronto a ricevere cancellazioni\n");
 
     /* 3. Loop con cancellation point esplicito */
     while (1) {
-        printf("[thread] Lavoro in corso...
-");
+        printf("[thread] Lavoro in corso...\n");
         sleep(1);
         pthread_testcancel();  // Checkpoint manuale di cancellazione
     }
@@ -3178,16 +3520,14 @@ int main(void) {
     pthread_create(&tid, NULL, worker, NULL);
 
     sleep(3);
-    printf("[main] Invio richiesta di cancellazione con pthread_cancel()...
-");
+    printf("[main] Invio richiesta di cancellazione con pthread_cancel()...\n");
     pthread_cancel(tid);
 
     /* Il join raccoglie il thread cancellato */
     void *res;
     pthread_join(tid, &res);
     if (res == PTHREAD_CANCELED) {
-        printf("[main] Il thread worker e' stato correttamente terminato per cancellazione!
-");
+        printf("[main] Il thread worker e' stato correttamente terminato per cancellazione!\n");
     }
     return 0;
 }
@@ -3227,7 +3567,10 @@ int pthread_key_delete(pthread_key_t key);
 - **`pthread_key_delete(key)`**: Dealloca la chiave globale. Non invoca automaticamente i distruttori.
 
 #### Codice d'Esempio Completo (`thread_tsd.c`, Slide 829, 860)
+**Provenienza del codice:** adattamento del sorgente `thread_tsd.c`, Unificato p. 829 e slide p. 860. La struttura e i messaggi della guida precedente sono mantenuti; sono corretti solo gli escape delle stringhe e aggiunto il controllo di `malloc`, per evitare di dereferenziare NULL.
 ```c
+// Correzione rispetto alla vecchia guida: usare \n nelle stringhe,
+// non un a capo fra le virgolette: altrimenti il programma non compila.
 // thread_tsd.c
 #include <pthread.h>
 #include <stdio.h>
@@ -3240,6 +3583,8 @@ pthread_key_t chiave;
 void *worker(void *arg) {
     int *id = (int *)arg;   // ID passato dal main
     int *val = malloc(sizeof(int));
+    // Correzione: non dereferenziare NULL se malloc fallisce.
+    if (val == NULL) { perror("malloc"); exit(1); }
     *val = *id * 10;        // Calcolo un valore privato solo per questo thread
 
     /* Associo il valore alla chiave globale (specifico per questo thread) */
@@ -3247,8 +3592,7 @@ void *worker(void *arg) {
 
     /* Recupero il valore dalla chiave e lo stampo */
     int *mio_val = (int *)pthread_getspecific(chiave);
-    printf("[thread %d] Valore recuperato da TSD = %d
-", *id, *mio_val);
+    printf("[thread %d] Valore recuperato da TSD = %d\n", *id, *mio_val);
 
     free(val);  // Libero la memoria allocata
     return NULL;
@@ -3275,47 +3619,27 @@ int main(void) {
 }
 ```
 
-#### Caso d'Uso d'Esame: Associazione Socket Descriptor per Handler SIGPIPE (Slide 1142–1143)
-In un server di rete multithread, quando un client chiude bruscamente la connessione mentre un thread tenta di scrivervi con `write()` o `send()`, il kernel genera il segnale **`SIGPIPE`**. Se il server gestisce `SIGPIPE` con un signal handler personalizzato, come fa l'handler a sapere **quale socket** ha generato l'errore tra le decine di thread concorrenti?
+#### SIGPIPE e TSD: Rettifica dell'Esempio delle Slide 1142–1143
 
-La soluzione elegante presentata dal docente nelle slide consiste nell'usare una chiave TSD globale `key_sd`:
+Le slide associano il socket al thread tramite TSD e lo recuperano nell'handler SIGPIPE. `pthread_getspecific()` e `pthread_setspecific()` non sono async-signal-safe: quel pattern non è una gestione sicura POSIX. Neppure `printf()` è ammessa in un handler. `sigaction` e `sa_mask` non cambiano queste proprietà.
+
+Su Linux usare `send(..., MSG_NOSIGNAL)` e gestire `EPIPE` nel normale flusso del worker. Per le pipe, o in alternativa, ignorare SIGPIPE con `sigaction` prima di avviare i thread e controllare il ritorno di `write`/`send`. La disposizione ignorata vale per l'intero processo. Il thread può consultare i suoi TSD e chiudere il proprio socket nel normale flusso; deve evitare doppie chiusure e mantenere chiara la proprietà del descrittore.
+
+**Provenienza del codice:** correzione tecnica scritta per la guida. Le pagine 1142–1143 dell’Unificato mostrano invece l’handler con TSD descritto sopra: il frammento con `MSG_NOSIGNAL` non è una loro trascrizione.
+
 ```c
-#include <pthread.h>
-#include <signal.h>
-#include <unistd.h>
-#include <stdint.h>
-
-pthread_key_t key_sd;
-
-static void sigpipe_handler(int signo) {
-    (void)signo;
-    // Recupera il file descriptor del socket associato al thread corrente
-    int sd = (int)(intptr_t)pthread_getspecific(key_sd);
-    if (sd >= 0) {
-        close(sd);
-        // Evita doppie chiusure impostando il valore a -1
-        pthread_setspecific(key_sd, (void *)(intptr_t)-1);
-    }
-    const char msg[] = "SIGPIPE intercettato: chiuso socket del thread corrente
-";
-    write(STDERR_FILENO, msg, sizeof(msg) - 1);
+// Frammento nel worker; include sys/socket.h, errno.h e unistd.h.
+// Correzione: gestire EPIPE nel worker evita di usare TSD dentro un handler.
+ssize_t n = send(client_sd, buffer, len, MSG_NOSIGNAL);
+if (n == -1 && errno == EPIPE) {
+    close(client_sd);
+    client_sd = -1;
+    // Ripulire qui gli eventuali TSD; non da un signal handler.
 }
-
-// Nel main del server:
-pthread_key_create(&key_sd, NULL);
-signal(SIGPIPE, sigpipe_handler);
-
-// All'interno della routine di ciascun thread worker:
-void *client_handler(void *arg) {
-    int client_sd = *(int *)arg;
-    // Salva il descrittore nella memoria locale del thread
-    pthread_setspecific(key_sd, (void *)(intptr_t)client_sd);
-
-    // Esegue letture e scritture sul socket...
-    // Se scatta SIGPIPE, il gestore chiuderà esattamente client_sd!
-    return NULL;
-}
+// Gestire anche EINTR, altri errori e invii parziali (vedi §17.14).
 ```
+
+[Riferimento: signal-safety(7)](https://man7.org/linux/man-pages/man7/signal-safety.7.html).
 
 ---
 
@@ -3367,6 +3691,40 @@ void *thread_function(void *arg) {
     return NULL;
 }
 ```
+
+#### Primitive Atomiche e Tipologie di Mutex
+
+Fonte: Lezione 17, thread2, pp. 26–27 e 51–58. **Test-and-set** legge un valore e imposta il lock in un'unica operazione indivisibile; **swap** scambia atomicamente valori; **compare-and-swap** aggiorna soltanto se il valore corrente coincide con quello atteso. Sono basi per lock e algoritmi concorrenti; con normale C usare le atomiche di `<stdatomic.h>` e il corretto ordine di memoria, non una sequenza ordinaria di lettura/scrittura né `volatile` come sostituto della sincronizzazione. Uno spinlock occupa CPU durante l'attesa; i mutex possono sospendere il thread.
+
+Per mutex non robusti:
+
+| Tipo POSIX | Nuovo lock dallo stesso proprietario | Unlock da non proprietario o su lock libero |
+|---|---|---|
+| `PTHREAD_MUTEX_NORMAL` (storicamente fast) | Deadlock | Comportamento indefinito |
+| `PTHREAD_MUTEX_ERRORCHECK` | Errore `EDEADLK` | Errore `EPERM` |
+| `PTHREAD_MUTEX_RECURSIVE` | Incrementa il contatore; serve ugual numero di unlock | Errore `EPERM` |
+
+`PTHREAD_MUTEX_DEFAULT` non garantisce tutte le proprietà di NORMAL; scegliere il tipo esplicitamente se la distinzione conta. `trylock` non attende e restituisce `EBUSY` se non disponibile. La ricorsione non impedisce deadlock fra lock diversi e va evitata con condition variable se il lock resta acquisito più volte.
+
+**Provenienza del codice:** frammento aggiuntivo della guida con le API di attributo trattate in Lezione 17, thread2, pp. 51–58; usa i nomi POSIX al posto delle estensioni storiche `_NP`.
+
+```c
+// Frammento di inizializzazione; include pthread.h.
+pthread_mutexattr_t a;
+pthread_mutex_t m;
+// Prepara gli attributi: il tipo scelto viene applicato quando si crea m.
+int rc = pthread_mutexattr_init(&a);
+if (rc == 0) {
+    rc = pthread_mutexattr_settype(&a, PTHREAD_MUTEX_ERRORCHECK);
+    if (rc == 0) rc = pthread_mutex_init(&m, &a);
+    pthread_mutexattr_destroy(&a);
+    // Usare e poi distruggere m solo se la sua init è riuscita.
+}
+```
+
+`pthread_mutexattr_gettype` recupera il tipo. Le API possono fallire: controllare il codice restituito. Le costanti `_NP` delle vecchie slide sono estensioni non portabili.
+
+**Rettifica alle slide:** l'unlock di un fast mutex da un altro thread non è un'operazione lecita garantita; il mancato controllo in una vecchia implementazione non cambia l'ownership POSIX. [Tabella POSIX](https://man7.org/linux/man-pages/man3/pthread_mutex_lock.3p.html).
 
 ### 15.3 Condition Variable — Variabili di Condizione
 
@@ -3431,12 +3789,12 @@ int rc = 0;
 // Ciclo di attesa: continua a dormire finché 'ready' è 0 E il tempo non è scaduto (rc == 0)
 while (!ready && rc == 0) {
     rc = pthread_cond_timedwait(&cond, &mtx, &ts);
-    // rc == 0        → svegliato da signal/broadcast prima della deadline
+    // rc == 0        → risveglio anche spurio: rivalutare ready sotto mutex
     // rc == ETIMEDOUT → tempo massimo scaduto
 }
 
 if (ready) {
-    printf("Evento completato con successo entro la deadline (ready = 1)\n");
+    printf("Predicato ready osservato vero sotto mutex\n");
 } else if (rc == ETIMEDOUT) {
     printf("Timeout scaduto: il dato non è diventato pronto in tempo\n");
 }
@@ -3510,7 +3868,7 @@ int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,
                            const struct timespec *abstime);
 ```
 
-- **Parametro `abstime` (Tempo Assoluto):** A differenza di funzioni che accettano un intervallo relativo (es. `sleep(2)` o `usleep()`), `pthread_cond_timedwait()` richiede un **tempo assoluto** nel futuro (secondi e nanosecondi dall'Epoch, 1 gennaio 1970).
+- **Parametro `abstime` (Tempo Assoluto):** la scadenza usa l’orologio della condition variable: per default `CLOCK_REALTIME` (Epoch). Con `pthread_condattr_setclock` si può scegliere `CLOCK_MONOTONIC`, e anche il calcolo della deadline deve usare quello. Calcolare una sola scadenza prima del ciclo; i risvegli spuri non devono estenderla.
 - **Calcolo della Deadline:**
   ```c
   struct timespec ts;
@@ -3518,12 +3876,15 @@ int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex,
   ts.tv_sec += 2; // Scadenza tra esattamente 2 secondi da adesso
   ```
 - **Valore di ritorno:**
-  - Ritorna `0` se la condizione è stata segnalata prima della scadenza (`pthread_cond_signal` o `broadcast`).
-  - Ritorna `ETIMEDOUT` se il tempo massimo è trascorso senza che l'evento si sia verificato.
+  - Ritorna `0` al risveglio, anche spurio: non certifica il predicato applicativo, da rivalutare sotto mutex.
+  - Ritorna `ETIMEDOUT` alla scadenza: rivalutare comunque il predicato sotto mutex, poiché può esserci una corsa con la notifica.
   - Al risveglio (sia per segnale che per timeout), **il mutex viene sempre riacquisito automaticamente** prima che la funzione ritorni.
 
 **Esempio Completo (`cond_var_deadline.c`, Slide 961):**
+**Provenienza del codice:** adattamento del sorgente `cond_var_deadline.c`, Unificato p. 961. Il ciclo con deadline unica deriva dall’originale; messaggi e commenti sono riscritti/corretti dalla guida, senza garanzia indebita che un risveglio certifichi l’evento prima della scadenza.
 ```c
+// Correzione rispetto alla vecchia guida: usare \n nelle stringhe,
+// non un a capo fra le virgolette: altrimenti il programma non compila.
 // cond_var_deadline.c
 #include <pthread.h>
 #include <stdio.h>
@@ -3563,15 +3924,13 @@ int main(void) {
         rc = pthread_cond_timedwait(&cond, &mtx, &ts);
     }
 
+    // Correzione del messaggio: ready vero non prova quando sia diventato vero.
     if (ready) {
-        printf("[main] Evento segnalato dal worker PRIMA della deadline!
-");
+        printf("[main] Predicato ready osservato vero sotto mutex!\n");
     } else if (rc == ETIMEDOUT) {
-        printf("[main] Timeout scaduto (ETIMEDOUT): il worker ha impiegato troppo tempo!
-");
+        printf("[main] Timeout scaduto (ETIMEDOUT): il worker ha impiegato troppo tempo!\n");
     } else {
-        printf("[main] Errore su timedwait: %d
-", rc);
+        printf("[main] Errore su timedwait: %d\n", rc);
     }
 
     pthread_mutex_unlock(&mtx);
@@ -3754,58 +4113,57 @@ int get_item(void) {
 
 ### 16.2 Readers-Writers (Lettori-Scrittori)
 
-**Il Problema:** 
-Abbiamo una base di dati condivisa (es. un file o un array). Ci sono thread che vogliono solo *leggere* (Lettori) e thread che vogliono *modificare* (Scrittori).
-*Regole d'oro:*
-1. Più Lettori possono leggere **contemporaneamente** senza darsi fastidio a vicenda.
-2. Quando uno Scrittore accede, deve avere **accesso esclusivo assoluto** (nessun altro scrittore e *nessun* lettore può accedere finché non ha finito).
+Più lettori possono accedere insieme; uno scrittore richiede esclusività. Nella soluzione con priorità ai lettori, il primo prenota la risorsa e l'ultimo la libera. Possono essere thread diversi: per quella risorsa serve un **semaforo binario**, non un mutex POSIX.
 
-*Soluzione (con priorità ai lettori):* Usiamo un contatore di lettori. Il primo lettore che arriva "chiude la porta" in faccia agli scrittori usando un lucchetto. Finché ci sono lettori che continuano ad arrivare e leggere, la porta rimane chiusa agli scrittori. Solo l'ultimo lettore che se ne va, riapre la porta rimuovendo il lucchetto.
+**Rettifica alle slide:** Lezione 18, pp. 38–40 e Unificato p. 947 usano invece un mutex fra primo e ultimo lettore, violandone l'ownership. Il frammento seguente corregge quel pattern. Assume assenza di cancellazione dei lettori durante l'accesso; se prevista servono cleanup coerenti.
+
+**Provenienza del codice:** soluzione correttiva della guida, non del docente: mantiene l’algoritmo con priorità ai lettori ma sostituisce con un semaforo la risorsa che nelle slide è impropriamente un mutex.
 
 ```c
-pthread_mutex_t mutex;      // Protegge la modifica della variabile 'read_count'
-pthread_mutex_t rw_mutex;   // Agisce come un "lucchetto gigante" per la risorsa/dati
-int read_count = 0;         // Quanti lettori ci sono attualmente dentro
+#include <pthread.h>
+#include <semaphore.h>
+#include <errno.h>
+#include <stdlib.h>
 
-// --- SCRITTORE ---
-pthread_mutex_lock(&rw_mutex); // Chiede l'accesso esclusivo. Se c'è anche un solo lettore dentro, si blocca.
-// ... Scrive/Modifica i dati in totale solitudine ...
-pthread_mutex_unlock(&rw_mutex);
+pthread_mutex_t count_mutex = PTHREAD_MUTEX_INITIALIZER;
+// Correzione: primo e ultimo lettore possono essere thread diversi.
+// Un semaforo può essere rilasciato da un altro thread; un mutex POSIX no.
+sem_t resource;
+int read_count = 0;
 
-
-// --- LETTORE ---
-// FASE DI INGRESSO
-pthread_mutex_lock(&mutex); // Proteggiamo il contatore
-read_count++;
-if (read_count == 1) { 
-    // Sono il PRIMO lettore ad entrare! 
-    // Metto il lucchetto gigante agli scrittori, così nessuno può modificare mentre leggiamo.
-    pthread_mutex_lock(&rw_mutex);  
+void init_rw(void) {
+    if (sem_init(&resource, 0, 1) == -1) abort();
 }
-pthread_mutex_unlock(&mutex);
-
-// ... Legge i dati (possono esserci N lettori qui dentro contemporaneamente!) ...
-
-// FASE DI USCITA
-pthread_mutex_lock(&mutex); // Proteggiamo di nuovo il contatore per uscire
-read_count--;
-if (read_count == 0) {
-    // Sono l'ULTIMO lettore ad uscire! Non c'è più nessuno che legge.
-    // Tolgo il lucchetto gigante, ora gli scrittori possono rientrare.
-    pthread_mutex_unlock(&rw_mutex);  
+static void reserve(void) {
+    while (sem_wait(&resource) == -1) {
+        if (errno != EINTR) abort();
+    }
 }
-pthread_mutex_unlock(&mutex);
+void begin_read(void) {
+    pthread_mutex_lock(&count_mutex);
+    if (++read_count == 1) reserve(); // Il primo lettore esclude gli scrittori.
+    pthread_mutex_unlock(&count_mutex);
+}
+void end_read(void) {
+    pthread_mutex_lock(&count_mutex);
+    if (--read_count == 0 && sem_post(&resource) == -1) abort(); // L’ultimo libera la risorsa.
+    pthread_mutex_unlock(&count_mutex);
+}
+void begin_write(void) { reserve(); }
+void end_write(void) { if (sem_post(&resource) == -1) abort(); }
+// main: init_rw prima dei thread; sem_destroy dopo tutte le join.
 ```
 
+La priorità ai lettori può causare **starvation degli scrittori** se continuano ad arrivare lettori. Un'alternativa è `pthread_rwlock_t` con `rdlock`, `wrlock` e `unlock`, senza assumere una politica di equità non garantita dall'implementazione.
 
-### 16.3 Problema del Ponte a Senso Unico Alternato (Bridge Problem — `sem_ponte.c`)
+### 16.3 Problema del Ponte a Capacità Limitata (Bridge Problem — `sem_ponte.c`)
 <div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
 Nelle slide (*Slide 935–936, 968*), viene presentato un classico problema di concorrenza spesso assegnato negli esami di laboratorio:
 
 **Specifica del Problema:**
 - Un ponte a campata unica collega due sponde e può sostenere al massimo $N$ automobili contemporaneamente (`MAX_SUL_PONTE = 3`).
-- La carreggiata è a corsia singola.
+- Il modello regola soltanto la capacità; non implementa due direzioni né la loro alternanza.
 - Ogni automobile è modellata come un **thread** concorrente che:
   1. Arriva al ponte e attende il permesso di salire.
   2. Entra nel ponte e lo attraversa (simulato tramite `sleep()`).
@@ -3816,14 +4174,17 @@ Un semaforo contatore inizializzato a $N$ (`MAX_SUL_PONTE`) regola la capacità 
 - Ogni auto che entra esegue `sem_wait(&bridge)`, decrementando il contatore. Se il contatore è $0$, il thread si blocca.
 - Ogni auto che esce esegue `sem_post(&bridge)`, incrementando il contatore e risvegliando una delle auto in coda.
 
+**Provenienza del codice:** completamento e adattamento proposto dalla guida di `sem_ponte.c`, Unificato p. 968. Il file del docente ha TODO per init/wait/post/destroy; il listato qui li completa. La sola correzione funzionale aggiunta è il controllo di `sem_wait`: un’interruzione non deve far entrare l’auto senza posto; i tempi casuali precedenti sono conservati. Non è una soluzione ufficiale.
+
 ```c
-// sem_ponte.c - Esercizio ufficiale slide 968
+// Completamento della guida del template sem_ponte.c (Unificato p. 968)
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <errno.h>
 
 #define N_AUTO 10
 #define MAX_SUL_PONTE 3
@@ -3832,18 +4193,19 @@ sem_t bridge;  // Semaforo contatore di capacità del ponte
 
 void* car(void* arg) {
     long id = (long)arg;
-    printf("[Auto %2ld] Arriva in prossimita' del ponte
-", id);
+    printf("[Auto %2ld] Arriva in prossimita' del ponte\n", id);
 
     // 1. Attesa permesso di salire sul ponte (capacità residua > 0)
-    sem_wait(&bridge);
+    // Correzione: se sem_wait è interrotta da un segnale, riprovarla.
+    // Altrimenti un’auto entrerebbe senza aver ottenuto un posto.
+    while (sem_wait(&bridge) == -1) {
+        if (errno != EINTR) { perror("sem_wait"); exit(1); }
+    }
 
-    printf(">>> [Auto %2ld] ENTRA nel ponte (auto sul ponte: max %d)
-", id, MAX_SUL_PONTE);
-    sleep(1 + rand() % 2);  // Tempo di attraversamento simulato
+    printf(">>> [Auto %2ld] ENTRA nel ponte (auto sul ponte: max %d)\n", id, MAX_SUL_PONTE);
+    sleep(1 + rand() % 2);  // Tempo di attraversamento simulato, come prima
 
-    printf("<<< [Auto %2ld] ESCE dal ponte sul lato opposto
-", id);
+    printf("<<< [Auto %2ld] ESCE dal ponte sul lato opposto\n", id);
 
     // 2. Segnala l'uscita liberando uno slot per le auto in attesa
     sem_post(&bridge);
@@ -3873,14 +4235,111 @@ int main(void) {
 
     // Distruzione del semaforo al termine
     sem_destroy(&bridge);
-    printf("[main] Tutte le %d auto hanno attraversato il ponte con successo.
-", N_AUTO);
+    printf("[main] Tutte le %d auto hanno attraversato il ponte con successo.\n", N_AUTO);
     return 0;
 }
 ```
 
 
 ---
+
+### 16.4 Cena dei Filosofi: Monitor e Condition Variable
+
+Fonte: Lezione 18, pp. 42–52; Unificato pp. 950–960, sorgente pp. 962–963. Cinque filosofi alternano pensiero e pasto; per mangiare ciascuno deve avere entrambe le bacchette condivise con i vicini. Se tutti prendono prima la bacchetta sinistra e attendono la destra si crea attesa circolare e deadlock.
+
+Un **monitor** incapsula stato, operazioni e mutua esclusione. In Pthreads si costruisce con un mutex e condition variable: si concede atomicamente il diritto a usare **entrambe** le bacchette quando nessun vicino mangia. L'attesa rilascia il mutex; mangiare avviene fuori dal mutex, ma con lo stato EATING che riserva le risorse. I monitor delle slide hanno operazioni astratte wait/signal; con le condition POSIX bisogna usare `while` per riverificare il predicato.
+
+Soluzione delle slide, riunita in un solo listato. Il ciclo dei filosofi resta infinito come nell’originale: le `join` attendono e il programma si interrompe dall’esterno (per esempio con Ctrl+C).
+
+**Provenienza del codice:** adattamento della soluzione con condition variable della Lezione 18, pp. 47–52. Sono conservati nomi, ciclo infinito, tempi casuali e funzioni delle slide. Sono aggiunti solo il prototipo mancante di `philosopher` e la corretta segnalazione dell’errore di `pthread_create`, spiegati nei commenti; è tolta la precedente variante della guida con tre pasti e helper `check`. Nell’Unificato pp. 962–963 `es_dining_phil.c` è invece lo scheletro TODO da completare, non la soluzione completa.
+
+```c
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#define N 5
+#define LEFT(i) ((i + N - 1) % N)
+#define RIGHT(i) ((i + 1) % N)
+typedef enum { THINKING, HUNGRY, EATING } state_t;
+
+state_t state[N];
+pthread_mutex_t mtx;
+pthread_cond_t self[N];
+
+void test(int i);
+void pickup(int i);
+void putdown(int i);
+// Correzione di compilazione: il main usa questa funzione prima della definizione.
+void *philosopher(void *arg);
+
+int main(void) {
+    pthread_t th[N];
+    pthread_mutex_init(&mtx, NULL);
+    for (int i = 0; i < N; i++) {
+        state[i] = THINKING;
+        pthread_cond_init(&self[i], NULL);
+    }
+    for (long i = 0; i < N; i++) {
+        int rc = pthread_create(&th[i], NULL, philosopher, (void *)i);
+        if (rc != 0) {
+            // Correzione: pthread_create restituisce l'errore, non imposta errno.
+            fprintf(stderr, "pthread_create: errore %d\n", rc);
+            exit(1);
+        }
+    }
+    for (int i = 0; i < N; i++)
+        pthread_join(th[i], NULL);
+    pthread_mutex_destroy(&mtx);
+    for (int i = 0; i < N; i++)
+        pthread_cond_destroy(&self[i]);
+    return 0;
+}
+
+void *philosopher(void *arg) {
+    int i = (int)(long)arg;
+    while (1) { // Come nelle slide: il ciclo non termina da solo.
+        printf("Filosofo %d sta PENSANDO\n", i);
+        usleep(100000 + rand() % 200000);
+        pickup(i);
+        printf(">>> Filosofo %d sta MANGIANDO\n", i);
+        usleep(100000 + rand() % 200000);
+        putdown(i);
+    }
+    return NULL;
+}
+
+void test(int i) {
+    // Il mutex è già acquisito da pickup o putdown.
+    if (state[i] == HUNGRY && state[LEFT(i)] != EATING &&
+        state[RIGHT(i)] != EATING) {
+        state[i] = EATING; // Riserva entrambe le bacchette.
+        pthread_cond_signal(&self[i]);
+    }
+}
+
+void pickup(int i) {
+    pthread_mutex_lock(&mtx);
+    state[i] = HUNGRY;
+    test(i);
+    // Il while è già nella soluzione del docente: controlla anche risvegli spuri.
+    while (state[i] != EATING)
+        pthread_cond_wait(&self[i], &mtx);
+    pthread_mutex_unlock(&mtx);
+}
+
+void putdown(int i) {
+    pthread_mutex_lock(&mtx);
+    state[i] = THINKING;
+    // Liberando le bacchette, possono ora mangiare i vicini in attesa.
+    test(LEFT(i));
+    test(RIGHT(i));
+    pthread_mutex_unlock(&mtx);
+}
+```
+
+**Proprietà:** due vicini non possono essere EATING insieme; non c'è acquisizione parziale delle bacchette né attesa circolare. In assenza di cancellazioni e assumendo che i thread abilitati siano eseguiti e rilascino le risorse, non c'è deadlock. **La starvation rimane possibile**: non c'è una coda FIFO o un limite alle precedenze dei vicini. Un’osservazione finita non dimostra equità per tutte le esecuzioni; per garantirla serve una politica aggiuntiva (coda/ticket).
 
 ## 17. Socket — Comunicazione di Rete
 <div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
@@ -3971,6 +4430,8 @@ Se inviassimo il numero di porta "5200" sulla rete senza convertirla, i disposit
 
 *(Viceversa, per leggere un indirizzo ricevuto dalla rete nel formato dell'host locale, si usano `ntohs()` e `ntohl()`: Network TO Host).*
 
+`htonl`/`ntohl` scambiano i byte sugli host little-endian; sugli host big-endian lasciano il valore invariato. Convertire solo valori in ordine host: `inet_pton` produce già l’ordine di rete e non richiede un ulteriore `htonl`.
+
 **Conversione facilitata degli IP (stringa → numero): `inet_pton` e `inet_ntop`**
 Gli indirizzi IP sono comunemente espressi come stringhe testuali leggibili (es. `"127.0.0.1"` o `"192.168.1.1"`), ma la struct `sockaddr_in` richiede che il campo `sin_addr` contenga i 4 byte in formato binario di rete (Network Byte Order).
 Si usa `inet_pton` (**P**resentation **TO** **N**etwork) per convertire e validare l'indirizzo:
@@ -4010,7 +4471,7 @@ Spesso si fa confusione tra queste funzioni perché entrambe hanno a che fare co
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │ 2. Conversione DATI / INTERI (CPU Little Endian <──► Rete Big Endian)                  │
 │                                                                                        │
-│   Intero CPU (es. 1500)       ───[   htonl()   ]───► 4 Byte invertiti per la rete      │
+│   Intero CPU (es. 1500)       ───[   htonl()   ]───► 4 byte in ordine di rete      │
 │   Intero CPU (es. 1500)       ◄───[   ntohl()   ]─── 4 Byte ricevuti dal socket        │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -4019,7 +4480,7 @@ Spesso si fa confusione tra queste funzioni perché entrambe hanno a che fare co
 | :--- | :--- | :--- |
 | **Etimologia** | **P**resentation **TO** **N**etwork | **H**ost **TO** **N**etwork **L**ong / **N**etwork **TO** **H**ost **L**ong |
 | **Input** | Stringa testuale ASCII (es. `"127.0.0.1"`) | Intero numerico a 32 bit (`uint32_t`, `int`) |
-| **Operazione** | **Parsing e validazione**: analizza caratteri e punti, verifica che i 4 ottetti siano 0-255 e li memorizza in memoria già in Big Endian. | **Byte-swapping**: non legge stringhe né valida nulla. Inverte semplicemente l'ordine dei 4 byte in memoria della CPU. |
+| **Operazione** | **Parsing e validazione**: analizza caratteri e punti, verifica che i 4 ottetti siano 0-255 e li memorizza in memoria già in Big Endian. | Converte tra ordine host e rete; scambia i 4 byte su host little-endian e li lascia invariati su host big-endian. Non interpreta stringhe. |
 | **Quando si usa?** | **Fase di Setup**: per inizializzare `addr.sin_addr` prima di `connect()` o `bind()`. | **Fase di I/O (Dati)**: per inviare e ricevere numeri binari nel payload (es. `msg.type`, punteggi, lunghezze). |
 | **Supporto IPv6?** | Sì (`AF_INET6` su buffer a 128 bit `in6_addr`). | No (opera unicamente su numeri interi a 32 bit). |
 
@@ -4033,7 +4494,7 @@ Spesso si fa confusione tra queste funzioni perché entrambe hanno a che fare co
 > * **NO se hai una stringa testuale come `"192.168.1.1"`**:
 >   ```c
 >   // ERRORE GRAVE: un letterale stringa è un puntatore 'char *'!
->   addr.sin_addr.s_addr = htonl("192.168.1.1"); // ERRORE! Invertirebbe i byte dell'indirizzo del puntatore in memoria!
+>   addr.sin_addr.s_addr = htonl("192.168.1.1"); // ERRORE di tipo: si passa un puntatore dove è richiesto un uint32_t!
 >   
 >   // CORRETTO:
 >   inet_pton(AF_INET, "192.168.1.1", &addr.sin_addr);
@@ -4092,6 +4553,123 @@ connect(sd, (struct sockaddr*)&srv_addr, sizeof(srv_addr)); // Richiede la conne
 // ... comunica ...
 close(sd);
 ```
+
+#### Socket Locali a Datagrammi (`AF_UNIX`, `SOCK_DGRAM`)
+
+Fonte: Lezione 19, socket-2, pp. 12–15. I datagrammi conservano i confini dei messaggi: qui non servono `listen` e `accept`. `sendto` invia un messaggio e `recvfrom` ne riceve uno. Un `connect` opzionale può fissare il peer senza creare uno stream.
+
+**Provenienza dei due listati:** `server_datagram.c` e `client_datagram.c` dell’Unificato, rispettivamente pp. 1030 e 1027. Sono riportati nella loro struttura originale, al posto del programma unico generato per la guida; è aggiunto soltanto il controllo degli errori di `sendto`, motivato nei commenti. Avviare prima il server e poi il client in due terminali, sulla stessa macchina. Il client ha un proprio pathname perché deve ricevere la risposta; entrambi rimuovono il proprio pathname alla fine, come nei sorgenti del corso. L’esempio assume che i pathname fissi usati non appartengano ad altre applicazioni.
+
+**Server (`server_datagram.c`):**
+
+```c
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
+#define SOCK_PATH "/tmp/local_dgram"
+
+int main(void) {
+    int sfd;
+    struct sockaddr_un addr, src;
+    char buf[100];
+    socklen_t slen = sizeof(src);
+
+     // Crea socket datagram locale
+     sfd = socket(AF_LOCAL, SOCK_DGRAM, 0);
+     if (sfd == -1) { perror("socket"); return 1; }
+
+     // Associa un path al socket (bind)
+     memset(&addr, 0, sizeof(addr));
+     addr.sun_family = AF_LOCAL;
+     strcpy(addr.sun_path, SOCK_PATH);
+     unlink(SOCK_PATH);
+     if (bind(sfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+         perror("bind"); return 1;
+     }
+
+     printf("Server pronto su %s\n", SOCK_PATH);
+
+     // Attende un messaggio
+     ssize_t n = recvfrom(sfd, buf, sizeof(buf) - 1, 0,
+                          (struct sockaddr*)&src, &slen);
+     if (n == -1) { perror("recvfrom"); return 1; }
+     buf[n] = '\0';
+
+     printf("Ricevuto: \"%s\"\n", buf);
+
+     // Invia una risposta
+     const char *msg = "OK dal server";
+     // Correzione: non dichiarare riuscita una risposta che non è stata inviata.
+     if (sendto(sfd, msg, strlen(msg), 0, (struct sockaddr*)&src, slen) == -1) {
+         perror("sendto"); close(sfd); unlink(SOCK_PATH); return 1;
+     }
+
+     close(sfd);
+     unlink(SOCK_PATH);
+     return 0;
+}
+```
+
+**Client (`client_datagram.c`):**
+
+```c
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
+#define SOCK_PATH "/tmp/local_dgram"
+
+int main(void) {
+    int cfd;
+    struct sockaddr_un srv, cli;
+    char buf[100];
+    ssize_t n;
+
+     // Crea socket datagram locale
+     cfd = socket(AF_LOCAL, SOCK_DGRAM, 0);
+     if (cfd == -1) { perror("socket"); return 1; }
+
+     // Crea un indirizzo univoco per il client
+     memset(&cli, 0, sizeof(cli));
+     cli.sun_family = AF_LOCAL;
+     snprintf(cli.sun_path, sizeof(cli.sun_path),
+              "/tmp/client_%d", getpid());
+     unlink(cli.sun_path);
+     if (bind(cfd, (struct sockaddr*)&cli, sizeof(cli)) == -1) {
+         perror("bind client"); return 1;
+     }
+
+     // Imposta indirizzo del server
+     memset(&srv, 0, sizeof(srv));
+     srv.sun_family = AF_LOCAL;
+     strcpy(srv.sun_path, SOCK_PATH);
+
+     // Invia messaggio
+     const char *msg = "Ciao dal client!";
+     // Correzione: se l'invio fallisce, non attendere una risposta impossibile.
+     if (sendto(cfd, msg, strlen(msg), 0,
+                (struct sockaddr*)&srv, sizeof(srv)) == -1) {
+         perror("sendto"); close(cfd); unlink(cli.sun_path); return 1;
+     }
+
+     // Attende la risposta
+     n = recvfrom(cfd, buf, sizeof(buf) - 1, 0, NULL, NULL);
+     if (n == -1) { perror("recvfrom"); return 1; }
+     buf[n] = '\0';
+     printf("Risposta del server: \"%s\"\n", buf);
+
+     close(cfd);
+     unlink(cli.sun_path);
+     return 0;
+}
+```
+
+Questi sono esempi didattici, non server persistenti: il server riceve e risponde una volta sola. Il controllo degli invii permette di segnalare gli errori; la controparte può comunque restare in attesa se l’altro processo termina. Un recupero automatico richiederebbe anche un timeout, che non è aggiunto a questo esempio del corso. Una ricezione con buffer troppo piccolo tronca il messaggio; non si recupera il residuo come in TCP. Non assumere un limite universale di 64 KB. Su Linux i datagrammi Unix sono affidabili e ordinati. [Riferimento: unix(7)](https://man7.org/linux/man-pages/man7/unix.7.html).
 
 ### 17.5 Server TCP Completo
 
@@ -4545,7 +5123,7 @@ int select(int numfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 | `readfds` | Insieme di fd da controllare in **lettura** |
 | `writefds` | Insieme di fd da controllare in **scrittura** |
 | `exceptfds` | Condizioni eccezionali (raramente usato, OOB data) |
-| `timeout` | `NULL` → blocca indefinitamente; `{0,0}` → polling; `{N,M}` → attende N.M sec |
+| `timeout` | `NULL` → blocca indefinitamente; `{0,0}` → polling; `{N,M}` → attende N + M/1000000 secondi (M in microsecondi) |
 
 ### 18.3 Macro per `fd_set`
 
@@ -4688,7 +5266,7 @@ int main(void) {
     close(server_fd);
     return 0;
 }
- ```
+```
 
 ---
 
@@ -4703,22 +5281,22 @@ Nello sviluppo di applicazioni di rete, la gestione dei segnali presenta due pro
 
 ### 19.1 Gestione delle Syscall Bloccanti e `EINTR`
 
-Quando un server è bloccato in attesa di connessioni (`accept()`) o di dati (`recv()`, `read()`), l'arrivo di un qualsiasi segnale (come `SIGCHLD` emesso da un processo figlio che termina) interrompe la chiamata.
+Quando un server è bloccato in attesa di connessioni (`accept()`) o di dati (`recv()`, `read()`), un segnale catturato può interrompere la chiamata. Un segnale ignorato normalmente non produce questo effetto; uno fatale termina il processo. Contano API, flag e trasferimenti parziali.
 
 Esistono due approcci standard per gestire questa situazione:
 
 #### Metodo A: Riavvio Automatico con `SA_RESTART` (Raccomandato)
-Configurando il gestore con `sigaction()` e impostando il flag `SA_RESTART`, il sistema operativo riavvia automaticamente la chiamata interrotta non appena l'handler termina:
+Configurando il gestore con `sigaction()` e impostando il flag `SA_RESTART`, il sistema operativo riavvia le chiamate per cui il flag è previsto. Su Linux `select()` richiede la gestione esplicita di `EINTR`, ricostruendo set e timeout (ricalcolato rispetto alla scadenza):
 ```c
 struct sigaction sa = {0};
 sa.sa_handler = gestore_sigchld;
-sa.sa_flags = SA_RESTART; // Le syscall bloccanti interrotte NON falliscono con EINTR, ma ripartono
+sa.sa_flags = SA_RESTART; // Riavvia solo le chiamate supportate; select può ancora restituire EINTR
 sigemptyset(&sa.sa_mask);
 sigaction(SIGCHLD, &sa, NULL);
 ```
 
 #### Metodo B: Gestione Manuale nel Ciclo con `EINTR`
-Se `SA_RESTART` non è impostato, la chiamata fallisce restituendo `-1` e impostando `errno = EINTR`. In tal caso, il server deve verificare la condizione e ripetere l'operazione:
+Se la chiamata restituisce `-1` con `errno == EINTR`, occorre decidere se riprovare o terminare. Questo può accadere anche con `SA_RESTART` per API non riavviate. In tal caso, il server deve verificare la condizione e ripetere l'operazione:
 ```c
 for (;;) {
     int sd = accept(listen_sd, ...);
@@ -5175,7 +5753,7 @@ I PID namespace formano un **albero gerarchico**:
 
 ```
 Global Namespace      PID = 24133
-    └── Namespace A       PID = 1
+    └── Namespace A       PID = 47
         └── Namespace B   PID = 1
 ```
 
@@ -5183,13 +5761,15 @@ Global Namespace      PID = 24133
 - Il kernel mantiene un array `numbers[]` con il PID in ogni livello della gerarchia:
 
 ```
-Namespace B (corrente)  → numbers[0] = 1
+Global namespace        → numbers[0] = 24133
 Namespace A (genitore)  → numbers[1] = 47
-Global namespace        → numbers[2] = 24322
+Namespace B (corrente)  → numbers[2] = 1
 ```
 
 - La struttura `struct pid` nel kernel gestisce la traduzione dei PID lungo la gerarchia
-- Si può ispezionare via `/proc/<PID>/ns/` e `/proc/<PID>/status` → campo `NSpid: 24133  1  1`
+- Si può ispezionare via `/proc/<PID>/ns/` e `/proc/<PID>/status` → campo `NSpid: 24133  47  1`
+
+**Rettifica alle slide (Lezione 29, p. 8):** l’indice 0 è il namespace iniziale e gli indici crescono verso quelli annidati, come nel [sorgente Linux](https://raw.githubusercontent.com/torvalds/linux/master/kernel/pid.c).
 
 
 #### Process Subreaper e Adozione dei Processi Orfani (`adopt_test.c`)
@@ -5205,15 +5785,18 @@ In scenari a container o servizi complessi, non si desidera che gli orfani risal
 
 prctl(PR_SET_CHILD_SUBREAPER, 1);
 ```
-Un processo si dichiara **subreaper**: d'ora in avanti, se un qualsiasi processo discendente all'interno del suo sottoalbero muore lasciando figli orfani, questi ultimi verranno adottati **da questo processo**, e non da PID 1!
+Un processo si dichiara **subreaper**: d'ora in avanti, se un qualsiasi processo discendente all'interno del suo sottoalbero muore lasciando figli orfani, l’orfano viene adottato dal più vicino antenato ancora vivo marcato subreaper; in assenza di un tale antenato interviene l’init del PID namespace. Non necessariamente da qualunque subreaper più in alto. [Riferimento Linux](https://man7.org/linux/man-pages/man2/PR_SET_CHILD_SUBREAPER.2const.html).
 
 **Comportamento nei PID Namespace:**
 Quando si crea un nuovo PID namespace (es. con `sudo unshare --pid --fork --mount-proc bash`):
 - Il processo shell avviato dentro il namespace assume **PID 1** locale.
-- Se all'interno del namespace viene lanciato un processo che a sua volta crea un figlio e poi termina (es. `bash -c 'sleep 100 & exit'`), il processo figlio `sleep 100` diventa orfano e viene **adottato automaticamente dal PID 1 del namespace locale** (il subreaper implicito del namespace), mantenendo l'isolamento completo rispetto all'host!
+- Se all'interno del namespace viene lanciato un processo che a sua volta crea un figlio e poi termina (es. `bash -c 'sleep 100 & exit'`), il processo figlio `sleep 100` diventa orfano e viene adottato dal più vicino antenato subreaper idoneo, oppure dal PID 1 del namespace. Il ruolo di init del namespace è distinto dall’attributo esplicito `PR_SET_CHILD_SUBREAPER`.
 
 **Codice di Test dell'Adozione (`adopt_test.c`, Slide 1316):**
+**Provenienza del codice:** adattamento di `adopt_test.c`, Unificato p. 1316: il sorgente originale stampa dieci volte e il padre esce dopo tre secondi; qui sono sei iterazioni e due secondi. Il programma osserva l’adozione ma non configura da sé un subreaper.
 ```c
+// Correzione rispetto alla vecchia guida: usare \n nelle stringhe,
+// non un a capo fra le virgolette: altrimenti il programma non compila.
 // adopt_test.c - Verifica adozione orfano
 #include <stdio.h>
 #include <stdlib.h>
@@ -5221,8 +5804,7 @@ Quando si crea un nuovo PID namespace (es. con `sudo unshare --pid --fork --moun
 #include <sys/types.h>
 
 int main(void) {
-    printf("[Padre] Start:  PID=%d  PPID=%d
-", getpid(), getppid());
+    printf("[Padre] Start:  PID=%d  PPID=%d\n", getpid(), getppid());
     pid_t child = fork();
     if (child < 0) {
         perror("fork");
@@ -5231,26 +5813,22 @@ int main(void) {
 
     if (child == 0) {
         // PROCESSO FIGLIO
-        printf("[Figlio] Start: PID=%d  PPID=%d
-", getpid(), getppid());
+        printf("[Figlio] Start: PID=%d  PPID=%d\n", getpid(), getppid());
         for (int i = 0; i < 6; i++) {
             sleep(1);
-            printf("[Figlio] t=%d sec -> PID=%d, PPID=%d
-", i + 1, getpid(), getppid());
+            printf("[Figlio] t=%d sec -> PID=%d, PPID=%d\n", i + 1, getpid(), getppid());
         }
         return 0;
     } else {
         // PROCESSO PADRE: attende 2 secondi poi esce volontariamente
-        printf("[Padre] Figlio creato con PID=%d. Il padre esce tra 2 secondi...
-", child);
+        printf("[Padre] Figlio creato con PID=%d. Il padre esce tra 2 secondi...\n", child);
         sleep(2);
-        printf("[Padre] Uscita padre!
-");
+        printf("[Padre] Uscita padre!\n");
         _exit(0);
     }
 }
 ```
-*Osservazione:* Se lanciato da terminale host, dopo $t=2$ il figlio mostrerà `PPID = 1` (o il PID del subreaper `systemd --user`). Se lanciato dentro un namespace isolato `unshare --pid --fork bash`, il PPID diventerà esattamente `1` (il processo shell interno al namespace).
+*Osservazione:* Dopo l’uscita del padre, il figlio mostra il PID del nuovo adottante: `1` se è init, oppure il PID del più vicino antenato subreaper idoneo; non è garantito che sia `systemd --user`. Se lanciato dentro un namespace isolato `unshare --pid --fork bash`, il PPID diventerà `1` se l’adottante è la shell init del namespace; la presenza di un antenato subreaper più vicino cambia l’adottante. L’osservazione dipende anche dallo scheduling: il primo campione col nuovo PPID può essere successivo a due secondi.
 
 #### Rappresentazione dei Namespace nel Kernel e `/proc/<PID>/ns/`
 A livello kernel (*Slide 1332*), i namespace sono entità anonime collegate a ciascun task:
@@ -5441,19 +6019,22 @@ sudo umount merged
 
 **Meccanismo Whiteout:**
 
-Quando si cancella un file nel layer `merged`, OverlayFS non tocca il `lowerdir` ma crea un file speciale nel `upperdir` chiamato **whiteout** (`.wh.<nomefile>`):
+Una cancellazione attraverso `merged` nasconde il file del lower senza modificarlo. Nell'OverlayFS montato il whiteout ha il nome dell'entry nascosta ed è rappresentato da un device a caratteri 0/0 oppure da un file con apposito xattr. I nomi `.wh.<nome>` descrivono invece la rappresentazione nei layer degli archivi immagine.
+
+Nel precedente esempio il filesystem è già stato smontato: rimontarlo prima della cancellazione dimostrativa.
 
 ```bash
-rm merged/file.txt           # cancella il file nel container
-ls -a upper/                 # appare: .wh.file.txt
-# Il whiteout “nasconde” il file nel lowerdir senza modificarlo
-cat lower/file.txt           # il file originale è ancora intatto
+sudo mount -t overlay overlay \
+    -o lowerdir=lower,upperdir=upper,workdir=work merged
+rm merged/file.txt
+ls -la upper/     # non si garantisce un nome .wh.file.txt
+cat lower/file.txt # il contenuto originale resta intatto
+sudo umount merged
 ```
 
-> Il **whiteout** è un file di tipo `character device (0,0)` che segnala a OverlayFS di ignorare il corrispondente file del lowerdir. Al rollback basta cancellare l'`upperdir` (inclusi i whiteout) e il file originale torna visibile.
+[Riferimento kernel: OverlayFS](https://docs.kernel.org/filesystems/overlayfs.html).
 
 ---
-
 
 ### 23.6 Mini-Container Didattico in C tramite `clone()` e `mount()` (`test_container.c`)
 <div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
@@ -5635,7 +6216,7 @@ docker run --name client --network miarete ubuntu
 docker network rm miarete           # rimuove rete
 ```
 
-Docker crea un **DNS interno** per ogni rete: l'hostname è il nome del container.
+Sulle reti bridge personalizzate Docker offre risoluzione DNS per nomi e alias dei container. Il bridge predefinito non offre automaticamente lo stesso comportamento. [Docker bridge](https://docs.docker.com/engine/network/drivers/bridge/).
 
 ### 24.4 Dockerfile
 
@@ -5651,7 +6232,7 @@ Un **Dockerfile** è un file di testo che descrive come costruire un'immagine.
 | `WORKDIR` | Imposta la directory di lavoro |
 | `EXPOSE` | Dichiara porte esposte |
 | `CMD` | Comando di default all'avvio del container |
-| `ENTRYPOINT` | Comando fisso (non sostituibile) all'avvio |
+| `ENTRYPOINT` | Eseguibile di avvio; sostituibile con `docker run --entrypoint` |
 
 **Esempio — Server C:**
 ```dockerfile
@@ -5669,7 +6250,7 @@ docker build -t c-server .
 docker run --rm --name server-cont --network miarete c-server
 ```
 
-**Layer caching:** ogni istruzione crea un layer immutabile. Se un'istruzione non cambia, Docker riusa il layer → build veloci.
+**Cache di build:** il riuso dipende dall’istruzione, dagli input (inclusi i file copiati) e dai passaggi precedenti. Non tutte le istruzioni creano un layer di filesystem; il solo testo invariato non garantisce un cache hit. [Dockerfile reference](https://docs.docker.com/reference/dockerfile/).
 
 > **`COPY` vs `docker cp`**: `COPY` nel Dockerfile opera a **build-time** (crea un layer immutabile dell'immagine). `docker cp` opera a **runtime** sul container già avviato (agisce sul layer scrivibile del container, non crea layer permanenti).
 
@@ -5719,7 +6300,7 @@ services:
       - miarete
   client:
     build: ./client
-    container_name: client-cont
+    # Correzione: niente container_name fisso, altrimenti --scale non funziona.
     networks:
       - miarete
     depends_on:
@@ -5737,6 +6318,8 @@ docker compose up --scale client=5  # lancia 5 istanze del client
 docker compose down              # ferma e rimuove tutto
 docker compose down -v           # rimuove anche i volumi
 ```
+
+**Avvio e scaling:** il client non ha `container_name` fisso, quindi può essere replicato. `depends_on` nella forma breve ordina l’avvio, ma non attende che il server accetti connessioni: il client deve ritentare oppure occorre un healthcheck con `condition: service_healthy`. [Compose services](https://docs.docker.com/reference/compose-file/services/).
 
 ### 24.6 Limiti sulle Risorse (cgroups in Docker)
 
@@ -5772,7 +6355,7 @@ services:
     build: ./server
     mem_limit: 100m
     memswap_limit: 100m       # RAM+swap = 100m → nessuno swap
-    memory_reservation: 50m   # soft limit (può essere superato)
+    mem_reservation: 50m   # Correzione: questa è la chiave Compose; memory_reservation non è valida.
     cpus: 0.2                 # 20% di un core
     cpu_shares: 1024          # peso relativo di scheduling (default 1024)
     pids_limit: 15
@@ -5782,7 +6365,7 @@ services:
 |---|---|
 | `mem_limit` | Limite rigido RAM (OOM Killer se superato) |
 | `memswap_limit` | Limite RAM+Swap (uguale a `mem_limit` → no swap) |
-| `memory_reservation` | Soft limit (il kernel prova a restare sotto) |
+| `mem_reservation` | Soft limit (il kernel prova a restare sotto) |
 | `cpus` | Frazione di core (1.0 = 1 core, 0.5 = metà core) |
 | `cpu_shares` | Priorità di scheduling — default 1024; peso relativo tra container |
 | `pids_limit` | Max processi+thread nel container |
@@ -5871,7 +6454,7 @@ int main(void) {
 
 ### 24.7 Volumi — Persistenza dei Dati
 
-I container sono **effimeri**: al riavvio i dati vengono persi. I **volumi** rendono i dati persistenti.
+Il layer scrivibile resta disponibile quando si arresta e riavvia **lo stesso container**. Si perde quando quel container viene **eliminato**; un nuovo container parte con un nuovo layer. I volumi conservano i dati indipendentemente da questa sostituzione, finché non sono rimossi esplicitamente. [Docker storage](https://docs.docker.com/engine/storage/).
 
 **Tipi di storage:**
 
@@ -5946,7 +6529,7 @@ docker compose down -v              # ferma e rimuove anche i volumi dichiarati
 
 ---
 
-> **Fine della guida.** Questo documento copre **tutti** gli argomenti trattati nelle lezioni 1–32 del corso di Laboratorio di Sistemi Operativi, inclusi: Unix, file system, shell, comandi, grep/regex, scripting, sed/awk, funzioni bash, compilazione C/GCC, I/O di basso livello, processi, segnali, IPC (pipe/FIFO/mmap), thread, sincronizzazione, problemi classici, socket (locali/TCP/UDP), I/O multiplexing (select), broadcast/multicast, comandi di rete, DNS (getaddrinfo), virtualizzazione, container (namespace/cgroups/OverlayFS) e Docker.
+> **Riepilogo degli argomenti.** La guida raccoglie spiegazioni ed esempi selezionati dalle lezioni 1–32, con integrazioni e rettifiche; non certifica una trascrizione integrale del materiale. Comprende: Unix, file system, shell, comandi, grep/regex, scripting, sed/awk, funzioni bash, compilazione C/GCC, I/O di basso livello, processi, segnali, IPC (pipe/FIFO/mmap), thread, sincronizzazione, problemi classici, socket (locali/TCP/UDP), I/O multiplexing (select), broadcast/multicast, comandi di rete, DNS (getaddrinfo), virtualizzazione, container (namespace/cgroups/OverlayFS) e Docker.
 
 ---
 
@@ -5960,7 +6543,7 @@ Nelle lezioni del corso (in particolare *Lezioni 24, 25, 27 e 28*), il docente f
 2. **File `_TODO.c` e `_TODO.sh` (Template d'Esame):** Scheletri di programmi C e script Bash con parti mancanti contrassegnate da `// TODO` da completare durante la prova.
 3. **Simulazione della Prova Parziale (Lezione 28):** La prova d'esame ufficiale proposta dal docente per la verifica intermedia al calcolatore.
 
-Di seguito vengono riportati tutti i codici completi, le analisi dettagliate dei bug e le soluzioni risolte.
+Di seguito sono raccolti esempi selezionati e soluzioni proposte/adattate. I template originali e le altre tracce restano parte del materiale da esercitare; questa raccolta non è una trascrizione integrale.
 
 ---
 
@@ -6020,14 +6603,51 @@ int main(void) {
 2. Uno dei due thread (es. `t1`) acquisisce per primo il mutex `m`, esce dalla `pthread_cond_wait()`, stampa il messaggio ed esegue `ready = 0;`, consumando la condizione e rilasciando il mutex.
 3. Il secondo thread (`t2`) acquisisce a sua volta il mutex ed esce dalla `pthread_cond_wait()`. **Poiché c'è un `if` anziché un `while`, `t2` non riverifica la condizione `ready`!** `t2` entra illegittimamente nella sezione critica anche se `ready == 0`, violando il predicato di sincronizzazione. Inoltre, lo standard POSIX ammette i cosiddetti *spurious wakeups* (risvegli senza segnale).
 
-**Correzione:**
-Sostituire tassativamente l'`if` con il ciclo `while`:
+**Correzione del predicato e della terminazione:**
+
+Il solo `while (!ready)` impedisce il consumo illegittimo, ma lascia un worker in attesa per sempre: il main produce una sola disponibilità. Per far procedere entrambi come consumatori distinti, produrre due unità e decrementarne una per worker. Il broadcast non produce unità e non sostituisce il contatore. Come nell’esempio originale, questo listato si concentra sulla sincronizzazione e assume che le due creazioni di thread riescano. Non serve `sleep` per la correttezza: il predicato conserva lo stato anche se la notifica precede l'attesa.
+
+**Provenienza del codice:** soluzione scritta per la guida della traccia `es_cond_wait_if_ERR.c` (Unificato p. 1261). L’originale è il listato ERR sopra; la versione con due disponibilità è una correzione proposta, non un sorgente fornito dal docente.
 ```c
-// CORREZIONE:
-while (!ready) {
-    pthread_cond_wait(&c, &m);
+#include <stdio.h>
+#include <pthread.h>
+
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t c = PTHREAD_COND_INITIALIZER;
+int ready = 0; // Ora conta le disponibilità, non è più solo un booleano.
+
+void *worker(void *arg) {
+    int id = (int)(long)arg;
+    pthread_mutex_lock(&m);
+    // Correzione: dopo un risveglio si deve ricontrollare il predicato.
+    while (ready == 0)
+        pthread_cond_wait(&c, &m);
+
+    printf("Thread %d entra nella sezione critica\n", id);
+    // Correzione: ciascun worker consuma una sola disponibilità.
+    ready--;
+    pthread_mutex_unlock(&m);
+    return NULL;
+}
+
+int main(void) {
+    pthread_t t1, t2;
+    pthread_create(&t1, NULL, worker, (void *)1);
+    pthread_create(&t2, NULL, worker, (void *)2);
+
+    pthread_mutex_lock(&m);
+    // Correzione: con una sola disponibilità uno dei due restava in attesa.
+    ready = 2;
+    pthread_cond_broadcast(&c);
+    pthread_mutex_unlock(&m);
+
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+    return 0;
 }
 ```
+
+Se invece l'evento significa «via libera per tutti», usare un predicato persistente `ready = 1` senza consumarlo. Se deve lavorare uno solo, va previsto un protocollo di stop per l'altro prima delle join.
 
 ---
 
@@ -6554,6 +7174,8 @@ int main(void) {
 #### 25.2.6 Script Bash d'Esame Svolti (`es_file_bash1/2/3_TODO.sh`)
 
 ##### Script 1: Monitoraggio File con Modifiche (`es_file_bash1_TODO.sh`, Slide 1269)
+**Provenienza del codice:** completamento proposto dalla guida di `es_file_bash1_TODO.sh` (Unificato p. 1269). Sono corretti solo i commenti non validi in Bash; è conservato `grep -q` del template. STR è quindi un pattern regex. Il separatore `--` impedisce di interpretare un pattern che inizia con `-` come un’opzione.
+
 ```bash
 #!/bin/bash
 # Monitora file .txt contenenti una stringa in una cartella
@@ -6565,7 +7187,7 @@ fi
 DIR="$1"
 STR="$2"
 
-if [ ! -d "$DIR" ]; then //-d controlla se il file è una directory
+if [ ! -d "$DIR" ]; then # -d verifica che sia una directory
     echo "Errore: '$DIR' non e' una directory valida."
     exit 1
 fi
@@ -6575,9 +7197,8 @@ while true; do
     count=0
     for f in "$DIR"/*.txt; do
         if [ -f "$f" ]; then  
-                                            /*Attenzione, dettaglio d esame importante! Se nella cartella non c è alcun file .txt, Bash non espande la wildcard e assegna letteralmente a $f la stringa "$DIR/*.txt". Il test [ -f "$f" ] verifica che $f sia effettivamente un file regolare esistente prima di procedere, evitando errori.*/
-            if grep -q "$STR" "$f"; then /*-q sopprime l output, 
-                                        questa riga ritorna 0 se trova la stringa $STR in $f, altrimenti 1. */
+                                            # Senza match il glob resta letterale: -f evita di elaborarlo.
+            if grep -q -- "$STR" "$f"; then # -q come nel template; -- protegge pattern che iniziano con -
                 count=$((count + 1))
             fi
         fi
@@ -6592,6 +7213,8 @@ done
 ```
 
 ##### Script 2: Conteggio Thread LWP per Utente (`es_file_bash2_TODO.sh`, Slide 1270)
+**Provenienza del codice:** completamento proposto di `es_file_bash2_TODO.sh` (Unificato p. 1270). Incremento dei contatori, ciclo END e passaggio del nome utente tramite `-v` completano/adattano lo scheletro del docente.
+
 ```bash
 #!/bin/bash
 if [ $# -ne 2 ]; then
@@ -6608,7 +7231,7 @@ BEGIN {
 }
 {
     pid = $1;
-    count[pid]++; // Incrementa il numero di LWP per questo PID
+    count[pid]++; # Incrementa il numero di LWP per questo PID
 }
 END {
     printf("Processi dell utente %s con piu di %d LWP:\n\n", user, soglia);
@@ -6649,13 +7272,261 @@ sed -i "s/\b${FIRST}[a-zA-Z0-9_]*${LAST}\b/$BASENAME/g" "$FILE"
 
 ---
 
+#### 25.2.7 Chat UDP Unicast a Due Peer (`es_chat_TODO.c`)
+
+Fonte: Unificato pp. 1320–1321. È una chat tra due endpoint, distinta dalla chat multicast del §25.2.3: ogni processo esegue `bind` sulla propria porta e invia all'IP/porta dell'altro. Avviare in due terminali `./chat 5001 127.0.0.1 5002` e `./chat 5002 127.0.0.1 5001`. EOF su stdin chiude il peer locale; UDP non comunica automaticamente la chiusura all'altro.
+
+**Provenienza del codice:** template `es_chat_TODO.c` (Unificato pp. 1320–1321), completato dalla guida nei punti TODO, mantenendo nomi e flusso originali. Tolti parser delle porte e filtro del peer aggiunti nella prima revisione: non servono alla traccia. Sono commentati il completamento di `select`/invio e il messaggio corretto per IP non valido. Non è una soluzione ufficiale.
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <sys/select.h>
+
+#define BUF 256
+
+int main(int argc, char *argv[]) {
+    int sock;
+    struct sockaddr_in local_addr, peer_addr;
+    char buf[BUF];
+    if (argc != 4) {
+        fprintf(stderr, "Uso: %s PORTA_LOCALE IP_PEER PORTA_PEER\n", argv[0]);
+        return 1;
+    }
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) { perror("socket"); return 1; }
+
+    memset(&local_addr, 0, sizeof(local_addr));
+    local_addr.sin_family = AF_INET;
+    local_addr.sin_port = htons(atoi(argv[1]));
+    local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (bind(sock, (struct sockaddr *)&local_addr, sizeof(local_addr)) < 0) {
+        perror("bind"); close(sock); return 1;
+    }
+    memset(&peer_addr, 0, sizeof(peer_addr));
+    peer_addr.sin_family = AF_INET;
+    peer_addr.sin_port = htons(atoi(argv[3]));
+    if (inet_pton(AF_INET, argv[2], &peer_addr.sin_addr) != 1) {
+        // Correzione: per IP non valido inet_pton ritorna 0 senza impostare errno.
+        // Perciò perror potrebbe stampare un messaggio non pertinente.
+        fprintf(stderr, "Indirizzo IPv4 non valido\n");
+        close(sock);
+        return 1;
+    }
+    printf("Chat UDP: scrivi e premi invio; Ctrl+D per uscire.\n");
+    while (1) {
+        fd_set set;
+        FD_ZERO(&set);
+        // Completamento dei TODO: controlla tastiera e socket nello stesso ciclo.
+        FD_SET(STDIN_FILENO, &set);
+        FD_SET(sock, &set);
+        if (select(sock + 1, &set, NULL, NULL, NULL) < 0) {
+            perror("select"); break;
+        }
+        if (FD_ISSET(STDIN_FILENO, &set)) {
+            int n = read(STDIN_FILENO, buf, BUF);
+            if (n <= 0) break;
+            // Invia solo i byte letti, all'indirizzo dell'altro peer.
+            if (sendto(sock, buf, n, 0, (struct sockaddr *)&peer_addr,
+                       sizeof(peer_addr)) < 0) {
+                perror("sendto"); break;
+            }
+        }
+        if (FD_ISSET(sock, &set)) {
+            struct sockaddr_in from;
+            socklen_t fromlen = sizeof(from);
+            int n = recvfrom(sock, buf, BUF, 0,
+                             (struct sockaddr *)&from, &fromlen);
+            if (n < 0) { perror("recvfrom"); break; }
+            // Come nel template: n è la lunghezza, non serve aggiungere '\0'.
+            write(STDOUT_FILENO, "lui dice: ", 10);
+            write(STDOUT_FILENO, buf, n);
+        }
+    }
+    close(sock);
+    return 0;
+}
+```
+
+Come nel template, si assumono porte numeriche valide fra 1 e 65535. Il buffer limita la dimensione del messaggio visualizzato; datagrammi più grandi vengono troncati. Si assume testo senza NUL. Una `read` dal terminale non definisce da sola un protocollo di messaggi di lunghezza arbitraria.
+
+#### 25.2.8 Pipe e Stdin nel Figlio (`es2_3_pipeSelect_TODO.c`)
+
+Fonte: Unificato p. 1319. Rispetto al §25.2.2, qui è il **padre** a scrivere tre ping e il **figlio** a multiplexare tastiera e pipe. Soluzione adattata: dopo EOF della pipe il figlio continua su stdin fino al suo EOF; il padre attende il figlio, perciò nell'uso interattivo serve Ctrl+D per terminare.
+
+**Provenienza del codice:** template `es2_3_pipeSelect_TODO.c` (Unificato p. 1319), completato con due rami espliciti per pipe e stdin. Sono mantenuti i ping ogni due secondi; le aggiunte necessarie (rimozione degli EOF, raccolta del figlio e gestione della pipe chiusa) sono commentate nel codice. Il precedente helper generico per l’output è eliminato.
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/select.h>
+#include <sys/wait.h>
+#include <string.h>
+#include <signal.h>
+#include <errno.h>
+
+int main(void) {
+    int p[2];
+    if (pipe(p) < 0) { perror("pipe"); return 1; }
+    pid_t pid = fork();
+    if (pid < 0) { perror("fork"); return 1; }
+
+    if (pid == 0) { // FIGLIO: legge dalla pipe e dalla tastiera.
+        close(p[1]);
+        char buf[64];
+        int pipe_aperta = 1, stdin_aperto = 1;
+        while (pipe_aperta || stdin_aperto) {
+            fd_set set;
+            FD_ZERO(&set);
+            // Correzione: dopo EOF non reinserire il descrittore.
+            // Altrimenti select lo segnala continuamente e il ciclo gira a vuoto.
+            if (pipe_aperta) FD_SET(p[0], &set);
+            if (stdin_aperto) FD_SET(STDIN_FILENO, &set);
+            int maxfd = pipe_aperta ? p[0] : STDIN_FILENO;
+            if (select(maxfd + 1, &set, NULL, NULL, NULL) < 0) {
+                if (errno == EINTR) continue; // Ricostruisce il set prima di riprovare.
+                perror("select"); break;
+            }
+            if (pipe_aperta && FD_ISSET(p[0], &set)) {
+                int n = read(p[0], buf, sizeof(buf) - 1);
+                if (n < 0) { perror("read pipe"); break; }
+                if (n == 0) pipe_aperta = 0;
+                else {
+                    buf[n] = '\0'; // L'esempio scambia testo: termina la stringa.
+                    printf("PIPE: %s", buf);
+                }
+            }
+            if (stdin_aperto && FD_ISSET(STDIN_FILENO, &set)) {
+                int n = read(STDIN_FILENO, buf, sizeof(buf) - 1);
+                if (n < 0) { perror("read stdin"); break; }
+                if (n == 0) stdin_aperto = 0;
+                else {
+                    buf[n] = '\0';
+                    printf("STDIN: %s", buf);
+                }
+            }
+        }
+        close(p[0]);
+        return 0;
+    }
+
+    // PADRE: il comportamento della traccia resta tre ping, uno ogni due secondi.
+    close(p[0]);
+    // Se il figlio esce per errore, gestiamo la pipe chiusa come errore di write.
+    signal(SIGPIPE, SIG_IGN);
+    char msg[] = "ping dal padre\n";
+    for (int i = 0; i < 3; i++) {
+        if (write(p[1], msg, strlen(msg)) < 0) { perror("write"); break; }
+        sleep(2);
+    }
+    close(p[1]);
+    // Correzione: raccogliere il figlio evita di lasciarlo zombie.
+    while (waitpid(pid, NULL, 0) < 0 && errno == EINTR) { }
+    return 0;
+}
+```
+
+#### 25.2.9 Altre Tracce Iniziali: Byte, Shell e Awk
+
+Fonte: Lezione 10, esercitazione I/O, pp. 13–23; Lezione 6, eserciziShell25-26; Lezione 7, esercitazione Sed/Awk. Queste tracce vanno esercitate anche sui PDF originali; qui sono esplicitati i metodi e casi limite, senza attribuire al docente nuove soluzioni.
+
+| Traccia I/O | Metodo e casi da verificare |
+|---|---|
+| Letture a gruppi di 2, saltando 3 byte | `read(...,2)` seguito da `lseek(fd,3,SEEK_CUR)`; sull'alfabeto della slide produce `ABFGMNRSZ` |
+| `extract file1 file2 n m` | Intervallo inclusivo, offset da zero: validare `0 <= n <= m`, aprire file2 con `O_CREAT|O_EXCL`, posizionarsi a n, copiare al massimo `m-n+1` byte gestendo scritture parziali; definire EOF anticipato come errore |
+| `alternaByte.c` | Leggere gli offset 0,2,4,… fino a EOF; file vuoto produce output vuoto, nessun seek negativo |
+| `invertiByte.c` | Ricavare dimensione con `lseek(fd,0,SEEK_END)`, leggere offset size-1,…,0 con `off_t`; vuoto gestito senza seek a -1. Si invertono byte, non caratteri Unicode |
+
+**Provenienza dei due listati:** versioni corrette degli esercizi `alternaByte.c` e `invertiByte.c` della Lezione 10, esercitazione I/O, pp. 17–23. Sono mantenuti due programmi separati, come nel corso, al posto dell’eseguibile con due modalità generato nella prima revisione. Le correzioni necessarie (header, tipo degli offset, EOF ed eventuale file vuoto) sono commentate. Si assumono file regolari non modificati durante la lettura; si elaborano byte, non caratteri Unicode.
+
+**`alternaByte.c`:** legge un byte e salta quello successivo.
+
+```c
+#include <stdio.h> // Correzione: dichiara perror e fprintf.
+#include <unistd.h>
+#include <fcntl.h>
+
+int main(int argc, char **argv) { // Correzione: il tipo restituito è int.
+    int fd;
+    ssize_t nread;
+    char buffer[1];
+    off_t i = 0; // Correzione: gli offset di file hanno tipo off_t, non int.
+    if (argc != 2) { fprintf(stderr, "Uso: %s FILE\n", argv[0]); return 1; }
+    fd = open(argv[1], O_RDONLY);
+    if (fd < 0) { perror("open"); return 1; }
+
+    while ((nread = read(fd, buffer, 1)) > 0) {
+        if (write(STDOUT_FILENO, buffer, 1) != 1) {
+            perror("write"); close(fd); return 1;
+        }
+        i = i + 2; // Stesso algoritmo delle slide: offset 0, 2, 4, ...
+        if (lseek(fd, i, SEEK_SET) == -1) {
+            perror("lseek"); close(fd); return 1;
+        }
+    }
+    // Correzione: EOF (0) va distinto da un errore (-1).
+    if (nread < 0) perror("read");
+    close(fd);
+    return nread < 0 ? 1 : 0;
+}
+```
+
+**`invertiByte.c`:** parte dalla fine e legge un byte alla volta all’indietro.
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+int main(int argc, char **argv) {
+    int fd;
+    char buffer[1];
+    // Correzione: off_t evita di memorizzare una posizione di file in un int.
+    off_t currpos;
+    if (argc != 2) { fprintf(stderr, "Uso: %s FILE\n", argv[0]); return 1; }
+    fd = open(argv[1], O_RDONLY);
+    if (fd < 0) { perror("open"); return 1; }
+    currpos = lseek(fd, 0, SEEK_END);
+    if (currpos == -1) { perror("lseek"); close(fd); return 1; }
+
+    // Correzione: con un file vuoto non cercare l'offset -1.
+    // Per gli altri file, prima si decrementa e poi si legge: size-1, ..., 0.
+    while (currpos > 0) {
+        currpos--;
+        if (lseek(fd, currpos, SEEK_SET) == -1) {
+            perror("lseek"); close(fd); return 1;
+        }
+        if (read(fd, buffer, 1) != 1) {
+            fprintf(stderr, "Errore o EOF anticipato\n"); close(fd); return 1;
+        }
+        if (write(STDOUT_FILENO, buffer, 1) != 1) {
+            perror("write"); close(fd); return 1;
+        }
+    }
+    close(fd);
+    return 0;
+}
+```
+
+Per shell/Awk riprendere anche gli esercizi originali: confrontare `"$@"` e `"$*"`, filtri su colonne, aggregazione per chiave, trasformazioni con backreference. Verificare input vuoto, spazi nei nomi, pattern senza match e righe duplicate non adiacenti. Esempio aggiuntivo di aggregazione (campo 1 = chiave, campo 2 = valore):
+
+**Provenienza del codice:** esempio aggiuntivo della guida su aggregazione Awk; non attribuito al docente.
+
+```bash
+awk 'NF >= 2 { sum[$1] += $2; count[$1]++ }
+     END { for (k in sum) print k, count[k], sum[k], sum[k]/count[k] }' dati.txt | sort
+```
+
 ### 25.3 Simulazione Ufficiale Prova Parziale (Lezione 28 — Prova PA)
 
-Questa sezione riporta fedelmente la **simulazione ufficiale della prova parziale** erogata dal docente Alberto Finzi nella **Lezione 28** (*Slide 1322–1325*), con tutti i quesiti e le relative soluzioni complete.
+Questa sezione propone soluzioni adattate ai quesiti della simulazione della **Lezione 28** (*Unificato pp. 1322–1325*). Le soluzioni della guida non sono una trascrizione ufficiale del docente.
 
 #### Quesito 1 (Pipeline Bash — Processi e Thread LWP)
-**Testo:** Scrivere una pipeline di comandi che stampi la lista di tutti gli utenti che hanno **almeno un processo con almeno 2 thread (LWP)**. Ogni utente deve comparire al massimo una volta nell'output.  
-*Comandi utili:* `ps`, `awk`, `sort`.  
+**Testo:** Scrivere una pipeline di comandi che stampi la lista di tutti gli utenti che hanno **almeno un processo con almeno 2 thread (LWP)**. Ogni utente deve comparire al massimo una volta nell'output.
+*Comandi utili:* `ps`, `awk`, `sort`.
 *Suggerimento:* Il comando `ps -eo user,nlwp` stampa l'utente e il numero di thread (`NLWP`).
 
 **Soluzione:**
@@ -6740,7 +7611,9 @@ void fine(void) {
 #### Quesito 4 (Processi Figli su Pipe Distinte e Padre con `select()` fino a 10 Caratteri)
 **Testo:** Due figli scrivono periodicamente un carattere su una propria pipe: il figlio 1 scrive `'A'` su `p1`, il figlio 2 scrive `'B'` su `p2`. Il padre usa `select()` per leggere dai due descrittori, conta quanti caratteri arrivano da ciascuna pipe, termina dopo aver ricevuto in totale 10 caratteri e stampa i conteggi. Aggiungere inoltre la gestione di pipe rotte nei figli con handler `SIGPIPE`.
 
-**Soluzione Completa:**
+**Soluzione proposta con limite esatto, EOF e raccolta dei figli:**
+**Provenienza del codice:** completamento correttivo scritto per la guida della traccia della Lezione 28, pp. 2–3 (Unificato pp. 1323–1324). La traccia ha TODO; sono mantenuti `p1`, `p2`, i due rami dei figli e i messaggi della guida precedente. Le sole correzioni funzionali (limite prima della seconda lettura, EOF, errori e raccolta dei figli) sono commentate. Non è una soluzione ufficiale del professore.
+
 ```c
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -6748,6 +7621,8 @@ void fine(void) {
 #include <unistd.h>
 #include <sys/select.h>
 #include <signal.h>
+#include <sys/wait.h> // Correzione: dichiara waitpid.
+#include <errno.h>
 
 void sigpipe_handler(int signo) {
     (void)signo;
@@ -6764,8 +7639,11 @@ int main(void) {
     // Utilizzo di pipe2() o pipe()
     if (pipe(p1) == -1 || pipe(p2) == -1) { perror("pipe"); exit(1); }
 
+    // Correzione: conserva il PID per raccogliere il figlio alla fine.
+    pid_t f1 = fork();
+    if (f1 < 0) { perror("fork"); return 1; }
     // FIGLIO 1
-    if (fork() == 0) {
+    if (f1 == 0) {
         signal(SIGPIPE, sigpipe_handler);
         close(p1[0]); // Chiude lettura p1
         close(p2[0]); close(p2[1]); // Non usa p2
@@ -6777,8 +7655,15 @@ int main(void) {
         _exit(0);
     }
 
+    pid_t f2 = fork();
+    if (f2 < 0) {
+        perror("fork");
+        close(p1[0]); close(p1[1]); close(p2[0]); close(p2[1]);
+        while (waitpid(f1, NULL, 0) < 0 && errno == EINTR) { }
+        return 1;
+    }
     // FIGLIO 2
-    if (fork() == 0) {
+    if (f2 == 0) {
         signal(SIGPIPE, sigpipe_handler);
         close(p2[0]); // Chiude lettura p2
         close(p1[0]); close(p1[1]); // Non usa p1
@@ -6797,37 +7682,54 @@ int main(void) {
     fd_set set;
     int maxfd = (p1[0] > p2[0] ? p1[0] : p2[0]) + 1;
 
-    while (c1 + c2 < 10) {
+    int aperta1 = 1, aperta2 = 1;
+    while (c1 + c2 < 10 && (aperta1 || aperta2)) {
         FD_ZERO(&set);
-        FD_SET(p1[0], &set);
-        FD_SET(p2[0], &set);
+        // Correzione: non reinserire una pipe che ha già raggiunto EOF.
+        if (aperta1) FD_SET(p1[0], &set);
+        if (aperta2) FD_SET(p2[0], &set);
 
         int ret = select(maxfd, &set, NULL, NULL, NULL);
-        if (ret < 0) { 
+        if (ret < 0) {
+            if (errno == EINTR) continue; // select può essere interrotta.
             perror("select"); 
             break; 
         }
 
-        if (FD_ISSET(p1[0], &set)) {
-            if (read(p1[0], &buf, 1) > 0) {
+        if (aperta1 && FD_ISSET(p1[0], &set)) {
+            ssize_t n = read(p1[0], &buf, 1);
+            if (n > 0) {
                 c1++;
                 printf("[Padre] Ricevuto '%c' da Pipe 1 (Tot p1: %d)\n", buf, c1);
-            }
+            } else if (n == 0) {
+                // Correzione: EOF è pronto in select, ma non fornisce più byte.
+                aperta1 = 0;
+            } else if (errno != EINTR) { perror("read pipe 1"); break; }
         }
-        if (FD_ISSET(p2[0], &set)) {
-            if (read(p2[0], &buf, 1) > 0) {
+        // Correzione essenziale: se il totale è già 10, non leggere l’undicesimo.
+        if (c1 + c2 < 10 && aperta2 && FD_ISSET(p2[0], &set)) {
+            ssize_t n = read(p2[0], &buf, 1);
+            if (n > 0) {
                 c2++;
                 printf("[Padre] Ricevuto '%c' da Pipe 2 (Tot p2: %d)\n", buf, c2);
-            }
+            } else if (n == 0) {
+                // Correzione: EOF è pronto in select, ma non fornisce più byte.
+                aperta2 = 0;
+            } else if (errno != EINTR) { perror("read pipe 2"); break; }
         }
     }
 
     printf("\nConteggio finale: pipe1 = %d, pipe2 = %d (Totale: %d)\n", c1, c2, c1 + c2);
     // Chiudendo le letture, i successivi write dei figli riceveranno SIGPIPE
     close(p1[0]); close(p2[0]);
-    return 0;
+    // Correzione: raccogliere entrambi i figli evita zombie.
+    while (waitpid(f1, NULL, 0) < 0 && errno == EINTR) { }
+    while (waitpid(f2, NULL, 0) < 0 && errno == EINTR) { }
+    return c1 + c2 == 10 ? 0 : 1;
 }
 ```
+
+Il controllo del totale è ripetuto prima di **ogni** lettura, quindi anche quando entrambe le pipe sono pronte a totale 9 non si supera 10. Un descrittore a EOF viene rimosso. La chiusura delle letture causa SIGPIPE alle scritture successive dei figli, che vengono poi raccolti con `waitpid`. EOF anticipato su entrambe le pipe produce un totale inferiore a 10 e un esito di errore.
 
 ---
 
@@ -6890,10 +7792,10 @@ c) **Cosa stampa il programma?**
 
 ---
 
-### 25.4 Traccia d'Esame Ufficiale Svolta — Compito A
+### 25.4 Traccia di Studio Svolta — Compito A
 <div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
-Questa sezione riporta integralmente la traccia ufficiale d'esame del **Compito A** (presente nei documenti d'esame del corso), con tutti i 5 esercizi risolti e commentati passo-passo.
+Il **Compito A** corrisponde alla traccia fotografata nel materiale locale: [fotografia 07](../Esami/photo_2026-10-01_15-08-07.jpg) e [fotografia 05](../Esami/photo_2026-10-01_15-08-05.jpg). Le fotografie riscontrano gli esercizi e i relativi frammenti; le soluzioni e le spiegazioni che seguono sono proposte della guida, non correzioni ufficiali del docente. Le etichette A/B sono quelle usate qui per distinguere le due tracce; le immagini non attestano da sole data, appello o denominazione ufficiale.
 
 ---
 
@@ -6959,24 +7861,26 @@ Scrivere una pipeline di comandi per ottenere l'elenco dei soli nomi dei file ch
 
 **Soluzione con `grep` e `awk`:**
 ```bash
-ls -l | grep '^-..w..[^w]..[^w]' | grep '\.sh$' | awk '{print $9}'
+# Correzione: w deve essere alla posizione 3; gruppo e altri non devono avere w.
+ls -l | grep '^-.w..[^w]..[^w].' | grep '\.sh$' | awk '{print $9}'
 ```
 
 **Soluzione Diretta con solo `awk`:**
 ```bash
-ls -l | awk '/^-..w..[^w]..[^w]/ && $9 ~ /\.sh$/ {print $9}'
+# Stesso controllo: posizioni di scrittura 3 (presente), 6 e 9 (assente).
+ls -l | awk '/^-.w..[^w]..[^w]./ && $9 ~ /\.sh$/ {print $9}'
 ```
 
 **Spiegazione Dettagliata dei Permessi:**
 La stringa dei permessi in `ls -l` è composta da 10 caratteri: `[tipo][user][group][other]`.
 - **Condizione a (File regolare):** Il primo carattere deve essere un trattino `-` (si escludono directory `d` e link `l`). Nella regex: `^-`.
 - **Condizione c (Scrittura SOLO per il proprietario):**
-  - **User (caratteri 2, 3, 4):** Il permesso di scrittura per l'utente è il carattere 4 (il terzo della terna user). Deve essere presente (`w`). I permessi di lettura ed esecuzione possono essere qualsiasi (`..`). La terna user corrisponde a: `..w`.
-  - **Group (caratteri 5, 6, 7):** Il permesso di scrittura per il gruppo è il carattere 6 (il secondo della terna group). **Non** deve essere presente (`-` oppure negato con `[^w]`). La terna group corrisponde a: `..[^w]` (oppure `. - .`).
-  - **Other (caratteri 8, 9, 10):** Il permesso di scrittura per gli altri è il carattere 9 (il secondo della terna other). **Non** deve essere presente (`-` oppure negato con `[^w]`). La terna other corrisponde a: `..[^w]`.
-  - Regex risultante completa sui primi 10 caratteri: `^-..w..[^w]..[^w]` (oppure `^-..w..-..-`).
+  - **User (caratteri 2, 3, 4):** Il permesso di scrittura per l'utente è il carattere 3 (il secondo della terna user). Deve essere presente (`w`). I permessi di lettura ed esecuzione possono essere qualsiasi (`..`). La terna user corrisponde a: `.w.`.
+  - **Group (caratteri 5, 6, 7):** Il permesso di scrittura per il gruppo è il carattere 6 (il secondo della terna group). **Non** deve essere presente (`-` oppure negato con `[^w]`). La terna group corrisponde a: `.[^w].` (oppure `. - .`).
+  - **Other (caratteri 8, 9, 10):** Il permesso di scrittura per gli altri è il carattere 9 (il secondo della terna other). **Non** deve essere presente (`-` oppure negato con `[^w]`). La terna other corrisponde a: `.[^w].`.
+  - Regex risultante completa sui primi 10 caratteri: `^-.w..[^w]..[^w].` (oppure `^-.w..-..-.`).
 - **Condizione b (Estensione `.sh`):** Il nome del file deve terminare con `.sh`. Con `grep` usiamo `grep '\.sh$'` oppure in `awk` verifichiamo la nona colonna con `$9 ~ /\.sh$/`.
-- **Estrazione nome:** `awk '{print $9}'` isola e stampa solo la colonna del nome file.
+- **Estrazione nome:** `awk '{print $9}'` assume nomi senza spazi e il formato didattico di `ls -l`; per script reali usare `find` con metadati e delimitazione adatta.
 
 ---
 
@@ -7042,7 +7946,7 @@ int main() {
 ##### b) Il programma termina correttamente? Segnalare e correggere eventuali anomalie.
 - **Sì, il programma termina**, ma presenta un'**anomalia logica nella chiamata a `wait()`**:
   - L'istruzione `wait(NULL);` si trova all'esterno del blocco `if-else`, quindi viene eseguita **sia dal Padre che dal Figlio**.
-  - Nel **Figlio**, che non ha generato alcun processo figlio a sua volta, la chiamata a `wait(NULL)` fallisce immediatamente restituendo `-1` e impostando la variabile globale `errno = ECHILD` (*No child processes*).
+  - Nel **Figlio**, che non ha generato alcun processo figlio a sua volta, la chiamata a `wait(NULL)` fallisce immediatamente restituendo `-1` e impostando `errno = ECHILD` del thread chiamante (*No child processes*).
   - Nel **Padre**, `wait(NULL)` attende correttamente la terminazione del processo figlio.
   - **Correzione:** Spostare `wait(NULL);` all'interno del ramo `else` del padre, oppure racchiuderlo in un controllo esplicito:
     ```c
@@ -7126,7 +8030,7 @@ int main(void) {
 
 ##### 1. Le due select() del padre si bloccano oppure ritornano subito? Perché?
 - **La prima `select()`:**
-  - Si **blocca temporaneamente** fino a quando il processo figlio non scrive i dati nella pipe. Appena il figlio esegue `write(p[1], "ABCD", 4)`, i byte entrano nel buffer kernel della pipe; il descrittore `p[0]` diventa pronto in lettura e la `select()` si sblocca ritornando `1`.
+  - Può attendere se il figlio non ha ancora scritto; ritorna subito se i dati sono già disponibili. Appena il figlio esegue `write(p[1], "ABCD", 4)`, i byte entrano nel buffer kernel della pipe; il descrittore `p[0]` diventa pronto in lettura e la `select()` si sblocca ritornando `1`.
 - **La seconda `select()`:**
   - **Ritorna immediatamente senza bloccarsi**.
   - *Motivo:* Il figlio ha scritto 4 byte (`"ABCD"`). La prima `read()` ha consumato soltanto 2 byte (`"AB"`). All'interno del buffer della pipe rimangono ancora 2 byte non letti (`"CD"`). Poiché il buffer della pipe non è vuoto, il descrittore `p[0]` è già pronto per una nuova lettura immediata.
@@ -7206,10 +8110,10 @@ Nei sistemi Linux, il processo con **PID 1 è il supervisore vitale del namespac
 
 ---
 
-### 25.5 Traccia d'Esame Ufficiale Svolta — Compito B
+### 25.5 Traccia di Studio Svolta — Compito B
 <div align="right"><em><a href="#indice">Torna all'indice</a></em></div>
 
-Questa sezione riporta integralmente la traccia ufficiale d'esame del **Compito B** (presente nei documenti d'esame del corso), con tutti i 5 esercizi risolti e commentati passo-passo.
+Il **Compito B** corrisponde alla traccia fotografata nel materiale locale: [fotografia 10](../Esami/photo_2026-10-01_15-08-10.jpg) e [fotografia 09](../Esami/photo_2026-10-01_15-08-09.jpg). Le fotografie riscontrano gli esercizi e i relativi frammenti; le soluzioni e le spiegazioni che seguono sono proposte della guida, non correzioni ufficiali del docente. Le etichette A/B sono quelle usate qui per distinguere le due tracce; le immagini non attestano da sole data, appello o denominazione ufficiale.
 
 ---
 
@@ -7438,12 +8342,12 @@ int main(void) {
 
 ##### 1. Le tre select() del padre si bloccano oppure ritornano subito? Perché?
 - **La prima `select()`:**
-  - Si **blocca** fino a quando il processo figlio non scrive i dati nella pipe. Quando il figlio invoca `write(p[1], "XYZ", 3)`, la pipe diventa leggibile e la `select()` ritorna.
+  - Può attendere fino alla scrittura, oppure ritornare subito se il figlio ha già scritto. Quando il figlio invoca `write(p[1], "XYZ", 3)`, la pipe diventa leggibile e la `select()` ritorna.
 - **La seconda `select()`:**
   - **Ritorna subito senza bloccarsi**, poiché nella pipe è rimasto ancora 1 byte non letto (`'Z'`). Il descrittore è pronto in lettura.
 - **La terza `select()`:**
-  - **Ritorna subito anch'essa senza bloccarsi!**
-  - *Motivo fondamentale (domanda classica d'esame):* Il processo figlio ha chiuso la sua estremità di scrittura con `close(p[1]);` ed è terminato. Il padre ha già chiuso `p[1]` all'inizio. **Quando tutte le estremità di scrittura di una pipe sono chiuse, la pipe viene considerata dal kernel come pronta in lettura per notificare la condizione di End-Of-File (EOF)!** Di conseguenza, `select()` non attende e ritorna immediatamente pronta.
+  - **Ritorna subito se tutti gli scrittori hanno già chiuso; altrimenti può attendere la chiusura.**
+  - *Motivo fondamentale (domanda classica d'esame):* Il figlio può essere sospeso fra `write` e `close`. Solo dopo la chiusura di tutte le estremità di scrittura si osserva EOF a buffer vuoto. Il padre ha già chiuso `p[1]` all'inizio. **Quando tutte le estremità di scrittura di una pipe sono chiuse, la pipe viene considerata dal kernel come pronta in lettura per notificare la condizione di End-Of-File (EOF)!** Di conseguenza, `select()` non attende e ritorna immediatamente pronta.
 
 ##### 2. Quanto valgono n1, n2, n3?
 - Il figlio inietta 3 byte (`"XYZ"`).
@@ -7457,7 +8361,7 @@ int main(void) {
 
 ##### 3. Che cosa indica il valore restituito dalla terza read()? Il programma termina correttamente?
 - Il valore `n3 = 0` indica inequivocabilmente la condizione di **End-Of-File (EOF)**: la pipe è chiusa e non vi sono ulteriori dati da leggere.
-- Il programma termina correttamente e senza blocchi.
+- In assenza di errori il programma termina; l’ultima attesa può durare finché il figlio non viene schedulato ed esegue `close`.
 
 ##### 4. C'è il rischio che il processo figlio rimanga temporaneamente in stato zombie? In caso affermativo, indicare come modificare il programma per evitarlo.
 - **Sì, il figlio diventa zombie.**
@@ -7538,7 +8442,7 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 ### Processi e Segnali
 * **PID / PPID**: Process ID (identificativo univoco) e Parent Process ID (PID del padre).
 * **Processo Zombie (`Z`)**: Processo terminato ma il cui padre non ha ancora recuperato l'exit status tramite `wait()`.
-* **Processo Orfano**: Processo il cui padre è terminato; viene solitamente adottato da `init` (PID 1).
+* **Processo Orfano**: Processo il cui padre è terminato; su Linux è adottato dal più vicino antenato subreaper idoneo o dall’init del namespace.
 * **fork()**: System call che clona integralmente il processo corrente in un processo figlio distinto.
 * **wait() / waitpid()**: System call per attendere la terminazione di un figlio (scongiurando gli zombie) e leggerne l'exit status.
 * **exec()**: Famiglia di funzioni che sostituisce l'immagine del processo chiamante con un nuovo eseguibile.
@@ -7581,553 +8485,333 @@ Questo glossario funge da *cheat sheet* riassuntivo per l'esame e lo studio, con
 
 ---
 
-## Indice Dettagliato delle Sottosezioni
+---
 
+## Indice Dettagliato delle Sottosezioni
 
 ### Indice delle Sottosezioni Capitolo 0
 
-
 - [0.1 Obiettivi del Corso](#01-obiettivi-del-corso)
-
-
 - [0.2 Modalità d'Esame e Criteri di Valutazione](#02-modalità-desame-e-criteri-di-valutazione)
-
-
-- [0.3 Prove Parziali vs Appelli Ordinari](#03-prove-parziali-vs-appelli-ordinari)
-
-
+- [0.3 Prove Parziali e Avvisi d'Esame](#03-prove-parziali-e-avvisi-desame)
 - [0.4 Ambiente di Sviluppo di Riferimento](#04-ambiente-di-sviluppo-di-riferimento)
-
-
 ### Indice delle Sottosezioni Capitolo 1
 
-
-- [1.1 Cos'è un Sistema Operativo](#11-cos-un-sistema-operativo)
-
-
+- [1.1 Cos'è un Sistema Operativo](#11-cosè-un-sistema-operativo)
 - [1.2 Il Kernel](#12-il-kernel)
-
-
 - [1.3 Storia di Unix](#13-storia-di-unix)
-
-
 - [1.4 Architettura di Sistema Unix](#14-architettura-di-sistema-unix)
-
-
 - [1.5 System Call e Libreria Standard C](#15-system-call-e-libreria-standard-c)
-
-
 - [1.6 Sistema Multi-utente](#16-sistema-multi-utente)
-
-
 ### Indice delle Sottosezioni Capitolo 2
 
-
 - [2.1 Caratteristiche Generali](#21-caratteristiche-generali)
-
-
 - [2.2 Tipi di File](#22-tipi-di-file)
-
-
 - [2.3 i-node e Metadati](#23-i-node-e-metadati)
-
-
 - [2.4 Directory](#24-directory)
-
-
 - [2.5 Pathname](#25-pathname)
-
-
 - [2.6 Directory Tipiche](#26-directory-tipiche)
-
-
 - [2.7 Home e Working Directory](#27-home-e-working-directory)
-
-
 - [2.8 Permessi dei File](#28-permessi-dei-file)
-
-
+- [Permessi iniziali e `umask`](#permessi-iniziali-e-umask)
 - [2.9 Link](#29-link)
-
-
 - [2.10 File System Montabile](#210-file-system-montabile)
-
-
 - [2.11 Comando `stat`](#211-comando-stat)
-
-
 ### Indice delle Sottosezioni Capitolo 3
 
-
-- [3.1 Cos'è la Shell](#31-cos-la-shell)
-
-
+- [3.1 Cos'è la Shell](#31-cosè-la-shell)
 - [3.2 File di Inizializzazione](#32-file-di-inizializzazione)
-
-
 - [3.3 Variabili di Shell](#33-variabili-di-shell)
-
-
 - [3.4 Formato dei Comandi](#34-formato-dei-comandi)
-
-
 - [3.5 Redirezione I/O](#35-redirezione-io)
-
-
 - [3.6 Pipe](#36-pipe)
-
-
 - [3.7 Metacaratteri e Wildcard](#37-metacaratteri-e-wildcard)
-
-
 - [3.8 Quoting](#38-quoting)
-
-
 ### Indice delle Sottosezioni Capitolo 4
 
-
 - [4.1 Gestione Directory](#41-gestione-directory)
-
-
 - [4.2 Gestione File](#42-gestione-file)
-
-
-- [4.3 Comandi di Utilità su Testo](#43-comandi-di-utilit-su-testo)
-
-
+- [4.3 Comandi di Utilità su Testo](#43-comandi-di-utilità-su-testo)
 - [4.4 Listing di Processi](#44-listing-di-processi)
-
-
 - [4.5 Il file `/etc/passwd`](#45-il-file-etcpasswd)
-
-
 ### Indice delle Sottosezioni Capitolo 5
 
-
 - [5.1 Il Comando `grep`](#51-il-comando-grep)
-
-
 - [5.2 Espressioni Regolari Base (BRE)](#52-espressioni-regolari-base-bre)
-
-
 - [5.3 Espressioni Regolari Estese (ERE)](#53-espressioni-regolari-estese-ere)
-
-
 - [5.4 Esempi Pratici](#54-esempi-pratici)
-
-
 ### Indice delle Sottosezioni Capitolo 6
 
-
 - [6.1 Struttura Base](#61-struttura-base)
-
-
-- [6.2 Variabili Predefinite negli Script](#62-variabili-predefinite-negli-script)
-
-
+- [6.2 Variabili negli Script](#62-variabili-negli-script)
+- [Variabili Predefinite](#variabili-predefinite)
 - [6.3 Exit Status](#63-exit-status)
-
-
 - [6.4 Operatori su Comandi](#64-operatori-su-comandi)
-
-
 - [6.5 Strutture di Controllo](#65-strutture-di-controllo)
-
-
 - [6.6 Sostituzione Aritmetica](#66-sostituzione-aritmetica)
-
-
+- [6.7 Input Interattivo con `read`](#67-input-interattivo-con-read)
+- [6.8 Approfondimenti dal Manuale Bash Supplementare](#68-approfondimenti-dal-manuale-bash-supplementare)
 ### Indice delle Sottosezioni Capitolo 7
 
-
 - [7.1 Sed — Stream Editor](#71-sed--stream-editor)
-
-
+- [Sed Avanzato: Registri, Salti e File](#sed-avanzato-registri-salti-e-file)
 - [7.2 Awk — Linguaggio di Elaborazione Testuale](#72-awk--linguaggio-di-elaborazione-testuale)
-
-
+- [Struttura di un programma awk](#struttura-di-un-programma-awk)
+- [Variabili predefinite](#variabili-predefinite)
+- [Variabili utente e operatori](#variabili-utente-e-operatori)
+- [Condizionali e Cicli](#condizionali-e-cicli)
+- [Array Associativi](#array-associativi)
+- [Funzioni Built-in di Awk](#funzioni-built-in-di-awk)
+- [Funzioni Definite dall'Utente](#funzioni-definite-dallutente)
+- [Pipe e Interazione con la Shell](#pipe-e-interazione-con-la-shell)
+- [Awk: `next` e Redirezioni su File](#awk-next-e-redirezioni-su-file)
 ### Indice delle Sottosezioni Capitolo 8
 
-
 - [8.1 Definizione e Chiamata](#81-definizione-e-chiamata)
-
-
 - [8.2 Parametri Interni](#82-parametri-interni)
-
-
 - [8.3 Esempi](#83-esempi)
-
-
 ### Indice delle Sottosezioni Capitolo 9
 
-
 - [9.0 Basi di Programmazione C (vs Java)](#90-basi-di-programmazione-c-vs-java)
-
-
 - [9.1 Il Compilatore GCC](#91-il-compilatore-gcc)
-
-
 - [9.2 Opzioni di GCC](#92-opzioni-di-gcc)
-
-
 - [9.3 Debug con GDB](#93-debug-con-gdb)
-
-
 - [9.4 Funzione Main in C](#94-funzione-main-in-c)
-
-
 - [9.5 Layout di Memoria di un Processo](#95-layout-di-memoria-di-un-processo)
-
-
 - [9.6 Formato ELF e Linking](#96-formato-elf-e-linking)
-
-
 ### Indice delle Sottosezioni Capitolo 10
 
-
 - [10.1 Concetti Fondamentali](#101-concetti-fondamentali)
-
-
 - [10.2 Le Cinque System Call Fondamentali](#102-le-cinque-system-call-fondamentali)
-
-
+- [`open` — Apertura di un file](#open--apertura-di-un-file)
+- [`creat` — Creazione di un file](#creat--creazione-di-un-file)
+- [`close` — Chiusura di un file](#close--chiusura-di-un-file)
+- [`read` — Lettura da file](#read--lettura-da-file)
+- [`write` — Scrittura su file](#write--scrittura-su-file)
 - [10.3 Offset e `lseek`](#103-offset-e-lseek)
-
-
+- [File con Buchi (Sparse File)](#file-con-buchi-sparse-file)
 - [10.4 Gestione Errori con `errno` e `perror`](#104-gestione-errori-con-errno-e-perror)
-
-
+- [`perror()` — stampa il messaggio di errore](#perror--stampa-il-messaggio-di-errore)
 - [10.5 Implementazione nel Kernel](#105-implementazione-nel-kernel)
-
-
 - [10.6 Duplicazione File Descriptor — `dup` e `dup2`](#106-duplicazione-file-descriptor--dup-e-dup2)
-
-
+- [Come funziona `dup2(oldfd, newfd)` a livello di Kernel](#come-funziona-dup2oldfd-newfd-a-livello-di-kernel)
+- [Esempio 1: Redirezione di `stdout` su file e RIPRISTINO](#esempio-1-redirezione-di-stdout-su-file-e-ripristino)
+- [Esempio: Tipico pattern Shell (`fork` + `dup2` + `exec`)](#esempio-tipico-pattern-shell-fork--dup2--exec)
 - [10.7 Struttura `stat`](#107-struttura-stat)
-
-
-- [10.8 Esempio Completo: Copia tra File](#108-esempio-completo-copia-tra-file)
-
-
+- [10.8 Esempio: Copia tra File con Scritture Parziali](#108-esempio-copia-tra-file-con-scritture-parziali)
+- [10.9 Tipi di File e API sui Permessi](#109-tipi-di-file-e-api-sui-permessi)
+- [10.10 I/O dei Dispositivi e Terminali](#1010-io-dei-dispositivi-e-terminali)
 ### Indice delle Sottosezioni Capitolo 11
 
-
 - [11.1 Concetti Fondamentali](#111-concetti-fondamentali)
-
-
 - [11.2 Ottenere PID](#112-ottenere-pid)
-
-
 - [11.3 Creazione di Processi — `fork()`](#113-creazione-di-processi--fork)
-
-
 - [11.3.1 `vfork()`](#1131-vfork)
-
-
 - [11.4 Terminazione di Processi](#114-terminazione-di-processi)
-
-
+- [Confronto: `exit()` vs `_exit()`](#confronto-exit-vs-_exit)
 - [11.5 Processi Zombie e Orfani](#115-processi-zombie-e-orfani)
-
-
 - [11.6 `wait()` e `waitpid()`](#116-wait-e-waitpid)
-
-
+- [Stati Stop/Continue dei Figli](#stati-stopcontinue-dei-figli)
 - [11.7 La Famiglia `exec`](#117-la-famiglia-exec)
-
-
+- [A cosa serve?](#a-cosa-serve)
+- [Esempio di Utilizzo di `envp` (`execve` + lettura)](#esempio-di-utilizzo-di-envp-execve--lettura)
 - [11.9 La funzione `system()`](#119-la-funzione-system)
-
-
+- [Esempio Base con `system()`](#esempio-base-con-system)
+- [Implementazione Equivalente con `fork()`, `execl()` e `waitpid()`](#implementazione-equivalente-con-fork-execl-e-waitpid)
+- [Note su `system()`](#note-su-system)
 - [11.10 Ambiente di un Processo: `getenv` e `putenv`](#1110-ambiente-di-un-processo-getenv-e-putenv)
-
-
+- [`getenv` — leggere una variabile d'ambiente](#getenv--leggere-una-variabile-dambiente)
+- [`putenv` — aggiungere o modificare una variabile d'ambiente](#putenv--aggiungere-o-modificare-una-variabile-dambiente)
+- [Accedere all'intero ambiente](#accedere-allintero-ambiente)
+- [Passare un ambiente custom a `exec`](#passare-un-ambiente-custom-a-exec)
 - [11.11 `chdir` e `chroot` — Cambiare directory e root](#1111-chdir-e-chroot--cambiare-directory-e-root)
-
-
+- [`chdir` — Cambia la Current Working Directory (CWD)](#chdir--cambia-la-current-working-directory-cwd)
+- [`chroot` — Cambia la Root Directory (Sandboxing)](#chroot--cambia-la-root-directory-sandboxing)
 ### Indice delle Sottosezioni Capitolo 12
 
-
-- [12.1 Cos'è un Segnale](#121-cos-un-segnale)
-
-
+- [12.1 Cos'è un Segnale](#121-cosè-un-segnale)
 - [12.2 Segnali Principali](#122-segnali-principali)
-
-
 - [12.3 Azioni Possibili](#123-azioni-possibili)
-
-
 - [12.4 Catturare un Segnale — `signal()`](#124-catturare-un-segnale--signal)
-
-
 - [12.4.1 Ignorare un Segnale — `signal()`](#1241-ignorare-un-segnale--signal)
-
-
 - [12.4.2 Azione di Default — `signal()`](#1242-azione-di-default--signal)
-
-
 - [12.5 Inviare Segnali](#125-inviare-segnali)
-
-
 - [12.6 Alarm — Sveglia](#126-alarm--sveglia)
-
-
 - [12.7 Insiemi di Segnali e Maschere](#127-insiemi-di-segnali-e-maschere)
-
-
 - [12.8 Gestione Moderna dei Segnali — `sigaction()`](#128-gestione-moderna-dei-segnali--sigaction)
-
-
+- [I 4 Problemi Critici di `signal()` risolti da `sigaction()`](#i-4-problemi-critici-di-signal-risolti-da-sigaction)
+- [Struttura e Configurazione di `sigaction`](#struttura-e-configurazione-di-sigaction)
+- [Esempio Completo](#esempio-completo)
+- [12.9 Segnali nei Thread ed Effetti di `fork`/`exec`](#129-segnali-nei-thread-ed-effetti-di-forkexec)
 ### Indice delle Sottosezioni Capitolo 13
 
-
+- [13.0 Cos'è l'IPC (Inter-Process Communication)](#130-cosè-lipc-inter-process-communication)
 - [13.1 Pipe Ordinarie](#131-pipe-ordinarie)
-
-
+- [Variante Atomica: `pipe2()`](#variante-atomica-pipe2)
 - [13.2 Pipe con Nome (FIFO)](#132-pipe-con-nome-fifo)
-
-
 - [13.3 Memoria Condivisa con `mmap`](#133-memoria-condivisa-con-mmap)
-
-
+- [1. I Flag di Protezione (`protect` / `PROT_*`)](#1-i-flag-di-protezione-protect--prot_)
+- [2. I Flag di Mappatura (`flags`)](#2-i-flag-di-mappatura-flags)
+- [3. Matrice delle 4 Combinazioni Fondamentali](#3-matrice-delle-4-combinazioni-fondamentali)
+- [4. `msync()` su `MAP_PRIVATE` vs `MAP_SHARED`](#4-msync-su-map_private-vs-map_shared)
+- [5. Esempi Pratici di Codice](#5-esempi-pratici-di-codice)
+- [13.4 `popen()` e `pclose()`](#134-popen-e-pclose)
 ### Indice delle Sottosezioni Capitolo 14
 
-
 - [14.1 Motivazioni](#141-motivazioni)
-
-
 - [14.2 Concorrenza vs Parallelismo](#142-concorrenza-vs-parallelismo)
-
-
 - [14.3 Modelli di Multithreading](#143-modelli-di-multithreading)
-
-
 - [14.4 API POSIX Pthreads](#144-api-posix-pthreads)
-
-
+- [Creazione di un thread](#creazione-di-un-thread)
+- [Attesa di un thread](#attesa-di-un-thread)
+- [Terminazione di un thread](#terminazione-di-un-thread)
+- [Identificazione](#identificazione)
+- [Detach (Scollegamento)](#detach-scollegamento)
+- [Confronto degli ID e Attributi di Creazione](#confronto-degli-id-e-attributi-di-creazione)
 - [14.5 Thread in Linux](#145-thread-in-linux)
-
-
+- [Architettura LWP (Lightweight Processes) in Linux](#architettura-lwp-lightweight-processes-in-linux)
+- [Comandi di Monitoraggio Thread da Shell](#comandi-di-monitoraggio-thread-da-shell)
+- [Pipeline Bash per l'Ispezione dei Thread (Quesito d'Esame Tipico)](#pipeline-bash-per-lispezione-dei-thread-quesito-desame-tipico)
 - [14.6 Cancellazione Thread](#146-cancellazione-thread)
-
-
+- [Routine di Pulizia: `pthread_cleanup_push()` e `pthread_cleanup_pop()`](#routine-di-pulizia-pthread_cleanup_push-e-pthread_cleanup_pop)
+- [Esempio Completo di Cancellazione Controllata (`thread_canc_test.c`)](#esempio-completo-di-cancellazione-controllata-thread_canc_testc)
 - [14.7 Thread-Specific Data (TSD) — Dati Specifici del Thread](#147-thread-specific-data-tsd--dati-specifici-del-thread)
-
-
+- [Funzioni dell'API POSIX TSD](#funzioni-dellapi-posix-tsd)
+- [Codice d'Esempio Completo (`thread_tsd.c`, Slide 829, 860)](#codice-desempio-completo-thread_tsdc-slide-829-860)
+- [SIGPIPE e TSD: Rettifica dell'Esempio delle Slide 1142–1143](#sigpipe-e-tsd-rettifica-dellesempio-delle-slide-11421143)
 ### Indice delle Sottosezioni Capitolo 15
 
-
 - [15.1 Il Problema della Sezione Critica](#151-il-problema-della-sezione-critica)
-
-
 - [15.2 Mutex — Mutua Esclusione](#152-mutex--mutua-esclusione)
-
-
+- [Primitive Atomiche e Tipologie di Mutex](#primitive-atomiche-e-tipologie-di-mutex)
 - [15.3 Condition Variable — Variabili di Condizione](#153-condition-variable--variabili-di-condizione)
-
-
+- [Attesa con Scadenza Temporale: `pthread_cond_timedwait()` e Deadline](#attesa-con-scadenza-temporale-pthread_cond_timedwait-e-deadline)
 - [15.4 Semafori POSIX](#154-semafori-posix)
-
-
 ### Indice delle Sottosezioni Capitolo 16
 
-
 - [16.1 Bounded-Buffer (Produttore-Consumatore)](#161-bounded-buffer-produttore-consumatore)
-
-
+- [Soluzione 1: Mutex + Condition Variable](#soluzione-1-mutex--condition-variable)
+- [Soluzione 2: Semafori](#soluzione-2-semafori)
 - [16.2 Readers-Writers (Lettori-Scrittori)](#162-readers-writers-lettori-scrittori)
-
-
-- [16.3 Problema del Ponte a Senso Unico Alternato (Bridge Problem)](#163-problema-del-ponte-a-senso-unico-alternato-bridge-problem--sem_pontec)
-
-
+- [16.3 Problema del Ponte a Capacità Limitata (Bridge Problem — `sem_ponte.c`)](#163-problema-del-ponte-a-capacità-limitata-bridge-problem--sem_pontec)
+- [16.4 Cena dei Filosofi: Monitor e Condition Variable](#164-cena-dei-filosofi-monitor-e-condition-variable)
 ### Indice delle Sottosezioni Capitolo 17
 
-
 - [17.1 Concetti Fondamentali](#171-concetti-fondamentali)
-
-
-- [17.2 Le fasi di una connessione TCP (SOCK_STREAM)](#172-le-fasi-di-una-connessione-tcp-sockstream)
-
-
+- [17.2 Le fasi di una connessione TCP (SOCK_STREAM)](#172-le-fasi-di-una-connessione-tcp-sock_stream)
 - [17.3 Indirizzi e il problema del "Byte Order" (Endianness)](#173-indirizzi-e-il-problema-del-byte-order-endianness)
-
-
-- [17.4 Socket Locali (AF_LOCAL / Unix Domain Sockets)](#174-socket-locali-aflocal--unix-domain-sockets)
-
-
+- [Focus: Differenza Fondamentale tra `inet_pton()` e `ntohl()` / `htonl()`](#focus-differenza-fondamentale-tra-inet_pton-e-ntohl--htonl)
+- [17.4 Socket Locali (AF_LOCAL / Unix Domain Sockets)](#174-socket-locali-af_local--unix-domain-sockets)
+- [Socket Locali a Datagrammi (`AF_UNIX`, `SOCK_DGRAM`)](#socket-locali-a-datagrammi-af_unix-sock_dgram)
 - [17.5 Server TCP Completo](#175-server-tcp-completo)
-
-
 - [17.6 Client TCP Completo](#176-client-tcp-completo)
-
-
 - [17.7 `send()` e `recv()`](#177-send-e-recv)
-
-
-- [17.8 Scambio Dati Binari — Network Byte Order](#178-scambio-dati-binari--network-byte-order)
-
-
+- [17.8 Scambio Dati Binari — Network Byte Order (`htonl` / `ntohl`)](#178-scambio-dati-binari--network-byte-order-htonl--ntohl)
+- [Esempio: Invio e Ricezione di un Intero a 32 bit](#esempio-invio-e-ricezione-di-un-intero-a-32-bit)
+- [Esempio con Struttura / Header di Protocollo](#esempio-con-struttura--header-di-protocollo)
 - [17.9 Lettura e Scrittura Safe](#179-lettura-e-scrittura-safe)
-
-
-- [17.10 Socket UDP](#1710-socket-udp)
-
-
+- [17.10 Socket UDP (`sendto` e `recvfrom`)](#1710-socket-udp-sendto-e-recvfrom)
+- [Firme di Sistema POSIX](#firme-di-sistema-posix)
+- [Analisi Dettagliata dei Parametri](#analisi-dettagliata-dei-parametri)
+- [Diagramma di Flusso: Il Ciclo Richiesta-Risposta (Echo)](#diagramma-di-flusso-il-ciclo-richiesta-risposta-echo)
+- [Esempio Pratico Completo: Server Echo e Client UDP](#esempio-pratico-completo-server-echo-e-client-udp)
+- [Caratteristiche Cruciali di UDP per l'Esame:](#caratteristiche-cruciali-di-udp-per-lesame)
 - [17.11 Server Concorrente](#1711-server-concorrente)
-
-
 - [17.12 Opzioni Socket (`setsockopt`)](#1712-opzioni-socket-setsockopt)
-
-
 - [17.13 Socket Non Bloccante](#1713-socket-non-bloccante)
-
-
-- [17.14 Pattern `recv_all` / `send_all` (lettura/scrittura safe)](#1714-pattern-recvall--sendall-letturascrittura-safe)
-
-
+- [17.14 Pattern `recv_all` / `send_all` (lettura/scrittura safe)](#1714-pattern-recv_all--send_all-letturascrittura-safe)
 - [17.15 Server Concorrente — Anti-Zombie con SIGCHLD](#1715-server-concorrente--anti-zombie-con-sigchld)
-
-
 - [17.16 `connect()` con UDP](#1716-connect-con-udp)
-
-
 ### Indice delle Sottosezioni Capitolo 18
 
-
 - [18.1 Problema](#181-problema)
-
-
 - [18.2 La Funzione `select()`](#182-la-funzione-select)
-
-
-- [18.3 Macro per `fd_set`](#183-macro-per-fdset)
-
-
-- [18.4 Quando un fd è "pronto"](#184-quando-un-fd--pronto)
-
-
+- [18.3 Macro per `fd_set`](#183-macro-per-fd_set)
+- [18.4 Quando un fd è "pronto"](#184-quando-un-fd-è-pronto)
 - [18.5 Esempio — Select su stdin con timeout](#185-esempio--select-su-stdin-con-timeout)
-
-
 - [18.6 Server Multiplexing con `select()`](#186-server-multiplexing-con-select)
-
-
 ### Indice delle Sottosezioni Capitolo 19
 
-
 - [19.1 Gestione delle Syscall Bloccanti e `EINTR`](#191-gestione-delle-syscall-bloccanti-e-eintr)
-
-
+- [Metodo A: Riavvio Automatico con `SA_RESTART` (Raccomandato)](#metodo-a-riavvio-automatico-con-sa_restart-raccomandato)
+- [Metodo B: Gestione Manuale nel Ciclo con `EINTR`](#metodo-b-gestione-manuale-nel-ciclo-con-eintr)
 - [19.2 Gestione di `SIGPIPE` nelle Socket TCP](#192-gestione-di-sigpipe-nelle-socket-tcp)
-
-
 ### Indice delle Sottosezioni Capitolo 20
 
-
 - [20.1 Broadcast](#201-broadcast)
-
-
 - [20.2 Multicast](#202-multicast)
-
-
 - [20.3 Protocolli di Rete per il Multicast](#203-protocolli-di-rete-per-il-multicast)
-
-
 ### Indice delle Sottosezioni Capitolo 21
 
-
 - [21.1 Comandi di Diagnostica](#211-comandi-di-diagnostica)
-
-
 - [21.2 Risoluzione DNS in C — `getaddrinfo()`](#212-risoluzione-dns-in-c--getaddrinfo)
-
-
 ### Indice delle Sottosezioni Capitolo 22
 
-
 - [22.1 Concetti Base](#221-concetti-base)
-
-
 - [22.2 Simulazione, Emulazione, Virtualizzazione](#222-simulazione-emulazione-virtualizzazione)
-
-
 - [22.3 Tipi di Hypervisor](#223-tipi-di-hypervisor)
-
-
 - [22.4 Tecniche di Virtualizzazione](#224-tecniche-di-virtualizzazione)
-
-
 - [22.5 Virtualizzazione HW-Assisted](#225-virtualizzazione-hw-assisted)
-
-
 - [22.6 KVM (Linux), Hyper-V (Windows), macOS](#226-kvm-linux-hyper-v-windows-macos)
-
-
 - [22.7 VM vs Container](#227-vm-vs-container)
-
-
 - [22.8 Gestione delle Risorse nell'Hypervisor](#228-gestione-delle-risorse-nellhypervisor)
-
-
 - [22.9 Confronto WSL2 vs VMware Workstation](#229-confronto-wsl2-vs-vmware-workstation)
-
-
 ### Indice delle Sottosezioni Capitolo 23
 
-
 - [23.1 Architettura dei Container](#231-architettura-dei-container)
-
-
 - [23.2 Namespace](#232-namespace)
-
-
 - [23.3 PID Namespace — Gerarchia](#233-pid-namespace--gerarchia)
-
-
+- [Process Subreaper e Adozione dei Processi Orfani (`adopt_test.c`)](#process-subreaper-e-adozione-dei-processi-orfani-adopt_testc)
+- [Rappresentazione dei Namespace nel Kernel e `/proc/<PID>/ns/`](#rappresentazione-dei-namespace-nel-kernel-e-procns)
 - [23.4 Cgroups (Control Groups)](#234-cgroups-control-groups)
-
-
+- [Stress-Test di un Cgroup v2 in C (`test_cgroup.c`, Slide 1359–1360)](#stress-test-di-un-cgroup-v2-in-c-test_cgroupc-slide-13591360)
 - [23.5 OverlayFS — Filesystem a Strati](#235-overlayfs--filesystem-a-strati)
-
-
-- [23.6 Mini-Container Didattico in C tramite `clone()` e `mount()`](#236-mini-container-didattico-in-c-tramite-clone-e-mount-test_containerc)
-
-
+- [23.6 Mini-Container Didattico in C tramite `clone()` e `mount()` (`test_container.c`)](#236-mini-container-didattico-in-c-tramite-clone-e-mount-test_containerc)
 ### Indice delle Sottosezioni Capitolo 24
 
-
-- [24.1 Cos'è Docker](#241-cos-docker)
-
-
+- [24.1 Cos'è Docker](#241-cosè-docker)
 - [24.2 Comandi Base](#242-comandi-base)
-
-
 - [24.3 Networking Docker](#243-networking-docker)
-
-
 - [24.4 Dockerfile](#244-dockerfile)
-
-
+- [Direttive Dockerfile: Confronto Approfondito `ADD` vs `COPY`](#direttive-dockerfile-confronto-approfondito-add-vs-copy)
 - [24.5 Docker Compose](#245-docker-compose)
-
-
 - [24.6 Limiti sulle Risorse (cgroups in Docker)](#246-limiti-sulle-risorse-cgroups-in-docker)
-
-
+- [Suite di Verifica Sperimentale dei Limiti (`test-limiti`, Slide 1438–1440)](#suite-di-verifica-sperimentale-dei-limiti-test-limiti-slide-14381440)
 - [24.7 Volumi — Persistenza dei Dati](#247-volumi--persistenza-dei-dati)
-
-
-
-
 ### Indice delle Sottosezioni Capitolo 25
 
 - [25.1 Esercizi di Bug-Hunting ("Trova e Correggi l'Errore" — File _ERR.c)](#251-esercizi-di-bug-hunting-trova-e-correggi-lerrore--file-_errc)
+- [25.1.1 Risveglio Spuro: `es_cond_wait_if_ERR.c` (Slide 1261)](#2511-risveglio-spuro-es_cond_wait_if_errc-slide-1261)
+- [25.1.2 Deadlock da Doppio Lock Consecutivo: `es2_2_ERR.c` (Slide 1318)](#2512-deadlock-da-doppio-lock-consecutivo-es2_2_errc-slide-1318)
+- [25.1.3 Deadlock tra Mutex e Socket Bloccante: `es_client_merge_ERR.c` (Slide 1259–1266)](#2513-deadlock-tra-mutex-e-socket-bloccante-es_client_merge_errc-slide-12591266)
 - [25.2 Template d'Esame da Completare (File _TODO.c e _TODO.sh)](#252-template-desame-da-completare-file-_todoc-e-_todosh)
+- [25.2.1 Sincronizzazione a Cascata: `es_thread_cascata_TODO.c` (Slide 1267–1268)](#2521-sincronizzazione-a-cascata-es_thread_cascata_todoc-slide-12671268)
+- [25.2.2 Multiplexing tra Pipe Anonima e Tastiera con `select()`: `es_pipe_select_TODO.c` (Slide 1262–1265)](#2522-multiplexing-tra-pipe-anonima-e-tastiera-con-select-es_pipe_select_todoc-slide-12621265)
+- [25.2.3 Chat UDP Multicast con `select()`: `chat_multi_TODO.c` (Slide 1225–1228)](#2523-chat-udp-multicast-con-select-chat_multi_todoc-slide-12251228)
+- [25.2.4 Client WHOIS TCP su Porta 43: `whois_TODO.c` (Slide 1229–1230)](#2524-client-whois-tcp-su-porta-43-whois_todoc-slide-12291230)
+- [25.2.5 Turni Rigidi tra Thread A e B: `es2_1_condvar_TODO.c` (Slide 1317)](#2525-turni-rigidi-tra-thread-a-e-b-es2_1_condvar_todoc-slide-1317)
+- [25.2.6 Script Bash d'Esame Svolti (`es_file_bash1/2/3_TODO.sh`)](#2526-script-bash-desame-svolti-es_file_bash123_todosh)
+- [25.2.7 Chat UDP Unicast a Due Peer (`es_chat_TODO.c`)](#2527-chat-udp-unicast-a-due-peer-es_chat_todoc)
+- [25.2.8 Pipe e Stdin nel Figlio (`es2_3_pipeSelect_TODO.c`)](#2528-pipe-e-stdin-nel-figlio-es2_3_pipeselect_todoc)
+- [25.2.9 Altre Tracce Iniziali: Byte, Shell e Awk](#2529-altre-tracce-iniziali-byte-shell-e-awk)
 - [25.3 Simulazione Ufficiale Prova Parziale (Lezione 28 — Prova PA)](#253-simulazione-ufficiale-prova-parziale-lezione-28--prova-pa)
-- [25.4 Traccia d'Esame Ufficiale Svolta — Compito A](#254-traccia-desame-ufficiale-svolta--compito-a)
-- [25.5 Traccia d'Esame Ufficiale Svolta — Compito B](#255-traccia-desame-ufficiale-svolta--compito-b)
-
+- [Quesito 1 (Pipeline Bash — Processi e Thread LWP)](#quesito-1-pipeline-bash--processi-e-thread-lwp)
+- [Quesito 2 (Pipeline Filtri su Metadati File: `ls -l`)](#quesito-2-pipeline-filtri-su-metadati-file-ls--l)
+- [Quesito 3 (Sezione Critica con Limite di Concorrenza: Massimo 3 Thread)](#quesito-3-sezione-critica-con-limite-di-concorrenza-massimo-3-thread)
+- [Quesito 4 (Processi Figli su Pipe Distinte e Padre con `select()` fino a 10 Caratteri)](#quesito-4-processi-figli-su-pipe-distinte-e-padre-con-select-fino-a-10-caratteri)
+- [Quesito 5 (Analisi Concorrente C: Fork e Multithreading)](#quesito-5-analisi-concorrente-c-fork-e-multithreading)
+- [25.4 Traccia di Studio Svolta — Compito A](#254-traccia-di-studio-svolta--compito-a)
+- [Esercizio 1 (Pipeline di Comandi Bash: `ps, awk, sort, uniq`)](#esercizio-1-pipeline-di-comandi-bash-ps-awk-sort-uniq)
+- [Esercizio 2 (Pipeline Filtri su Metadati File: `ls -l`)](#esercizio-2-pipeline-filtri-su-metadati-file-ls--l)
+- [Esercizio 3 (Processi, Thread e Sincronizzazione C: `x=5, y=3`)](#esercizio-3-processi-thread-e-sincronizzazione-c-x5-y3)
+- [Esercizio 4 (Pipe, Fork, Select, I/O con Buffer di Stringa)](#esercizio-4-pipe-fork-select-io-con-buffer-di-stringa)
+- [Esercizio 5 (Namespace e Container Docker)](#esercizio-5-namespace-e-container-docker)
+- [25.5 Traccia di Studio Svolta — Compito B](#255-traccia-di-studio-svolta--compito-b)
+- [Esercizio 1 (Pipeline di Comandi: Processi Sleeping e Secondi Trascorsi)](#esercizio-1-pipeline-di-comandi-processi-sleeping-e-secondi-trascorsi)
+- [Esercizio 2 (Pipeline Filtri su Metadati File: `ls -l` con Dimensione)](#esercizio-2-pipeline-filtri-su-metadati-file-ls--l-con-dimensione)
+- [Esercizio 3 (Processi, Thread e Sincronizzazione C: `x=9, y=3`)](#esercizio-3-processi-thread-e-sincronizzazione-c-x9-y3)
+- [Esercizio 4 (Pipe, Fork, Select in C: 3 read e Condizione di EOF)](#esercizio-4-pipe-fork-select-in-c-3-read-e-condizione-di-eof)
+- [Esercizio 5 (Namespace e Container Docker: Due Container Separati)](#esercizio-5-namespace-e-container-docker-due-container-separati)
 ### Indice delle Sottosezioni Capitolo 26
 
 - [Concetti Generali e SO](#concetti-generali-e-so)
