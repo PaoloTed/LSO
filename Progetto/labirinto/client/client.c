@@ -150,13 +150,11 @@ int main(int argc, char *argv[]) {
         read_set = master_set;
         int activity = select(max_fd + 1, &read_set, NULL, NULL, NULL);
         if (activity < 0) {
-            if (errno == EINTR) {
-                if (!loop)
-                    break;
+            if (errno == EINTR)
                 continue;
-            }
             perror("select");
-            break;
+            close(sock_fd);
+            return 1;
         }
 
         /* Input tastiera */
@@ -181,9 +179,7 @@ int main(int argc, char *argv[]) {
                 mostra_aiuto();
                 mostra_prompt();
             } else if (comando == 'q') {
-                msg_invio.tipo = MSG_ESCI;
-                invia_messaggio(sock_fd, &msg_invio);
-                printf("Arrivederci!\n");
+                loop = 0;
                 break;
             } else if (comando != '\n' && comando != '\r') {
                 printf("Comando non riconosciuto (premi 'h' per l'aiuto).\n");
@@ -196,7 +192,8 @@ int main(int argc, char *argv[]) {
             int ret = ricevi_messaggio(sock_fd, &msg);
             if (ret <= 0) {
                 printf("Connessione chiusa dal server.\n");
-                break;
+                close(sock_fd);
+                return 1;
             }
 
             switch (msg.tipo) {
@@ -258,13 +255,11 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    /* Invio disconnessione in uscita (Ctrl+D / Ctrl+C / SIGINT / SIGTERM)*/
-    if (!loop) {
-        printf("\n Disconnessione in corso...\n");
-        Messaggio msg_uscita = {0};
-        msg_uscita.tipo = MSG_ESCI;
-        invia_messaggio(sock_fd, &msg_uscita);
-    }
+    /* Invio disconnessione in uscita ('q' / Ctrl+D / Ctrl+C / SIGINT / SIGTERM) */
+    printf("\nDisconnessione in corso...\n");
+    Messaggio msg_uscita = {0};
+    msg_uscita.tipo = MSG_ESCI;
+    invia_messaggio(sock_fd, &msg_uscita);
 
     close(sock_fd);
     return 0;

@@ -8,3 +8,9 @@
 *.gmaps
 *.gsite
 
+# Configurazione IDE e clangd
+.vscode/
+.cache/
+compile_commands.json
+
+
