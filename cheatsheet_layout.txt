@@ -1,0 +1,907 @@
+File System                                                                Gestione File/Directory                               Variabili Speciali
+Filosofia Unix                                                             touch file     crea file vuoto / aggiorna timestamp   $0       nome dello script
+"Everything is a file" - file regolari, directory, device, socket, pipe.   mkdir dir      crea directory                         $1..$9   argomenti posizionali
+Gerarchia FHS                                                              mkdir -p a/b/c crea path completo                     $#       numero argomenti
+/     root, radice del filesystem                                          cp src dst     copia file                             $@       tutti args (separati)
+/bin comandi essenziali (ls, cp, mv)                                       cp -r src dst copia ricorsiva (directory)             $*       tutti args (unica stringa)
+/sbin comandi di sistema (fsck, init)                                      cp -i src dst conferma sovrascrittura                 $?       exit status ultimo comando
+/etc file configurazione                                                   mv src dst     sposta/rinomina                        $$       PID dello script
+/home directory utenti                                                     rm file        elimina file                           $!       PID ultimo processo background
+/var file variabili (log, spool)                                           rm -r dir      elimina directory ricorsivo            Quoting
+/tmp file temporanei                                                       rm -f file     forza eliminazione                     "..."     espande variabili, preserva spazi
+/usr programmi e dati utente                                               rmdir dir      elimina directory vuota                ’...’     letterale, nessuna espansione
+/dev file dispositivi                                                      Visualizzazione                                       `cmd`     command substitution (old)
+/proc filesystem virtuale (info kernel)                                    cat file       stampa contenuto                       $(cmd)    command substitution (new)
+Inode                                                                      less file      paginatore (q per uscire)              $((expr)) espressione aritmetica
+
+Struttura dati con metadati file: tipo, permessi, UID/GID, dimensione,     head -n N file prime N righe                          Controllo Argomenti (ESAME)
+timestamp, link count, puntatori a blocchi dati. Ogni file ha un inode     tail -n N file ultime N righe                         # Pattern standard
+
+unico nel filesystem.                                                      tail -f file   segue file in tempo reale              if [ $ # - ne 2 ]; then
+                                                                                                                                       echo " Uso : $0 < arg1 > < arg2 > "
+Link                                                                       Ricerca                                                     exit 1
+                                                                                                                                 fi
+Hard link stesso inode, stesso filesystem                                  find dir -name "*.c"    cerca per nome                DIR = " $1 "
+                                                                                                                                 STR = " $2 "
+               ln sorgente dest                                            find dir -type f        solo file regolari
+Soft link punta a pathname, cross-filesystem                               find dir -type d        solo directory                # Controllo directory valida
+                                                                                                                                 if [ ! -d " $DIR " ]; then
+               ln -s sorgente dest                                         find dir -size +1M      file > 1MB                        echo " Errore : $DIR non e ’ una directory "
+Permessi                                                                   find dir -mtime -7      modificati ultimi 7gg         fi
+                                                                                                                                     exit 1
+
+r read (4) leggere file/listare dir                                        locate pattern          ricerca nel database
+                                                                                                   path eseguibile
+                                                                                                                                 # Controllo file esiste
+w write (2) modificare/creare-eliminare                                    which cmd                                             if [ ! -e " $FILE " ]; then
+x exec (1) eseguire/accedere dir                                           whereis cmd             path + man + source               echo " File non trovato "
+                                                                                                                                     exit 1
+Formato: rwxrwxrwx = user|group|others                                     Wildcards                                             fi
+
+chmod 755 file        rwxr-xr-x                                            *      qualsiasi stringa                              Test Condizioni
+chmod u+x file        aggiunge exec a user                                 ?      singolo carattere                              if [ condizione ]; then ... fi
+                                                                                                                                 [ -e file ]       # esiste
+chmod go-w file       rimuove write a group/others                         [abc] uno tra a, b, c                                 [ -f file ]       # file regolare
+chown user:group file cambia proprietario                                  [a-z] range di caratteri                              [ -d file ]       # directory
+                                                                                                                                 [ -r file ]       # leggibile
+umask 022             maschera default (755 per dir)                       [!abc] nessuno tra a, b, c                            [ -w file ]       # scrivibile
+                                                                                                                                 [ -x file ]       # eseguibile
+Bit Speciali                                                               Redirezione e Pipe                                    [ -s file ]       # non vuoto
+SUID (4000) esegue con UID proprietario                                    cmd > file  stdout su file (sovrascrive)              [ -z " $str " ] # stringa vuota
+                                                                                                                                 [ -n " $str " ] # stringa non vuota
+SGID (2000)   esegue con GID gruppo                                        cmd » file  stdout su file (append)                   [ " $a " = " $b " ] # uguali
+
+Sticky (1000) solo owner può eliminare (/tmp)                              cmd < file stdin da file
+                                                                                                                                 [ " $a " != " $b " ] # diversi
+                                                                                                                                 [ $a - eq $b ] # numeri uguali
+                                                                           cmd 2> file stderr su file                            [ $a - ne $b ] # diversi
+Comandi Shell                                                                                                                    [ $a - lt $b ] # minore
+                                                                           cmd &> file stdout+stderr su file                     [ $a - le $b ] # minore o uguale
+                                                                           cmd1 | cmd2 pipe: stdout1 → stdin2
+Navigazione                                                                                                                      [ $a - gt $b ] # maggiore
+pwd   stampa directory corrente                                            Archivi
+                                                                                                                                 [ $a - ge $b ] # maggiore o uguale
+
+cd dircambia directory                                                                                                           Strutture Controllo
+                                                                           tar -cvf arch.tar dir     crea archivio
+cd .. directory padre
+                                                                                                                                 # if - then - else
+                                                                           tar -xvf arch.tar         estrae archivio             if [ cond ]; then
+cd ˜  home utente                                                                                                                     cmd
+                                                                           tar -czvf arch.tar.gz dir crea + gzip
+      directory precedente
+                                                                                                                                 elif [ cond2 ]; then
+cd -
+                                                                           tar -xzvf arch.tar.gz     estrae gzip                 else
+                                                                                                                                      cmd
+Listare File
+                                                                           gzip file                 comprime (file.gz)               cmd
+ls    lista file                                                           gunzip file.gz            decomprime                  fi
+
+ls -l formato lungo (permessi, size, date)                                                                                       # case
+ls -a mostra file nascosti (.*)                                            Shell Scripting                                       case $var in
+                                                                                                                                      pattern1 ) cmd ;;
+ls -h dimensioni human-readable                                            Base                                                       pattern2 ) cmd ;;
+ls -R ricorsivo
+                                                                           # !/ bin / bash            # shebang ( prima riga )        *) default ;;
+                                                                           chmod + x script . sh      # rende eseguibile         esac
+ls -t ordina per data modifica                                             ./ script . sh             # esegue
+                                                                                                                                 Cicli
+ls -S ordina per dimensione                                                Variabili                                             # for
+                                                                           VAR=valore   assegnazione (no spazi!)                 for var in lista ; do
+                                                                                                                                      cmd
+                                                                           $VAR         espansione variabile                     done
+
+                                                                                        espansione esplicita
+                                                                                                                                 for i in {1..10}; do echo $i ; done
+                                                                           ${VAR}                                                for f in *. txt ; do cat " $f " ; done
+                                                                           export VAR   esporta in ambiente
+                                                                                                                                 # while
+                                                                           readonly VAR variabile costante                       while [ cond ]; do
+                                                                           unset VAR    elimina variabile                            cmd
+done                                                             grep ’ ^# ’ file . txt                                                   Variabili awk
+
+# until ( opposto di while )                                     # Righe vuote                                                            $0        intera riga
+until [ cond ]; do                                               grep ’^ $ ’ file . txt                                                   $1..$N    campo N
+     cmd
+done                                                             # Parola intera " error "                                                NR        numero riga corrente
+Loop su File + grep -q (ESAME)
+                                                                 grep -w ’ error ’ log . txt
+                                                                                                                                          NF        numero campi riga
+# Conta file . txt contenenti stringa                            # Email ( pattern semplice )                                             FS        field separator (input)
+count =0
+for f in " $DIR " /*. txt ; do
+                                                                 grep -E ’[a - z ]+ @ [a - z ]+\.[ a - z ]+ ’ file
+                                                                                                                                          OFS       output field separator
+     if [ -f " $f " ]; then              # e ’ file regolare ?   # Numeri interi                                                          RS        record separator
+         if grep -q " $STR " " $f " ; then # -q = silent         grep -E ’ [0 -9]+ ’ file
+             count = $ (( count + 1) )                                                                                                    Struttura awk
+         fi                                                      # Linee NON vuote e NON commenti                                         awk ’ BEGIN { init } pattern { action } END { cleanup } ’
+     fi                                                          grep -v ’^ $ ’ file | grep -v ’ ^# ’                                     # Esempi :
+done                                                                                                                                      awk ’ NR > 1 ’ file               # salta header
+echo " Trovati $count file "                                     # IP address ( pattern base )                                            awk ’ $3 > 100 ’ file             # filtro su colonna
+                                                                 grep -E ’ [0 -9]{1 ,3}\.[0 -9]{1 ,3}\.[0 -9]{1 ,3}\.[0 -9]{1 ,3} ’ log   awk ’{ sum += $1 } END { print sum } ’ # somma colonna
+# Estrai prima / ultima lettera                                                                                                           awk ’{ count [ $1 ]++ } END { for ( k in count ) print k , count [ k ] } ’
+BASENAME = $ ( basename " $FILE " )                              # Cerca in tutti i . c ric orsiva mente
+FIRST = $ ( echo " $BASENAME " | cut - c1 )                      grep -r ’ main ’ -- include = ’ *. c ’ .                                 Altri Comandi
+LAST = $ ( echo " $BASENAME " | rev | cut - c1 )
+# oppure : LAST = $ { BASENAME : -1}                             # Conta occorrenze per file                                              cut -d:    -f1  estrae campo 1 (delim :)
+Funzioni
+                                                                 grep -c ’ TODO ’ *. c
+                                                                                                                                          cut -c1-10      caratteri 1-10
+nome_funzione () {                                               # Solo nomi file con match                                               sort            ordina righe
+    # $1 , $2 ... = argomenti funzione                           grep -l ’ ERROR ’ *. log
+                                                                                                                                          sort -n         ordine numerico
+    local var = valore # var locale
+    return 0 # exit status                                       Regex Base (BRE)                                                         sort -r         ordine inverso
+}
+nome_funzione arg1 arg2
+                                                                 .      qualsiasi carattere                                               sort -k2        ordina per colonna 2
+result = $ ? # cattura return                                    *      0+ occorrenze precedente                                          sort -t: -k3 -n ordina per campo 3, delim :
+
+Input                                                            ˆ      inizio riga                                                       uniq            rimuove duplicati consecutivi
+read   var              #   legge in var                         $      fine riga                                                         uniq -c         conta occorrenze
+                                                                 [abc] uno tra a,b,c                                                                      conta righe
+read   -p " msg : " v   #   con prompt
+                                                                                                                                          wc -l
+read   -s pass          #   silent ( password )
+read   -t 5 var         #   timeout 5 sec                        [ˆabc] nessuno tra a,b,c                                                 wc -w           conta parole
+Espansioni Variabili                                             [a-z] range caratteri                                                    wc -c           conta byte
+${var:-default}   default se var vuota/non def                   \<     inizio parola                                                     tr ’a-z’ ’A-Z’  traduce caratteri
+${var:=default}   assegna default se vuota                       \>     fine parola                                                       tr -d ’chars’   elimina caratteri
+${var:+alt}       alt se var definita                            Regex Estese (ERE) - grep -E / egrep                                     Pattern Esame - Pipeline
+
+${var:?msg}       errore se var vuota                            +     1+ occorrenze                                                      # Top N processi per thread ( decrescente )
+                                                                                                                                          ps - eo pid , nlwp , comm | sort - k2 - nr | head -3
+${#var}           lunghezza stringa                              ?     0 o 1 occorrenza
+${var:offset:len} substring                                      {n}   esattamente n volte                                                # PID con massimo numero thread
+                                                                                                                                          ps - eo pid , nlwp | sort - k2 - nr | awk ’ NR ==1{ max = $2 } $2 == max { print $1 } ’
+${var#pattern}    rimuovi prefix (shortest)                      {n,m} da n a m volte
+                                                                       alternativa (or)
+                                                                                                                                          # File piu ’ grande + sostituisci ( X ) con x
+${var##pattern}   rimuovi prefix (longest)                       |                                                                        ls -l | grep ’^ - ’ | sort - k5 - nr | head -1 | awk ’{ print $NF } ’ | \
+${var%pattern}    rimuovi suffix (shortest)                      (...) gruppo                                                               xargs cat | sed ’s /([^) ]*) /( x ) / g ’
+
+${var%%pattern}   rimuovi suffix (longest)                       Classi POSIX                                                             # Conta processi per utente
+${var/old/new}    sostituisci prima                              [:alpha:] lettere
+                                                                                                                                          ps - eo user | sort | uniq -c | sort - nr
+
+${var//old/new}   sostituisci tutte                              [:digit:] cifre
+                                                                                                                                          # Estrai campo da output
+file = " / path / to / script . sh "                                                                                                      awk -F : ’{ print $1 } ’ / etc / passwd
+echo $ { file # #*/}          # script . sh ( basename )         [:alnum:] lettere + cifre                                                cut -d : - f1 / etc / passwd
+                                                                 [:space:] spazi
+echo $ { file %/*}            # / path / to ( dirname )
+                                                                                                                                          awk Avanzato
+echo $ { file %. sh }         # / path / to / script
+echo $ { # file }             # 20 ( lunghezza )                 [:upper:] maiuscole                                                      # Trova massimo e stampa righe con quel valore
+                                                                                                                                          awk ’ NR ==1 { max = $2 } $2 > max { max = $2 } END {...} ’
+                                                                 [:lower:] minuscole
+echo $ { file :5:7}           # / to / scr ( substring )
+                                                                                                                                          awk ’ NR ==1 { max = $2 } $2 == max { print $1 } ’ # dopo sort - nr
+
+Text Processing                                                  sed - Stream Editor
+                                                                                                                                          # Array associativi
+                                                                 sed   ’s / old / new / ’ file        #   sostituisce prima occorrenza    awk ’{ count [ $1 ]++} END { for ( k in count ) print k , count [ k ]} ’
+grep - Ricerca Pattern
+                                                                 sed   ’s / old / new / g ’ file      #   sostituisce tutte
+grep pattern file   cerca pattern                                sed   ’s / old / new / gi ’ file     #   case insensitive                # Condizioni
+                                                                 sed   -i ’s / old / new / g ’ file   #   modifica in - place             awk ’ $3 > 100 && $4 != " root " { print $1 } ’
+-i                  case insensitive                             sed   -n ’ Np ’ file                 #   stampa riga N                   awk ’/ pattern / { print $2 } ’ # righe con pattern
+-v                  inverti match (righe senza pattern)          sed
+                                                                 sed
+                                                                       -n ’ 1 ,10 p ’ file
+                                                                       ’ Nd ’ file
+                                                                                                      #
+                                                                                                      #
+                                                                                                          stampa righe 1 -10
+                                                                                                          elimina riga N
+                                                                                                                                          awk ’ !/ pattern / { print } ’  # righe senza pattern
+
+-c                  conta occorrenze                             sed   ’/ pattern / d ’ file          #   elimina righe con pattern       # Calcoli
+-n                  mostra numeri riga                           sed
+                                                                 sed
+                                                                       ’s /.*/\ U &/ ’ file
+                                                                       ’s /.*/\ L &/ ’ file
+                                                                                                      #
+                                                                                                      #
+                                                                                                          uppercase
+                                                                                                          lowercase
+                                                                                                                                          awk ’{ sum += $1 ; n ++} END { print sum / n } ’ # media
+                                                                                                                                          awk ’ BEGIN { max =0} $1 > max { max = $1 } END { print max } ’
+-l                  solo nomi file con match                     Backreference sed                                                        sed Avanzato
+-r                  ricorsivo                                    sed ’s /\(.*\) /[\1]/ ’ file # cattura gruppo con \(...\)                # Sostituisci contenuto parentesi
+-E                  extended regex (ERE)                         sed ’s /\([0 -9]*\) / NUM :\1/ ’ # \1 = primo gruppo catturato
+                                                                 & = intera stringa matchata
+                                                                                                                                          sed ’s /([^) ]*) /( x ) / g ’ # ( abc ) -> ( x )
+                                                                                                                                          sed ’s /\(.*\) /[\1]/ ’       # abc -> [ abc ] ( backreference )
+-o                  solo parte matchata
+-w                  match parola intera                          awk - Pattern Processing                                                 # Elimina righe
+                                                                                                                                          sed ’ /^#/ d ’        #   commenti
+                                                                 awk   ’{ print } ’ file              # stampa tutto
+-A n                mostra n righe dopo match                    awk   ’{ print $1 } ’ file           # prima colonna                     sed ’ /^ $ / d ’      #   righe vuote
+-B n                mostra n righe prima match                   awk
+                                                                 awk
+                                                                       ’{ print $1 , $3 } ’ file
+                                                                       ’{ print $NF } ’ file
+                                                                                                      # colonne 1 e 3
+                                                                                                      # ultima colonna
+                                                                                                                                          sed ’1 d ’
+                                                                                                                                          sed ’ $d ’
+                                                                                                                                                                #
+                                                                                                                                                                #
+                                                                                                                                                                    prima riga
+                                                                                                                                                                    ultima riga
+-C n                mostra n righe contesto                      awk   -F : ’{ print $1 } ’ / etc / passwd # separatore :
+                                                                                                                                          # Intervalli
+Esempi grep                                                                                                                               sed -n ’ 5 ,10 p ’    # righe 5 -10
+# Righe che iniziano con #                                                                                                                sed ’ 5 ,10 d ’       # elimina 5 -10
+sed -n ’/ start / ,/ end / p ’       # tra pattern                      awk ’{                                            Flag GCC
+                                                                            if ( $1 > 10)
+# Multiple sostituzioni                                                          print " grande "                         -o nome     nome output
+sed -e ’s / a / A / ’ -e ’s / b / B / ’                                     else if ( $1 > 5)
+                                                                                 print " medio "
+                                                                                                                          -c          solo compile (produce .o)
+# Inserisci / Aggiungi                                                      else                                          -Wall       abilita warning comuni
+sed ’3 i \ testo ’
+sed ’3 a \ testo ’
+                      # inserisci prima riga 3
+                      # aggiungi dopo riga 3                            }’
+                                                                                 print " piccolo "
+                                                                                                                          -Wextra     warning extra
+sed ’/ pattern / a \ nuova riga ’ # dopo match                                                                            -Werror     warning → errori
+                                                                                                                                      info debug per GDB
+                                                                        # for loop
+# Sostituzioni con backreference                                        awk ’{                                            -g
+sed ’s /\([0 -9]*\) -\([0 -9]*\) /\2 -\1/ ’ # swap : 12 -34 -> 34 -12       for ( i = 1; i <= NF ; i ++)                  -O0         no ottimizzazione
+sed ’s /^\(.*\) $ /(\1) / ’   # wrappa in parentesi                             print " Campo " , i , "=" , $i
+                                                                        }’                                                -O1/-O2/-O3 livelli ottimizzazione
+# In - place con backup
+sed -i . bak ’s / old / new / g ’ file                                  # while loop
+                                                                                                                          -I dir      path include headers
+                                                                        awk ’{                                            -L dir      path librerie
+# Rimuovi spazi bianchi
+sed ’s /^[ \ t ]*// ’     # leading
+                                                                            i = 1
+                                                                            while ( i <= NF ) {                           -l lib      linka libreria (es: -lm, -lpthread)
+sed ’s /[ \ t ]* $ // ’   # trailing                                            print $i                                  -E          solo preprocessing
+sed ’s /^[ \ t ]*//; s /[ \ t ]* $ // ’ # entrambi                              i ++
+                                                                            }                                             -S          produce assembly
+awk Esempi Pratici                                                      }’                                                gcc - Wall - Wextra -g -o prog main . c utils . c - lm
+# Stampa righe lunghe piu ’ di 80 char                                                                                    gcc -c main . c         # produce main . o
+awk ’ length > 80 ’                                                     # next ( salta a prossima riga )                  gcc main . o utils . o -o prog # linking
+                                                                        awk ’/ skip / { next } { print } ’
+# Stampa righe tra due pattern                                                                                            Formato ELF
+awk ’/ START / ,/ END / ’                                               # exit ( termina )
+                                                                        awk ’{ if ( $1 == " STOP ") exit ; print } ’
+                                                                                                                          Executable and Linkable Format - standard Linux per binari.
+# Somma colonna 2 dove colonna 1 = " valore "
+                                                                        Funzioni awk
+                                                                                                                          Struttura:
+awk ’ $1 ==" valore " { sum += $2 } END { print sum } ’
+                                                                        # Funzioni stringa                                 • ELF Header: architettura, entry point
+# Trova duplicati
+awk ’ seen [ $0 ]++ ’ file                # stampa duplicati
+                                                                        length ( s )             # lunghezza
+                                                                        substr (s , start , n ) # substring
+                                                                                                                           • Program Header: segmenti per loader
+awk ’! seen [ $0 ]++ ’ file               # rimuovi duplicati           index (s , t )           # posizione di t in s     • Section Header: sezioni per linker
+                                                                        split (s , arr , sep ) # split in array           readelf -h prog         # mostra header
+# Rinumera righe                                                        gsub ( regex , repl , s ) # sostituisci tutte     readelf -S prog         # mostra sezioni
+awk ’{ print NR ": " $0 } ’                                             sub ( regex , repl , s ) # sostituisci prima      ldd prog                # librerie dinamiche
+                                                                        tolower ( s ) / toupper ( s )
+# Campo separato da virgola ( CSV )                                     sprintf ( fmt , ...)     # formatta stringa       Layout Memoria Processo
+awk -F ’ , ’ ’{ print $1 , $3 } ’ file . csv
+                                                                        # Funzioni matematiche                            Text codice (read-only, eseguibile)
+# Sostituisci campo
+awk ’{ $2 =" nuovo "; print } ’ OFS = ’\ t ’
+                                                                        int ( x )
+                                                                        log ( x )
+                                                                                  sin ( x )
+                                                                                  exp ( x )
+                                                                                            cos ( x )
+                                                                                            rand ()
+                                                                                                        sqrt ( x )
+                                                                                                        srand ()
+                                                                                                                          Data variabili globali inizializzate
+                                                                                                                          BSS var globali non inizializzate (zero)
+                                                                                                                          Heap allocazione dinamica (↑)
+# Formattazione output                                                  # Funzione custom
+awk ’{ printf "% -10 s %5 d \ n " , $1 , $2 } ’                         awk ’
+                                                                        function somma (a , b ) {                         Stack var locali, return addr (↓)
+# Split in array                                                             return a + b
+awk ’{ split ( $1 , arr , ":") ; print arr [1]} ’                       }                                                 Makefile
+                                                                        { print somma ( $1 , $2 ) }
+                                                                                                                          # Variabili
+# Lunghezza stringa                                                     ’
+                                                                                                                          CC = gcc
+awk ’{ print $1 , length ( $1 ) } ’
+                                                                                                                          CFLAGS = - Wall -g
+                                                                        # Esempio pratico : calcola statistiche
+                                                                                                                          TARGET = prog
+# Substring                                                             awk ’
+                                                                                                                          OBJS = main . o utils . o
+awk ’{ print substr ( $1 , 1 , 5) } ’          # primi 5 char           BEGIN { min = 999999; max = 0; sum = 0}
+                                                                        {
+                                                                                                                          # Regole : target : dipendenze
+# Conversione case                                                           if ( $1 < min ) min = $1
+                                                                                                                          $ ( TARGET ) : $ ( OBJS )
+awk ’{ print toupper ( $1 ) , tolower ( $2 ) } ’                             if ( $1 > max ) max = $1
+                                                                                                                              $ ( CC ) $ ( CFLAGS ) -o $@ $ ^
+                                                                             sum += $1
+awk Scripting                                                                n ++
+                                                                                                                          %. o : %. c
+# !/ usr / bin / awk -f                                                 }
+                                                                                                                             $ ( CC ) $ ( CFLAGS ) -c $ <
+# file : script . awk - eseguire con : awk -f script . awk input        END {
+                                                                             print " Min :" , min
+                                                                                                                          clean :
+BEGIN {                                                                      print " Max :" , max
+                                                                                                                            rm -f $ ( OBJS ) $ ( TARGET )
+    FS = " : "          # separatore input                                   print " Media :" , sum / n
+    OFS = " \ t "       # separatore output                             } ’ file
+                                                                                                                          . PHONY : clean
+    count = 0
+    print " === INIZIO === "                                            Sviluppo C                                                                  target      $@
+}
+                                                                        Fasi Compilazione GCC                                                       prima dipendenza
+                                                                                                                                                                $<
+                                                                                                                          Variabili automatiche:
+# Pattern : esegui solo su righe che matchano                                                                                                    $ˆ tutte le dipendenze
+/^[^ # ]/ {             # ignora commenti                               1. Preprocessor: espande #include, #define → .i
+                                                                                                                                                 $* stem (pattern matching)
+     count ++
+     data [ $1 ] = $2   # array associativo
+                                                                        2. Compiler: C → Assembly → .s
+}                                                                       3. Assembler: Assembly → Object code → .o         System Call vs Libreria
+
+# Condizione numerica
+                                                                        4. Linker: unisce .o + librerie → eseguibile      System Call interfaccia diretta kernel
+$3 > 100 {                                                                                                                            open, read, write, fork, exec
+                                                                                                                                      wrapper + funzionalità
+    print " ALTO : " , $1 , $3
+}                                                                                                                         Libreria
+                                                                                                                                      fopen, printf, malloc
+END {
+    print " === FINE === "
+    print " Processate " , count , " righe "                                                                              I/O System Calls
+                                                                                                                          File Descriptor
+     # Itera su array
+     for ( key in data ) {                                                                                                Intero non-negativo che identifica                       file   aperto   nel   processo.
+                                                                                                                          0 STDIN_FILENO (stdin)
+         print key , " ->" , data [ key ]
+     }
+}                                                                                                                         1 STDOUT_FILENO (stdout)
+Controllo Flusso awk                                                                                                      2 STDERR_FILENO (stderr)
+# if - else
+open / creat                                                                         Processi                                                                                                                     true se exit normale
+                                                                                                                                                                                                                WIFEXITED(s)
+
+# include < fcntl .h >                                                               Identificatori
+                                                                                                                                                                                                                  exit code (0-255)
+                                                                                                                                                                                                                WEXITSTATUS(s)
+                                                                                                                                                                                  Macro su status:
+int open ( const char * path , int oflag ) ;
+                                                                                      # include < unistd .h >                                                                                      WIFSIGNALED(s) true se terminato da segnale
+int open ( const char * path , int oflag , mode_t mode ) ;
+int creat ( const char * path , mode_t mode ) ;                                       pid_t getpid ( void ) ;
+                                                                                      pid_t getppid ( void ) ;
+                                                                                                                      //
+                                                                                                                      //
+                                                                                                                           PID processo corrente
+                                                                                                                           PID processo padre
+                                                                                                                                                                                                   WTERMSIG(s)    numero segnale
+// ret : fd on success , -1 on error                                                                                                                                              int status ;
+                                                                                      uid_t getuid ( void ) ;         //   Real UID                                               pid_t pid = wait (& status ) ;
+                                                     solo lettura
+                                              O_RDONLY                                uid_t geteuid ( void ) ;
+                                                                                      gid_t getgid ( void ) ;
+                                                                                                                      //
+                                                                                                                      //
+                                                                                                                           Effective UID
+                                                                                                                           Real GID
+                                                                                                                                                                                  if ( WIFEXITED ( status ) )
+Flag obbligatori (uno solo): O_WRONLY solo scrittura                                  gid_t getegid ( void ) ;        //   Effective GID
+                                                                                                                                                                                       printf ( " Exit code : % d \ n " , WEXITSTATUS ( status ) ) ;
+
+                                             O_RDWR  lettura + scrittura                     Real vs Effective:
+                                                                                                                                                                                  Zombie e Orfani
+
+                                                                crea se non esiste (richiede mode)                                                                                Zombie figlio terminato, padre non ha fatto wait
+                                                     O_CREAT
+                                                                                              • Real: utente che ha lanciato il processo
+                                                                errore se esiste (con O_CREAT)                                                                                    Orfano padre terminato, figlio adottato da init
+                                                     O_EXCL
+                                                                                              • Effective: determina permessi effettivi (SUID)
+Flag opzionali (combinabili con |): O_TRUNC tronca a 0 se esiste                             Layout Memoria
+                                                                                                                                                                                  Pattern fork-exec
+
+                                                                scrivi sempre in fondo                                                                                            pid_t pid = fork () ;
+                                                                                             Text codice eseguibile (RO, condivisibile)
+                                                     O_APPEND
+                                                                                                                                                                                  if ( pid == 0) {
+                                                     O_NONBLOCK I/O non bloccante
+int fd = open ( " file . txt " , O_RDWR | O_CREAT , 0644) ;                                  Data globali/statiche inizializzate                                                       // Figlio : esegue nuovo programma
+                                                                                                                                                                                       execvp ( args [0] , args ) ;
+
+close
+                                                                                             BSS globali/statiche non init (zero)                                                      perror ( " exec " ) ; _exit (1) ;
+                                                                                                                                                                                  }
+# include < unistd .h >
+                                                                                             Heap malloc/calloc/realloc (↑)                                                       // Padre : attende
+int close ( int fd ) ; // ret : 0 ok , -1 error                                              Stack variabili locali, return addr (↓)                                              int status ;
+                                                                                                                                                                                  waitpid ( pid , & status , 0) ;
+read / write                                                                         Ambiente
+                                                                                                                                                                                  system
+# include < unistd .h >                                                               extern char ** environ ; // array variabili ambiente
+ssize_t read ( int fd , void * buf , size_t count ) ;                                 char * getenv ( const char * name ) ;                                                       # include < stdlib .h >
+ssize_t write ( int fd , const void * buf , size_t count ) ;                          int putenv ( char * string ) ; // " NAME = value "                                          int system ( const char * command ) ;
+// ret : byte letti / scritti , 0 = EOF , -1 = error                                  int setenv ( const char * name , const char * val , int overwrite ) ;                       // ret : exit status comando , -1 errore fork , 127 errore exec
+                                                                                      int unsetenv ( const char * name ) ;                                                        // Internamente : fork + exec ("/ bin / sh " , " - c " , cmd ) + wait
+char buf [1024];
+ssize_t n = read ( fd , buf , sizeof ( buf ) ) ;                                     fork                                                                                         vfork (ottimizzazione)
+if ( n > 0) write ( STDOUT_FILENO , buf , n ) ;                                                                                                                                   pid_t pid = vfork () ;
+                                                                                      # include < unistd .h >
+                                                                                      pid_t fork ( void ) ;                                                                       if ( pid == 0) {
+lseek
+                                                                                      // ret : 0 nel figlio , PID figlio nel padre , -1 errore                                         exec ...() ; // SOLO exec o _exit !
+# include < unistd .h >                                                                                                                                                                _exit (1) ;  // MAI modificare var o return !
+off_t lseek ( int fd , off_t offset , int whence ) ;                                  pid_t pid = fork () ;                                                                       }
+// ret : nuova posizione , -1 on error                                                if ( pid < 0) {                                                                             // Padre bloccato finche ’ figlio fa exec / _exit
+                                                                                           perror ( " fork " ) ; exit (1) ;
+SEEK_SET offset da inizio file                                                        } else if ( pid == 0) {                                                                     waitpid WNOHANG (polling)
+SEEK_CUR offset da posizione corrente                                                      // FIGLIO
+                                                                                           printf ( " Sono figlio , PID =% d \ n " , getpid () ) ;
+                                                                                                                                                                                  // Non bloccante : controlla senza aspettare
+                                                                                                                                                                                  int status ;
+SEEK_END offset da fine file                                                          } else {                                                                                    pid_t ret = waitpid ( -1 , & status , WNOHANG ) ;
+lseek ( fd , 0 , SEEK_SET ) ;     // vai a inizio                                          // PADRE                                                                               if ( ret == 0) {
+lseek ( fd , 0 , SEEK_END ) ;     // vai a fine                                            printf ( " Sono padre , figlio PID =% d \ n " , pid ) ;                                     // nessun figlio terminato ancora
+lseek ( fd , -10 , SEEK_CUR ) ;   // indietro 10 byte                                 }                                                                                           } else if ( ret > 0) {
+off_t size = lseek ( fd , 0 ,     SEEK_END ) ; // dimensione file                                                                                                                      // figlio ret terminato
+                                                                                     Il figlio eredita: codice, dati (copia), fd aperti, ambiente.                                     if ( WIFEXITED ( status ) )
+dup / dup2
+                                                                                     Non eredita: PID, PPID, lock, timer.                                                         } else {
+                                                                                                                                                                                            printf ( " Exit : % d \ n " , WEXITSTATUS ( status ) ) ;
+# include < unistd .h >
+int dup ( int oldfd ) ;                   // ret : nuovo fd                          exec - Famiglia                                                                                   // errore o no figli
+int dup2 ( int oldfd , int newfd ) ;      // chiude newfd , duplica
+                                                                                     Sostituisce immagine processo con nuovo programma.                                           }
+
+// Redirige stdout su file                                                            # include < unistd .h >
+int fd = open ( " out . txt " , O_WRONLY | O_CREAT , 0644) ;                          int execl ( const char * path , const char * arg0 , ... , NULL ) ;                          Segnali
+dup2 ( fd , STDOUT_FILENO ) ; // 1 ora punta a out . txt                              int execlp ( const char * file , const char * arg0 , ... , NULL ) ;
+                                                                                                                                                                                  Segnali Comuni
+close ( fd ) ;                                                                        int execle ( const char * path , const char * arg0 , ... , NULL , char * const envp []) ;
+printf ( " va su file \ n " ) ;  // scrive su out . txt                               int execv ( const char * path , char * const argv []) ;                                     Num Nome    Descrizione
+                                                                                      int execvp ( const char * file , char * const argv []) ;
+stat / fstat / lstat                                                                  int execve ( const char * path , char * const argv [] , char * const envp []) ;             1   SIGHUP hangup terminale
+# include < sys / stat .h >                                                           // ret : -1 solo su errore ( non ritorna se successo )
+                                                                                                                                                                                  2   SIGINT  Ctrl+C
+int stat ( const char * path , struct stat * buf ) ;
+int fstat ( int fd , struct stat * buf ) ;                                           l lista argomenti (arg0, arg1, ..., NULL)                                                    3   SIGQUIT Ctrl+\ (core dump)
+int lstat ( const char * path , struct stat * buf ) ; // no follow symlink           v vettore argv[]                                                                             9   SIGKILL termina (non catturabile)
+                                              tipo file + permessi
+                                                   st_mode                           p cerca in PATH                                                                              11  SIGSEGV segmentation fault
+                                              dimensione in byte
+                                                   st_size                           e passa ambiente envp[]                                                                      13  SIGPIPE pipe senza lettore
+struct stat (campi principali): st_uid/st_gid owner UID/GID                           execl ( " / bin / ls " , " ls " , " -l " , NULL ) ;
+                                                                                      execlp ( " ls " , " ls " , " - la " , NULL ) ;
+                                                                                                                                                                                  14  SIGALRM timer alarm scaduto
+                                st_nlink      numero hard link                        char * args [] = { " ls " , " -l " , NULL };                                                15  SIGTERM terminazione (default kill)
+                                                                                                                                                                                  17  SIGCHLD figlio terminato/stopped
+                                                                                      execvp ( " ls " , args ) ;
+                                st_mtime      ultima modifica
+                                  S_ISREG(m) file regolare
+                                                                                     exit / _exit                                                                                 18  SIGCONT continua se stopped
+                                  S_ISDIR(m) directory
+                                                                                      # include < stdlib .h >
+                                                                                      void exit ( int status ) ;           // flush buffer , cleanup                              19  SIGSTOP stop (non catturabile)
+Macro test tipo (su st_mode): S_ISLNK(m) symbolic link                                # include < unistd .h >                                                                     20  SIGTSTP Ctrl+Z
+                                                                                      void _exit ( int status ) ;          // termina subito ( no cleanup )
+                                  S_ISFIFO(m) FIFO/pipe                                                                                                                           10  SIGUSR1 user-defined 1
+                                  S_ISSOCK(m) socket
+                                                                                     wait / waitpid
+                                                                                                                                                                                  12  SIGUSR2 user-defined 2
+                                                                                      # include < sys / wait .h >
+Altre Syscall File                                                                    pid_t wait ( int * status ) ; // attende qualsiasi figlio                                   signal
+                                                                                      pid_t waitpid ( pid_t pid , int * status , int options ) ;                                  # include < signal .h >
+int   access ( const char * path , int mode ) ; // R_OK , W_OK , X_OK , F_OK
+                                                                                      // ret : PID figlio terminato , -1 errore                                                   typedef void (* sighandler_t ) ( int ) ;
+int   chmod ( const char * path , mode_t mode ) ;
+                                                                                                                                                                                  sighandler_t signal ( int signum , sighandler_t handler ) ;
+                                                                                                    > 0 attende figlio specifico
+int   chown ( const char * path , uid_t owner , gid_t group ) ;
+int   link ( const char * old , const char * new ) ;   // hard link                                                                                                               // ret : handler precedente , SIG_ERR on error
+int   symlink ( const char * old , const char * new ) ; // soft link                 waitpid pid: -1 qualsiasi figlio                                                                                           SIG_DFL   azione default
+int
+int
+      unlink ( const char * path ) ; // elimina file
+      rename ( const char * old , const char * new ) ;                                              0   qualsiasi figlio stesso group                                             Handler speciali:
+                                                                                                                                                                                                                SIG_IGN   ignora segnale
+int
+int
+      mkdir ( const char * path , mode_t mode ) ;
+      rmdir ( const char * path ) ;
+                                                                                     Options: WNOHANG (non blocca), WUNTRACED                                                     void handler ( int sig ) {
+                                                                                                                                                                                      printf ( " Ricevuto segnale % d \ n " , sig ) ;
+}                                                                               kill(pid, 0) - Test Esistenza                                           FIFO O_NONBLOCK
+signal ( SIGINT , handler ) ;       // cattura Ctrl + C
+signal ( SIGINT , SIG_IGN ) ;       // ignora Ctrl + C
+                                                                                if ( kill ( pid , 0) == 0) {
+                                                                                     printf ( " Processo % d esiste \ n " , pid ) ;
+                                                                                                                                                        O_RDONLY            blocca finche’ scrittore
+signal ( SIGINT , SIG_DFL ) ;       // ripristina default                       } else if ( errno == ESRCH ) {                                          O_WRONLY            blocca finche’ lettore
+                                                                                                                                                        O_RDONLY|O_NONBLOCK ritorna subito ok
+                                                                                     printf ( " Processo non esiste \ n " ) ;
+kill / raise
+                                                                                } else {
+# include < signal .h >                                                              printf ( " Nessun permesso \ n " ) ;                               O_WRONLY|O_NONBLOCK errore ENXIO se no lettore
+int kill ( pid_t pid , int sig ) ;      // invia a processo                     }
+int raise ( int sig ) ;                 // invia a se stesso                                                                                            mmap - Memory Mapping
+// ret : 0 ok , -1 error                                                        Gestione SIGPIPE (ESAME)
+                                                                                                                                                        # include < sys / mman .h >
+               processo specifico
+               > 0                                                              SIGPIPE inviato quando write su pipe/socket chiuso. Default: termina!   void * mmap ( void * addr , size_t length , int prot , int flags ,
+                                                                                                                                                                      int fd , off_t offset ) ;
+          0    tutti processi stesso gruppo                                     Approccio 1 - Ignora globalmente:                                       int munmap ( void * addr , size_t length ) ;
+kill pid:                                                                                                                                               // ret : indirizzo mapping , MAP_FAILED on error
+          -1   tutti processi (permessi)                                        signal ( SIGPIPE , SIG_IGN ) ; // ignora
+
+                                                                                                                                                                                            leggibile
+                                                                                // write ritorna -1 , controllo errno :
+          < -1 gruppo |pid|                                                     if ( write ( fd , buf , n ) == -1 && errno == EPIPE )                                                  PROT_READ
+                                                                                     printf ( " peer disconnesso \ n " ) ;                                                                  scrivibile
+                                                                                                                                                                                       PROT_WRITE
+alarm / pause                                                                                                                                           Protezione (prot):
+# include < unistd .h >                                                         Approccio 2 - Blocca per thread:                                                                  PROT_EXEC eseguibile
+unsigned int alarm ( unsigned int seconds ) ;                                   sigset_t set ;                                                                                    PROT_NONE nessun accesso
+// ret : secondi rimanenti alarm precedente                                     sigemptyset (& set ) ;
+int pause ( void ) ; // sospende fino a segnale                                 sigaddset (& set , SIGPIPE ) ;                                                MAP_SHARED    modifiche visibili ad altri
+void timeout ( int sig ) { printf ( " Timeout !\ n " ) ; }
+                                                                                p th re a d_ s ig ma s k ( SIG_BLOCK , & set , NULL ) ;
+                                                                                // ora write ritorna -1/ EPIPE
+                                                                                                                                                        Flag: MAP_PRIVATE copy-on-write
+                                                                                                                                                              MAP_ANONYMOUS no file (fd=-1)
+signal ( SIGALRM , timeout ) ;
+alarm (5) ;   // SIGALRM tra 5 sec
+pause () ;    // attende segnale                                                Approccio 3 - MSG_NOSIGNAL (socket):                                    mmap per file
+                                                                                // Solo con send () , non write () !
+Insiemi di Segnali                                                              send ( fd , buf , n , MSG_NOSIGNAL ) ;                                  int fd = open ( " file " , O_RDWR ) ;
+                                                                                if ( ret == -1 && errno == EPIPE ) ...                                  struct stat sb ;
+# include < signal .h >                                                                                                                                 fstat ( fd , & sb ) ;
+sigset_t set ;                                                                                                                                          char * ptr = mmap ( NULL , sb . st_size , PROT_READ | PROT_WRITE ,
+int sigemptyset ( sigset_t * set ) ; // inizializza vuoto                       IPC                                                                                           MAP_SHARED , fd , 0) ;
+int sigfillset ( sigset_t * set ) ;  // tutti i segnali                                                                                                 close ( fd ) ; // fd non piu ’ necessario
+int sigaddset ( sigset_t * set , int signum ) ;                                 Pipe (anonime)                                                          // accedi ptr [0.. size -1]
+int sigdelset ( sigset_t * set , int signum ) ;
+int sigismember ( const sigset_t * set , int signum ) ;                         Comunicazione unidirezionale tra processi correlati (padre-figlio).     munmap ( ptr , sb . st_size ) ;
+                                                                                # include < unistd .h >                                                 mmap per IPC (memoria condivisa anonima)
+sigprocmask                                                                     int pipe ( int fd [2]) ;                                                void * ptr = mmap ( NULL , 4096 , PROT_READ | PROT_WRITE ,
+int sigprocmask ( int how , const sigset_t * set , sigset_t * oldset ) ;        // fd [0] = lettura , fd [1] = scrittura                                                      MAP_SHARED | MAP_ANONYMOUS , -1 , 0) ;
+                                                                                // ret : 0 ok , -1 error                                                if ( fork () == 0) {
+SIG_BLOCK   aggiungi set alla maschera                                                                                                                       // figlio scrive
+                                                                                Pattern padre-figlio:
+SIG_UNBLOCK rimuovi set dalla maschera                                          int fd [2];
+                                                                                                                                                             strcpy ( ptr , " Hello from child " ) ;
+                                                                                                                                                             exit (0) ;
+SIG_SETMASK sostituisci maschera con set                                        pipe ( fd ) ;                                                           }
+sigset_t mask , oldmask ;                                                       pid_t pid = fork () ;                                                   wait ( NULL ) ;
+sigemptyset (& mask ) ;                                                         if ( pid == 0) {                                                        printf ( " Padre legge : % s \ n " , ( char *) ptr ) ;
+sigaddset (& mask , SIGINT ) ;                                                       // FIGLIO : scrive                                                 munmap ( ptr , 4096) ;
+sigprocmask ( SIG_BLOCK , & mask , & oldmask ) ; // blocca SIGINT                    close ( fd [0]) ; // chiude lettura
+// ... sezione critica ...                                                           write ( fd [1] , " msg " , 3) ;                                    POSIX Shared Memory
+sigprocmask ( SIG_SETMASK , & oldmask , NULL ) ; // ripristina                       close ( fd [1]) ;                                                  # include < sys / mman .h >
+                                                                                } else {                                                                # include < fcntl .h >
+sigaction (raccomandato)                                                             // PADRE : legge                                                   int shm_open ( const char * name , int oflag , mode_t mode ) ;
+                                                                                     close ( fd [1]) ; // chiude scrittura                              int shm_unlink ( const char * name ) ;
+# include < signal .h >
+                                                                                     char buf [100];                                                    // Compilare con - lrt
+struct sigaction {
+                                                                                     read ( fd [0] , buf , sizeof ( buf ) ) ;
+     void (* sa_handler ) ( int ) ;          // handler semplice
+                                                                                     close ( fd [0]) ;                                                  // Creatore
+     void (* sa_sigaction ) ( int , siginfo_t * , void *) ; // handler esteso
+                                                                                }                                                                       int fd = shm_open ( " / myshm " , O_CREAT | O_RDWR , 0666) ;
+     sigset_t sa_mask ;      // segnali bloccati durante handler
+                                                                                                                                                        ftruncate ( fd , 4096) ; // imposta dimensione
+     int sa_flags ;          // opzioni
+};                                                                              Redirezionare I/O con pipe:                                             void * ptr = mmap ( NULL , 4096 , PROT_READ | PROT_WRITE ,
+                                                                                // stdout del figlio -> pipe                                                                 MAP_SHARED , fd , 0) ;
+int sigaction ( int signum , const struct sigaction * act ,
+                                                                                close ( fd [0]) ;                                                       close ( fd ) ;
+                struct sigaction * oldact ) ;
+                                                                                dup2 ( fd [1] , STDOUT_FILENO ) ;                                       // ... usa ptr ...
+struct sigaction sa ;                                                           close ( fd [1]) ;                                                       munmap ( ptr , 4096) ;
+sa . sa_handler = handler ;                                                     exec ...() ;                                                            shm_unlink ( " / myshm " ) ; // rimuove
+sigemptyset (& sa . sa_mask ) ;
+sa . sa_flags = 0; // o SA_RESTART                                              FIFO (Named Pipe)                                                       Semafori POSIX
+sigaction ( SIGINT , & sa , NULL ) ;                                                                                                                    # include < semaphore .h >
+                                                                                Pipe con nome nel filesystem, per processi non correlati.               sem_t * sem_open ( const char * name , int oflag , mode_t mode ,
+                          riavvia syscall interrotte
+                       SA_RESTART                                               # include < sys / stat .h >                                                                unsigned int value ) ;
+Flag comuni: SA_SIGINFO usa sa_sigaction                                        int mkfifo ( const char * pathname , mode_t mode ) ;
+                                                                                // ret : 0 ok , -1 error ( EEXIST se esiste )
+                                                                                                                                                        int sem_wait ( sem_t * sem ) ;
+                                                                                                                                                        int sem_post ( sem_t * sem ) ;
+                                                                                                                                                                                         // P : decrementa ( blocca se 0)
+                                                                                                                                                                                         // V : incrementa
+             SA_NOCLDSTOP no SIGCHLD per stop                                                                                                           int sem_close ( sem_t * sem ) ;
+                                                                                mkfifo / tmp / myfifo       # da shell                                  int sem_unlink ( const char * name ) ;
+alarm + read Timeout (ESAME)                                                                                                                            // Compilare con - lpthread
+                                                                                // Processo scrittore
+volatile sig_atomic_t timeout_flag = 0;                                         int fd = open ( " / tmp / myfifo " , O_WRONLY ) ;         // blocca     sem_t * sem = sem_open ( " / mysem " , O_CREAT , 0666 , 1) ; // mutex
+                                                                                write ( fd , " data " , 4) ;                                            sem_wait ( sem ) ;   // entra sezione critica
+void handler ( int s ) { timeout_flag = 1; }                                    close ( fd ) ;                                                          // ... sezione critica ...
+                                                                                                                                                        sem_post ( sem ) ;   // esce
+int main () {                                                                   // Processo lettore                                                     sem_close ( sem ) ;
+    char buf [100];                                                             int fd = open ( " / tmp / myfifo " , O_RDONLY ) ;         // blocca     sem_unlink ( " / mysem " ) ;
+    signal ( SIGALRM , handler ) ;                                              read ( fd , buf , sizeof ( buf ) ) ;
+                                                                                close ( fd ) ;                                                          Semafori senza nome (thread)
+     printf ( " Hai 5 secondi : " ) ;                                                                                                                   sem_t sem ;
+     alarm (5) ; // avvia timer                                                 Nota: open blocca finche’ non c’e’ processo all’altro capo (a meno di   sem_init (& sem , 0 , 1) ;   // 0= thread , 1= processi
+     int n = read (0 , buf , sizeof ( buf ) ) ;
+     alarm (0) ; // cancella timer                                              O_NONBLOCK).                                                            sem_wait (& sem ) ;
+                                                                                                                                                        sem_post (& sem ) ;
+                                                                                                                                                        sem_destroy (& sem ) ;
+     if ( n < 0 && timeout_flag ) {
+          printf ( " Timeout !\ n " ) ;                                                                                                                 select() con Pipe + stdin (ESAME)
+     } else {
+          printf ( " Letto : %.* s " , n , buf ) ;                                                                                                      int p [2];
+     }                                                                                                                                                  pipe ( p ) ;
+}                                                                                                                                                       int pipe_closed = 0;
+                                                                                   int p t h r e a d _ m u t e x _ t r y l o c k ( pt hr e ad _m u te x_ t * mutex ) ;               // non blocca     void * threadA ( void * arg ) {
+if ( fork () == 0) {            // FIGLIO                                          int p t h r e a d _ m u t e x _ u n l o c k ( p t hr ea d _m ut e x_ t * mutex ) ;                                       for ( int i = 0; i < N ; i ++) {
+     close ( p [1]) ;           // chiude scrittura                                int p t h r e a d _ m u t e x _ d e s t r o y ( pt hr e ad _m u te x_ t * mutex ) ;                                          p th r ea d _m u te x _l oc k (& m ) ;
+     char buf [64];                                                                                                                                                                                             while ( turn != 0)                               // WHILE , non IF !
+                                                                                   p th re a d_ m ut ex _ t lock = P T H R E A D _ M U T E X _ I N I T I A L I Z E R ;                                                  pt hre ad_ con d_w ait (& c , & m ) ;
+      while (1) {                                                                  int counter = 0;                                                                                                             printf ( " A \ n " ) ;
+          fd_set set ;                                                                                                                                                                                          turn = 1;                                        // passa turno a B
+          FD_ZERO (& set ) ;                                                       void * increment ( void * arg ) {                                                                                            p t h r e a d _ co n d _ s i g n a l (& c ) ;    // sveglia B
+          FD_SET ( STDIN_FILENO , & set ) ;                 // stdin = 0               for ( int i = 0; i < 1000000; i ++) {                                                                                    p t h r e a d _ m u t e x _ u n l o c k (& m ) ;
+          if (! pipe_closed )                                                               p t h r e a d _ m u t e x _ l o c k (& lock ) ;                                                                 }
+              FD_SET ( p [0] , & set ) ;                    // pipe read                    counter ++;                                                                                                     return NULL ;
+                                                                                            p t h r e a d _ m u t e x _ u n l o c k (& lock ) ;                                                        }
+            int maxfd = p [0]; // p [0] > 0                                            }
+            if ( select ( maxfd + 1 , & set , NULL , NULL , NULL ) <= 0)               return NULL ;                                                                                                   void * threadB ( void * arg ) {
+                 break ;                                                           }                                                                                                                        for ( int i = 0; i < N ; i ++) {
+                                                                                                                                                                                                                p th r ea d _m u te x _l oc k (& m ) ;
+                                                                                   Condition Variables
+            if ( FD_ISSET ( p [0] , & set ) ) {                                                                                                                                                                 while ( turn != 1)                               // WHILE !
+                 int n = read ( p [0] , buf , sizeof ( buf ) ) ;                   pthr ead_c ond_t cond = P T H R E A D _ C O N D _ I N I T I A L I Z E R ;                                                            pt hre ad_ con d_w ait (& c , & m ) ;
+                 if ( n == 0) { // EOF : padre ha chiuso !                                                                                                                                                      printf ( " B \ n " ) ;
+                      printf ( " Pipe chiusa \ n " ) ;                             int p t h r e a d _ c o n d _ w a i t ( pth read_c ond_t * cond , p th r ea d _m ut e x_ t * mutex ) ;                       turn = 0;                                        // passa turno a A
+                      pipe_closed = 1;                                             // rilascia mutex , attende signal , riacquista mutex                                                                        p t h r e a d _ co n d _ s i g n a l (& c ) ;
+                      close ( p [0]) ;                                             int p t h r e a d _ c o n d _ s i g n a l ( pthrea d_cond _t * cond ) ;       // sveglia 1                                   p t h r e a d _ m u t e x _ u n l o c k (& m ) ;
+                      continue ; // continua con stdin                             int p t h r e a d _ c o n d _ b r o a d c a s t ( pt hread_ cond_t * cond ) ; // sveglia tutti                           }
+                 }                                                                 int p t h r e a d _ c o n d _ d e s t r o y ( pthr ead_co nd_t * cond ) ;                                                return NULL ;
+                 if ( n < 0) break ;                                                                                                                                                                   }
+                 printf ( " PIPE : %.* s " , n , buf ) ;                           Pattern Produttore-Consumatore
+            }                                                                      p th re a d_ m ut ex _ t mutex = P T H R E A D _ M U T E X _ I N I T I A L I Z E R ;                                Pattern Cascata T1->T2->T3 (ESAME)
+            if ( FD_ISSET ( STDIN_FILENO , & set ) ) {                             pthr ead_c ond_t not_empty = P T H R E A D _ C O N D _ I N I T I A L I Z E R ;                                      pthread_mutex_t mtx = P T H R E A D _ M U T E X _ I N I T I A L I Z E R ;
+                 int n = read (0 , buf , sizeof ( buf ) ) ;                        pthr ead_c ond_t not_full = P T H R E A D _ C O N D _ I N I T I A L I Z E R ;                                       pthread_cond_t cond = P T H R E A D _ C O N D _ I N I T I A L I Z E R ;
+                 if ( n <= 0) {                                                    int buffer [ N ] , count = 0;                                                                                       int stato = 1; // 1= T1 , 2= T2 , 3= T3
+                      if ( pipe_closed ) break ; // tutto chiuso
+                      continue ;                                                   void * producer ( void * arg ) {                                                                                    void * thread1 ( void * arg ) {
+                 }                                                                     int item = produce () ;                                                                                              p th r ea d _m u te x _l o ck (& mtx ) ;
+                 printf ( " STDIN : %.* s " , n , buf ) ;                              p t h r e a d _ m u t e x _ l o c k (& mutex ) ;                                                                     while ( stato != 1)
+            }                                                                          while ( count == N ) // buffer pieno                                                                                         pt hre ad_ co nd_ wai t (& cond , & mtx ) ;
+    }                                                                                          p t h r e a d _ c o n d _ w a i t (& not_full , & mutex ) ;                                                  printf ( " T1 lavora \ n " ) ;
+    if (! pipe_closed ) close ( p [0]) ;                                               buffer [ count ++] = item ;                                                                                          stato = 2;
+} else { // PADRE                                                                      p t h r e a d _ c o n d _ s i g n a l (& not_empty ) ;                                                               p t h r e a d _ c o n d _ b r o a d c a s t (& cond ) ; // sveglia TUTTI
+    close ( p [0]) ;                    // IMPORTANTE : chiude lettura                 p t h r e a d _ m u t e x _ u n l o c k (& mutex ) ;                                                                 p t h r e a d _ m u t e x _ u n l o c k (& mtx ) ;
+    write ( p [1] , " ping \ n " , 5) ;                                            }                                                                                                                        return NULL ;
+    sleep (2) ;                                                                                                                                                                                        }
+    close ( p [1]) ;                    // chiude -> EOF al figlio                 void * consumer ( void * arg ) {                                                                                    // thread2 e thread3 : stessa struttura con stato 2 e 3
+    wait ( NULL ) ;                                                                    p t h r e a d _ m u t e x _ l o c k (& mutex ) ;
+}                                                                                      while ( count == 0) // buffer vuoto                                                                             int main () {
+                                                                                               p t h r e a d _ c o n d _ w a i t (& not_empty , & mutex ) ;                                                pthread_t t1 , t2 , t3 ;
+Gestione EOF pipe:                                                                     int item = buffer [ - - count ];                                                                                    pthread_create (& t1 , NULL , thread1 , NULL ) ;
+                                                                                       p t h r e a d _ c o n d _ s i g n a l (& not_full ) ;
+ • read() == 0: EOF, l’altro processo ha chiuso                                        p t h r e a d _ m u t e x _ u n l o c k (& mutex ) ;
+                                                                                                                                                                                                           pthread_create (& t2 , NULL , thread2 , NULL ) ;
+                                                                                                                                                                                                           pthread_create (& t3 , NULL , thread3 , NULL ) ;
+ • Padre DEVE chiudere fd[1] per segnalare EOF                                     }
+                                                                                       consume ( item ) ;                                                                                                  pthread_join ( t1 , NULL ) ;
+
+ • Figlio DEVE chiudere fd[1] subito (non lo usa)
+                                                                                                                                                                                                           pthread_join ( t2 , NULL ) ;
+                                                                                                                                                                                                           pthread_join ( t3 , NULL ) ;
+                                                                                   Semafori POSIX (Thread)
+                                                                                                                                                                                                           p t h r e a d _ m u t e x _ d e s t r o y (& mtx ) ;
+Thread POSIX                                                                       # include < semaphore .h >                                                                                              p t h r e a d _ c o n d _ d e s t r o y (& cond ) ;
+                                                                                   sem_t sem ;                                                                                                         }
+Concetti Base                                                                      int sem_init ( sem_t * sem , int pshared , unsigned int value ) ;
+Thread = flusso esecuzione leggero, condivide: codice, dati, heap, fd.             // pshared : 0= thread , non - zero = processi
+                                                                                   int sem_wait ( sem_t * sem ) ;    // P : decr , blocca se 0
+                                                                                                                                                                                                       signal vs broadcast:
+Ogni thread ha: stack proprio, registri, TID.                                      int sem_trywait ( sem_t * sem ) ; // non blocca                                                                      • signal: sveglia 1 thread (piu’ efficiente)
+Compilare con: gcc -pthread                                                        int sem_post ( sem_t * sem ) ;    // V : incrementa
+                                                                                   int sem_getvalue ( sem_t * sem , int * sval ) ;
+                                                                                                                                                                                                        • broadcast: sveglia tutti (necessario se piu’ thread aspettano condizioni
+Creazione e Terminazione                                                           int sem_destroy ( sem_t * sem ) ;                                                                                      diverse)
+# include < pthread .h >                                                           sem_t empty , full , mutex ;                                                                                        Errori Comuni (ESAME)
+int pthread _creat e ( pthread_t * thread , const pthre ad_att r_t * attr ,        sem_init (& empty , 0 , N ) ; // slot vuoti
+                       void *(* start_routine ) ( void *) , void * arg ) ;         sem_init (& full , 0 , 0) ;   // slot pieni                                                                          • if vs while: usare sempre while con cond_wait!
+void pthread_exit ( void * retval ) ;
+pthread_t pthread_self ( void ) ; // ret : TID corrente
+                                                                                   sem_init (& mutex , 0 , 1) ; // mutua esclusione                                                                     • Doppio lock: lock senza unlock = deadlock
+void * worker ( void * arg ) {
+                                                                                   // Produttore                                                                                                        • Unlock mancante: dopo sezione critica
+    int id = *( int *) arg ;
+                                                                                   sem_wait (& empty ) ;
+                                                                                   sem_wait (& mutex ) ;
+                                                                                                                                                                                                        • Signal prima unlock: ok ma unlock prima e’ meglio
+    printf ( " Thread % d \ n " , id ) ;
+    return NULL ; // o pthread_exit ( NULL ) ;
+                                                                                   // inserisci in buffer                                                                                              Sequenza corretta:
+                                                                                   sem_post (& mutex ) ;                                                                                               p th r ea d _m u te x _l o ck (& m ) ;
+}
+                                                                                   sem_post (& full ) ;                                                                                                while (! condizione )                            // WHILE !
+pthread_t tid ;
+int arg = 42;                                                                                                                                                                                                  pt hre ad_ con d_w ai t (& c , & m ) ;
+                                                                                   // Consumatore                                                                                                      // ... lavoro ...
+pthread_cr eate (& tid , NULL , worker , & arg ) ;
+                                                                                   sem_wait (& full ) ;                                                                                                condizione = nuovo_valore ;
+Join e Detach                                                                      sem_wait (& mutex ) ;                                                                                               p t h r e a d _ c on d _ s i g n a l (& c ) ;    // o broadcast
+                                                                                   // preleva da buffer                                                                                                p t h r e a d _ m u t e x _ u n l o c k (& m ) ;
+int pthread_join ( pthread_t thread , void ** retval ) ;                           sem_post (& mutex ) ;
+// blocca finche ’ thread termina , recupera retval                                sem_post (& empty ) ;                                                                                               Lettori-Scrittori (ESAME)
+int pthread _detac h ( pthread_t thread ) ;
+// thread non joinable , risorse liberate auto                                     Attributi Thread                                                                                                    pthread_mutex_t mtx = P T H R E A D _ M U T E X _ I N I T I A L I Z E R ;
+                                                                                                                                                                                                       pthread_mutex_t rw = P T H R E A D _ M U T E X _ I N I T I A L I Z E R ;
+void * result ;                                                                    pthr ead_a ttr_t attr ;                                                                                             int readers = 0;
+pthread_join ( tid , & result ) ; // attende thread                                p t h r e a d _ a t t r _ i n i t (& attr ) ;
+// oppure                                                                          p t h r e a d _ a t t r _ s e t d e t a c h s t a t e (& attr , P T H R E A D _ C R E A T E _ D E T A C H E D ) ;   void * reader ( void * arg ) {
+pthread_de tach ( tid ) ; // non attendo , risorse auto - liberate                 p t h r e a d _ a t t r _ s e t s t a c k s i z e (& attr , 1024*1024) ;                                                p th r ea d _m u te x _l o ck (& mtx ) ;
+                                                                                   pthr ead_c reate (& tid , & attr , func , arg ) ;                                                                       readers ++;
+Mutex                                                                              p t h r e a d _ a t t r _ d e s t r o y (& attr ) ;                                                                     if ( readers == 1)                                 // primo lettore
+pthread_ mu t ex _ t mutex = P T H R E A D _ M U T E X _ I N I T I A L I Z E R ;                                                                                                                                   p th r ea d _m u te x _l oc k (& rw ) ; // blocca scrittori
+                                                                                   Pattern Turnazione A-B (ESAME)
+// oppure :                                                                                                                                                                                                p t h r e a d _ m u t e x _ u n l o c k (& mtx ) ;
+pthread_ mu t ex _ t mutex ;                                                       p th re a d_ m ut ex _ t m = P T H R E A D _ M U T E X _ I N I T I A L I Z E R ;
+p th r ea d _ m u t e x _ i n i t (& mutex , NULL ) ;                              pthr ead_c ond_t c = P T H R E A D _ C O N D _ I N I T I A L I Z E R ;                                                    // --- LETTURA ( piu ’ lettori insieme ) ---
+                                                                                   int turn = 0;            // 0 = A , 1 = B
+int p th r e a d _ m u t e x _ l o c k ( pt h re ad _ mu te x _t * mutex ) ;                                                                                                                                 p th r ea d _m u te x _l o ck (& mtx ) ;
+       readers - -;                                                                                                                                                                       // nuova connessione
+       if ( readers == 0)                                    // ultimo lettore                    int bind ( int sockfd , const struct sockaddr * addr , socklen_t len ) ;           if ( FD_ISSET ( client_fd , & readfds ) )
+               p t h r e a d _ m u t e x _ u n l o c k (& rw ) ; // sblocca scrittori             int listen ( int sockfd , int backlog ) ; // backlog : coda connessioni                 // dati dal client
+       p t h r e a d _ m u t e x _ u n l o c k (& mtx ) ;                                         int accept ( int sockfd , struct sockaddr * addr , socklen_t * addrlen ) ;
+       return NULL ;                                                                              // ret : nuovo fd per client , -1 error                                            Chat UDP con select (ESAME)
+}                                                                                                 int server_fd = socket ( AF_INET , SOCK_STREAM , 0) ;                              int sock = socket ( AF_INET , SOCK_DGRAM , 0) ;
+                                                                                                                                                                                     struct sockaddr_in local , peer ;
+void * writer ( void * arg ) {                                                                    struct sockaddr_in addr ;                                                          char buf [256];
+    p th r e a d _ m u t e x _ l o c k (& rw ) ;        // esclusivo                              addr . sin_family = AF_INET ;
+    // --- SCRITTURA ---                                                                          addr . sin_port = htons (8080) ;                                                   // Setup bind locale
+    p t h r e a d _ m u t e x _ u n l o c k (& rw ) ;                                             addr . sin_addr . s_addr = INADDR_ANY ;      // tutte le interfacce                local . sin_family = AF_INET ;
+    return NULL ;                                                                                                                                                                    local . sin_port = htons ( porta_locale ) ;
+}                                                                                                 bind ( server_fd , ( struct sockaddr *) & addr , sizeof ( addr ) ) ;               local . sin_addr . s_addr = htonl ( INADDR_ANY ) ;
+                                                                                                  listen ( server_fd , 5) ;                                                          bind ( sock , ( struct sockaddr *) & local , sizeof ( local ) ) ;
+Thread-Local Storage TLS
+
+Variabili "globali" ma private per ogni thread.                                                   struct sockaddr_in client_addr ;
+                                                                                                  socklen_t client_len = sizeof ( client_addr ) ;
+                                                                                                                                                                                     // Setup peer
+                                                                                                                                                                                     peer . sin_family = AF_INET ;
+# include < pthread .h >                                                                                                                                                             peer . sin_port = htons ( porta_peer ) ;
+                                                                                                  int client_fd = accept ( server_fd , ( struct sockaddr *) & client_addr ,
+pthread_key_t key ;                                                                                                                                                                  inet_pton ( AF_INET , " IP_PEER " , & peer . sin_addr ) ;
+                                                                                                                               & client_len ) ;
+                                                                                                  // client_fd pronto per read / write
+// Crea chiave (1 volta , in main )                                                                                                                                                  while (1) {
+                                                                                                  char buf [1024];
+p th r ea d _ k e y _ c r e a t e (& key , free ) ; // free = destructor                                                                                                                 fd_set set ;
+                                                                                                  read ( client_fd , buf , sizeof ( buf ) ) ;
+                                                                                                  write ( client_fd , " OK " , 2) ;                                                      FD_ZERO (& set ) ;
+// In ogni thread :                                                                                                                                                                      FD_SET ( STDIN_FILENO , & set ) ;           // stdin
+                                                                                                  close ( client_fd ) ;
+p t h r e a d _ s e t s p e c i f i c ( key , malloc ( N ) ) ;    // setta                                                                                                               FD_SET ( sock , & set ) ;                    // socket
+                                                                                                  close ( server_fd ) ;
+void * p = p t h r e a d _ g e t s p e c i f i c ( key ) ;        // legge
+                                                                                                  Client TCP                                                                              int maxfd = sock ; // sock > 0
+// Cleanup finale                                                                                                                                                                         if ( select ( maxfd + 1 , & set , NULL , NULL , NULL ) < 0)
+p th r ea d _ k e y _ d e l e t e ( key ) ;                                                       int connect ( int sockfd , const struct sockaddr * addr , socklen_t len ) ;
+                                                                                                  // ret : 0 ok , -1 error                                                                     break ;
+
+Esempio completo:                                                                                 int sock = socket ( AF_INET , SOCK_STREAM , 0) ;                                        // Input utente -> invia a peer
+pthread_key_t id_key ;                                                                                                                                                                    if ( FD_ISSET ( STDIN_FILENO , & set ) ) {
+                                                                                                  struct sockaddr_in server_addr ;                                                             int n = read (0 , buf , sizeof ( buf ) ) ;
+void * worker ( void * arg ) {                                                                    server_addr . sin_family = AF_INET ;                                                         if ( n <= 0) break ;
+    int * my_id = malloc ( sizeof ( int ) ) ;                                                     server_addr . sin_port = htons (8080) ;                                                      sendto ( sock , buf , n , 0 ,
+    * my_id = *( int *) arg ;                                                                     inet_pton ( AF_INET , " 127.0.0.1 " , & server_addr . sin_addr ) ;                                    ( struct sockaddr *) & peer , sizeof ( peer ) ) ;
+    p t h r e a d _ s e t s p e c i f i c ( id_key , my_id ) ;                                                                                                                            }
+                                                                                                  connect ( sock , ( struct sockaddr *) & server_addr , sizeof ( server_addr ) ) ;
+       // Ora qualsiasi funzione puo ’ fare :                                                                                                                                             // Dati da peer -> stampa
+       int * id = p t h r e a d _ g e t s p e c i f i c ( id_key ) ;                              write ( sock , " Hello " , 5) ;                                                         if ( FD_ISSET ( sock , & set ) ) {
+       printf ( " Sono thread % d \ n " , * id ) ;                                                char buf [1024];                                                                             struct sockaddr_in from ;
+       return NULL ; // destructor libera memoria                                                 read ( sock , buf , sizeof ( buf ) ) ;                                                       socklen_t fromlen = sizeof ( from ) ;
+}                                                                                                 close ( sock ) ;                                                                             int n = recvfrom ( sock , buf , sizeof ( buf ) , 0 ,
+                                                                                                                                                                                                                    ( struct sockaddr *) & from , & fromlen ) ;
+int main () {                                                                                     send / recv                                                                                  if ( n < 0) break ;
+    p th r e a d _ k e y _ c r e a t e (& id_key , free ) ;                                       ssize_t send ( int sockfd , const void * buf , size_t len , int flags ) ;                    printf ( " lui dice : %.* s " , n , buf ) ;
+    // ... crea thread ...                                                                        ssize_t recv ( int sockfd , void * buf , size_t len , int flags ) ;                     }
+    p th r e a d _ k e y _ d e l e t e ( id_key ) ;                                               // flags : 0 , MSG_WAITALL , MSG_PEEK , MSG_DONTWAIT                               }
+}                                                                                                                                                                                    close ( sock ) ;
+                                                                                                  UDP
+                                                                                                                                                                                     Errore Deadlock Mutex+Socket (ESAME)
+Socket                                                                                            ssize_t sendto ( int sockfd , const void * buf , size_t len , int flags ,
+                                                                                                                   const struct sockaddr * dest , socklen_t addrlen ) ;              // SBAGLIATO - Deadlock !
+Concetti Base                                                                                     ssize_t recvfrom ( int sockfd , void * buf , size_t len , int flags ,              void * receiver ( void * arg ) {
+                                                                                                                                                                                          p th r ea d _m u te x _l o ck (& mtx ) ;           // prende lock
+TCP connection-oriented, affidabile, stream                                                                          struct sockaddr * src , socklen_t * addrlen ) ;
+                                                                                                                                                                                          recvfrom ( sockfd , ...) ;                         // BLOCCA tenendo lock !
+UDP connectionless, non affidabile, datagram                                                      // Server UDP
+                                                                                                  int sock = socket ( AF_INET , SOCK_DGRAM , 0) ;                                    }
+                                                                                                                                                                                          p t h r e a d _ m u t e x _ u n l o c k (& mtx ) ;
+
+Strutture Dati                                                                                    bind ( sock , ...) ;                                                               void * sender ( void * arg ) {
+                                                                                                  recvfrom ( sock , buf , sizeof ( buf ) , 0 , & client_addr , & client_len ) ;           p th r ea d _m u te x _l o ck (& mtx ) ;           // MAI -> deadlock
+# include < netinet / in .h >
+                                                                                                  sendto ( sock , reply , len , 0 , & client_addr , client_len ) ;                        sendto ( sockfd , ...) ;
+struct sockaddr_in {
+                                                                                                                                                                                          p t h r e a d _ m u t e x _ u n l o c k (& mtx ) ;
+     sa_family_t       sin_family ; // AF_INET
+                                                                                                  // Client UDP                                                                      }
+     in_port_t         sin_port ;   // porta ( network order )
+                                                                                                  int sock = socket ( AF_INET , SOCK_DGRAM , 0) ;
+     struct in_addr sin_addr ;      // IP address
+};
+                                                                                                  sendto ( sock , msg , len , 0 , & server_addr , sizeof ( server_addr ) ) ;         Soluzioni:
+                                                                                                  recvfrom ( sock , buf , sizeof ( buf ) , 0 , NULL , NULL ) ;
+struct in_addr {                                                                                                                                                                     1. NON usare mutex per socket (gia’ thread-safe)
+     uint32_t s_addr ; // IP ( network order )
+};
+                                                                                                  Opzioni Socket
+                                                                                                                                                                                     2. Usare select() prima di recvfrom
+                                                                                                                                                                                     3. Socket non bloccanti: MSG_DONTWAIT
+                                                                                                  int setsockopt ( int sockfd , int level , int optname ,
+Byte Order                                                                                                          const void * optval , socklen_t optlen ) ;
+                                                                                                  // SO_REUSEADDR : riusa porta subito dopo close                                    // CORRETTO : select prima di recvfrom
+# include       < arpa / inet .h >                                                                                                                                                   fd_set set ;
+                                                                                                  int opt = 1;
+uint16_t        htons ( uint16_t              hostshort ) ;      //   host to   network   short                                                                                      FD_ZERO (& set ) ;
+                                                                                                  setsockopt ( sock , SOL_SOCKET , SO_REUSEADDR , & opt , sizeof ( opt ) ) ;
+uint32_t        htonl ( uint32_t              hostlong ) ;       //   host to   network   long                                                                                       FD_SET ( sockfd , & set ) ;
+uint16_t        ntohs ( uint16_t              netshort ) ;       //   network   to host   short   select - I/O Multiplexing                                                          struct timeval tv = {1 , 0}; // timeout 1 s
+uint32_t        ntohl ( uint32_t              netlong ) ;        //   network   to host   long                                                                                       if ( select ( sockfd +1 , & set , NULL , NULL , & tv ) > 0) {
+                                                                                                  # include < sys / select .h >
+                                                                                                  int select ( int nfds , fd_set * readfds , fd_set * writefds ,                          recvfrom ( sockfd , buf , ...) ;
+Conversione Indirizzi
+                                                                                                               fd_set * exceptfds , struct timeval * timeout ) ;                     }
+# include < arpa / inet .h >
+                                                                                                  // ret : num fd pronti , 0 timeout , -1 error
+int inet_pton ( int af , const char * src , void * dst ) ;                                                                                                                           Server TCP select Multiplexed
+// "192.168.1.1" -> binary , ret : 1 ok , 0 invalid , -1 error                                                                                                                       fd_set master , read_set ;
+                                                                                                  fd_set set ;
+const char * inet_ntop ( int af , const void * src , char * dst , socklen_t size ) ;                                                                                                 FD_ZERO (& master ) ;
+                                                                                                  FD_ZERO (& set ) ;              //   inizializza vuoto
+// binary -> string , ret : dst o NULL                                                                                                                                               FD_SET ( listen_sd , & master ) ;
+                                                                                                  FD_SET ( fd , & set ) ;         //   aggiungi fd
+                                                                                                  FD_CLR ( fd , & set ) ;         //   rimuovi fd                                    int max_fd = listen_sd ;
+socket
+                                                                                                  FD_ISSET ( fd , & set ) ;       //   test se fd nel set
+# include < sys / socket .h >                                                                                                                                                        while (1) {
+int socket ( int domain , int type , int protocol ) ;                                             fd_set readfds ;                                                                       read_set = master ; // COPIA ! select modifica
+// ret : fd socket , -1 error                                                                     FD_ZERO (& readfds ) ;                                                                 select ( max_fd + 1 , & read_set , NULL , NULL , NULL ) ;
+                                                                                                  FD_SET ( server_fd , & readfds ) ;
+domain: AF_INET (IPv4), AF_INET6, AF_UNIX                                                         FD_SET ( client_fd , & readfds ) ;                                                      for ( int i = 0; i <= max_fd ; i ++) {
+          SOCK_STREAM (TCP), SOCK_DGRAM (UDP)
+                                                                                                  int maxfd = ( server_fd > client_fd ) ? server_fd : client_fd ;                             if (! FD_ISSET (i , & read_set ) ) continue ;
+type:
+protocol: 0 (default)                                                                             select ( maxfd + 1 , & readfds , NULL , NULL , NULL ) ;    // blocca                          if ( i == listen_sd ) {
+                                                                                                                                                                                                     // Nuova connessione
+Server TCP                                                                                        if ( FD_ISSET ( server_fd , & readfds ) )                                                          int new_sd = accept ( listen_sd , NULL , NULL ) ;
+    FD_SET ( new_sd , & master ) ;                       }                                                                        sendto ( sock , msg , len , 0 , ( struct sockaddr *) & bcast , sizeof ( bcast ) ) ;
+    if ( new_sd > max_fd ) max_fd = new_sd ;        }
+} else {                                                                                                                          Multicast UDP
+    // Dati da client                               Broadcast UDP                                                                 // Receiver : iscrizione gruppo
+    int n = recv (i , buf , sizeof ( buf ) , 0) ;   int opt = 1;                                                                  struct ip_mreq mreq ;
+    if ( n <= 0) {                                  setsockopt ( sock , SOL_SOCKET , SO_BROADCAST , & opt , sizeof ( opt ) ) ;    mreq . imr_multiaddr . s_addr = inet_addr ( " 239.0.0.1 " ) ;
+         close ( i ) ;                                                                                                            mreq . imr_interface . s_addr = htonl ( INADDR_ANY ) ;
+         FD_CLR (i , & master ) ;                   struct sockaddr_in bcast ;                                                    setsockopt ( sock , IPPROTO_IP , IP_ADD_MEMBERSHIP , & mreq , sizeof ( mreq ) ) ;
+    } else {                                        bcast . sin_family = AF_INET ;
+         // elabora buf , rispondi ...              bcast . sin_port = htons (5000) ;                                             // Sender : imposta TTL
+         send (i , buf , n , 0) ; // echo           inet_pton ( AF_INET , " 2 55 . 25 5. 2 55 .2 5 5 " , & bcast . sin_addr ) ;   int ttl = 64;
+    }                                                                                                                             setsockopt ( sock , IPPROTO_IP , IP_MULTICAST_TTL , & ttl , sizeof ( ttl ) ) ;
+}
+

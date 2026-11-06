@@ -2,6 +2,6 @@ admin admin
 mario 1234
 luigi 1234
 testuser testpass
-paolo dsdasdasd
+paolo paolo
 s s
 pippo pippo
