@@ -39,8 +39,8 @@ extern StatoGioco partita;
 
 void inizializza_gioco(int timeout, int intervallo);
 
-/* Aggiunge un giocatore verificando le credenziali */
-int  aggiungi_giocatore(int fd, const char *nickname, const char *password);
+/* Aggiunge un giocatore verificando le credenziali o registrandolo */
+int  aggiungi_giocatore(int fd, const char *nickname, const char *password, int tipo_richiesta);
 
 void rimuovi_giocatore(int indice);
 

@@ -27,6 +27,7 @@
 #define MSG_MOVIMENTO       2   /* Movimento */
 #define MSG_RICHIEDI_LISTA  3   /* Richiesta lista dal client */
 #define MSG_ESCI            4   /* Uscita */
+#define MSG_REGISTRAZIONE   5   /* Registrazione nuovo utente */
 
 #define MSG_OK              10  /* Conferma */
 #define MSG_ERRORE          11  /* Errore */

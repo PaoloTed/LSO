@@ -57,39 +57,54 @@ static void genera_labirinto(Labirinto *m) {
   }
 }
 
-/* Verifica credenziali o registrazione */
-static int autentica_utente(const char *nickname, const char *password) {
+/* Verifica credenziali o registrazione in base a tipo_richiesta */
+static int autentica_utente(const char *nickname, const char *password,
+                            int tipo_richiesta) {
   FILE *f = fopen(FILE_UTENTI, "r");
   char nick_salvato[MAX_NICK];
   char pass_salvata[MAX_PASS];
+  int trovato = 0;
 
   if (f != NULL) {
-    while (fscanf(f, "%s %s", nick_salvato, pass_salvata) == 2) {
-      /* Se il nickname e' gia presente, controlla la password */
+    while (fscanf(f, "%31s %31s", nick_salvato, pass_salvata) == 2) {
       if (strcmp(nick_salvato, nickname) == 0) {
-        fclose(f);
-        /* Se la password non e' corretta, restituisce 0,
-            se corretta 1 */
-        return (strcmp(pass_salvata, password) == 0);
+        trovato = 1;
+        break;
       }
     }
     fclose(f);
   }
 
-  /* Registrazione utente */
-  f = fopen(FILE_UTENTI, "a");
-  if (!f)
-    return -1;
-  fprintf(f, "%s %s\n", nickname, password);
-  fflush(f);
-  fclose(f);
+  switch (tipo_richiesta) {
+  case MSG_ACCESSO:
+    if (!trovato)
+      return -5; /* Utente non registrato */
+    if (strcmp(pass_salvata, password) != 0)
+      return -4; /* Password errata */
+    return 1;    /* Login OK */
 
-  char log_buf[128];
-  snprintf(log_buf, sizeof(log_buf), "Nuovo utente registrato: '%s'.",
-           nickname);
-  log_event(log_buf);
+  case MSG_REGISTRAZIONE:
+    if (trovato)
+      return -6; /* Nickname gia' registrato */
 
-  return 1;
+    /* Registrazione utente */
+    f = fopen(FILE_UTENTI, "a");
+    if (!f)
+      return -3;
+    fprintf(f, "%s %s\n", nickname, password);
+    fflush(f);
+    fclose(f);
+
+    char log_buf[128];
+    snprintf(log_buf, sizeof(log_buf), "Nuovo utente registrato: '%s'.",
+             nickname);
+    log_event(log_buf);
+
+    return 1; /* Registrazione OK */
+
+  default:
+    return -3;
+  }
 }
 
 void inizializza_gioco(int timeout, int intervallo) {
@@ -173,7 +188,8 @@ int termina_partita(void) {
   return 1;
 }
 
-int aggiungi_giocatore(int fd, const char *nickname, const char *password) {
+int aggiungi_giocatore(int fd, const char *nickname, const char *password,
+                       int tipo_richiesta) {
   pthread_mutex_lock(&partita.mutex);
 
   if (partita.partita_finita) {
@@ -181,18 +197,33 @@ int aggiungi_giocatore(int fd, const char *nickname, const char *password) {
     return -1;
   }
 
-  /* Verifica credenziali */
-  int esito_auth = autentica_utente(nickname, password);
-  if (esito_auth == 0) {
+  /* Verifica credenziali o registrazione */
+  int esito_auth = autentica_utente(nickname, password, tipo_richiesta);
+  if (esito_auth < 0) {
     pthread_mutex_unlock(&partita.mutex);
     char log_buf[128];
-    snprintf(log_buf, sizeof(log_buf),
-             "Tentativo di login fallito per '%s': password errata.", nickname);
-    log_event(log_buf);
-    return -4; /* Password errata */
-  } else if (esito_auth < 0) {
-    pthread_mutex_unlock(&partita.mutex);
-    return -3;
+    switch (esito_auth) {
+    case -4:
+      snprintf(log_buf, sizeof(log_buf),
+               "Tentativo di login fallito per '%s': password errata.", nickname);
+      log_event(log_buf);
+      break;
+    case -5:
+      snprintf(log_buf, sizeof(log_buf),
+               "Tentativo di login fallito per '%s': utente non registrato.",
+               nickname);
+      log_event(log_buf);
+      break;
+    case -6:
+      snprintf(log_buf, sizeof(log_buf),
+               "Tentativo di registrazione fallito: nickname '%s' gia' in uso.",
+               nickname);
+      log_event(log_buf);
+      break;
+    default:
+      break;
+    }
+    return esito_auth;
   }
 
   /* Controllo nickname */

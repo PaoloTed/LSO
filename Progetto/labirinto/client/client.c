@@ -77,19 +77,72 @@ int main(int argc, char *argv[]) {
 
   printf("Connesso al server %s:%d\n", host, port);
 
+  /* Menu iniziale: Accesso, Registrazione o Uscita */
+  int scelta = 0;
+  while (scelta < 1 || scelta > 3) {
+    system("clear");
+    printf("\n=== Labirinto ===\n");
+    printf("1. Accedi\n");
+    printf("2. Registrati\n");
+    printf("3. Esci\n");
+    printf("Seleziona un'opzione: ");
+    if (scanf("%d", &scelta) != 1) {
+      int c;
+      while ((c = getchar()) != '\n' && c != EOF)
+        ;
+      scelta = 0;
+    } else {
+      int c;
+      while ((c = getchar()) != '\n' && c != EOF)
+        ;
+    }
+    if (scelta < 1 || scelta > 3) {
+      printf("Scelta non valida. Riprova.\n");
+    }
+  }
+
+  if (scelta == 3) {
+    printf("Uscita dal gioco.\n");
+    close(sock_fd);
+    return 0;
+  }
+
   /* Richiesta credenziali */
-  char nickname[MAX_NICK];
-  char password[MAX_PASS];
+  char nickname[MAX_NICK] = {0};
+  char password[MAX_PASS] = {0};
+
+  if (scelta == 1) {
+    printf("\n--- Accesso ---\n");
+  } else {
+    printf("\n--- Registrazione ---\n");
+  }
 
   printf("Inserisci il tuo nickname: ");
-  scanf("%s", nickname);
+  scanf("%31s", nickname);
+  {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF)
+      ;
+  }
 
   printf("Inserisci la tua password: ");
-  scanf("%s", password);
+  scanf("%31s", password);
+  {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF)
+      ;
+  }
 
-  /* Invio richiesta di accesso */
+  /* Invio richiesta di accesso / registrazione */
   Messaggio msg = {0};
-  msg.tipo = MSG_ACCESSO;
+  switch (scelta) {
+  case 1:
+    msg.tipo = MSG_ACCESSO;
+    break;
+  case 2:
+    msg.tipo = MSG_REGISTRAZIONE;
+    break;
+  }
   strncpy(msg.nickname, nickname, MAX_NICK - 1);
   strncpy(msg.password, password, MAX_PASS - 1);
 
@@ -99,15 +152,15 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  /* Attesa esito accesso */
+  /* Attesa esito accesso / registrazione */
   if (ricevi_messaggio(sock_fd, &msg) <= 0) {
-    fprintf(stderr, "Disconnessione dal server durante l'accesso.\n");
+    fprintf(stderr, "Disconnessione dal server durante l'autenticazione.\n");
     close(sock_fd);
     return 1;
   }
 
   if (msg.tipo == MSG_ERRORE) {
-    printf("Accesso rifiutato: %s\n", msg.testo);
+    printf("Errore: %s\n", msg.testo);
     close(sock_fd);
     return 1;
   }
@@ -117,7 +170,46 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  printf("Accesso eseguito con successo!\n");
+  switch (scelta) {
+  case 1:
+    printf("\nAccesso eseguito con successo!\n");
+    break;
+  case 2:
+    printf("\nRegistrazione completata con successo!\n");
+    break;
+  }
+
+  /* Menu di gioco: Gioca o Esci */
+  int scelta_gioco = 0;
+  while (scelta_gioco < 1 || scelta_gioco > 2) {
+    system("clear");
+    printf("\n=== Menu Gioco ===\n");
+    printf("1. Gioca\n");
+    printf("2. Esci\n");
+    printf("Seleziona un'opzione: ");
+    if (scanf("%d", &scelta_gioco) != 1) {
+      int c;
+      while ((c = getchar()) != '\n' && c != EOF)
+        ;
+      scelta_gioco = 0;
+    } else {
+      int c;
+      while ((c = getchar()) != '\n' && c != EOF)
+        ;
+    }
+    if (scelta_gioco < 1 || scelta_gioco > 2) {
+      printf("Scelta non valida. Riprova.\n");
+    }
+  }
+
+  if (scelta_gioco == 2) {
+    printf("\nDisconnessione in corso...\n");
+    Messaggio msg_uscita = {0};
+    msg_uscita.tipo = MSG_ESCI;
+    invia_messaggio(sock_fd, &msg_uscita);
+    close(sock_fd);
+    return 0;
+  }
 
   /* Ricezione della mappa globale iniziale */
   if (ricevi_messaggio(sock_fd, &msg) <= 0) {
@@ -132,6 +224,7 @@ int main(int argc, char *argv[]) {
   }
   mostra_mappa_globale(msg.riga, msg.colonna, msg.mappa_globale);
   mostra_mappa_locale(msg.riga, msg.colonna, msg.punteggio, msg.mappa_locale);
+  mostra_comandi();
 
   fd_set master_set, read_set;
   FD_ZERO(&master_set);
@@ -203,6 +296,7 @@ int main(int argc, char *argv[]) {
 
       case MSG_MAPPA_GLOBALE:
         mostra_mappa_globale(msg.riga, msg.colonna, msg.mappa_globale);
+        sleep(1);
         mostra_mappa_locale(msg.riga, msg.colonna, msg.punteggio,
                             msg.mappa_locale);
         mostra_avviso(msg.testo);

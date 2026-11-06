@@ -52,8 +52,9 @@ static void *client_handler(void *arg) {
 
   Messaggio msg = {0};
 
-  /* Ricezione accesso */
-  if (ricevi_messaggio(client_fd, &msg) <= 0 || msg.tipo != MSG_ACCESSO) {
+  /* Ricezione accesso o registrazione */
+  if (ricevi_messaggio(client_fd, &msg) <= 0 ||
+      (msg.tipo != MSG_ACCESSO && msg.tipo != MSG_REGISTRAZIONE)) {
     close(client_fd);
     return NULL;
   }
@@ -70,19 +71,31 @@ static void *client_handler(void *arg) {
   }
 
   int indice_giocatore =
-      aggiungi_giocatore(client_fd, msg.nickname, msg.password);
+      aggiungi_giocatore(client_fd, msg.nickname, msg.password, msg.tipo);
   if (indice_giocatore < 0) {
     Messaggio err = {0};
     err.tipo = MSG_ERRORE;
 
-    if (indice_giocatore == -1)
+    switch (indice_giocatore) {
+    case -1:
       strncpy(err.testo, "La partita e' gia' terminata.", MAX_TESTO - 1);
-    else if (indice_giocatore == -2)
+      break;
+    case -2:
       strncpy(err.testo, "Nickname gia' connesso.", MAX_TESTO - 1);
-    else if (indice_giocatore == -4)
+      break;
+    case -4:
       strncpy(err.testo, "Password errata.", MAX_TESTO - 1);
-    else
+      break;
+    case -5:
+      strncpy(err.testo, "Utente non registrato.", MAX_TESTO - 1);
+      break;
+    case -6:
+      strncpy(err.testo, "Nickname gia' registrato.", MAX_TESTO - 1);
+      break;
+    default:
       strncpy(err.testo, "Errore interno del server.", MAX_TESTO - 1);
+      break;
+    }
 
     invia_messaggio(client_fd, &err);
     close(client_fd);
