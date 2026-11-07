@@ -13,30 +13,22 @@
 StatoGioco partita;
 
 static void genera_labirinto(Labirinto *m) {
-  /* Celle libere */
+  /* Inizialmente tutte le celle sono muri */
   for (int r = 0; r < RIGHE_MAPPA; r++) {
     for (int c = 0; c < COLONNE_MAPPA; c++) {
-      m->celle[r][c] = CELLA_LIBERA;
+      m->celle[r][c] = CELLA_MURO;
       m->oggetti[r][c] = 0;
     }
   }
 
-  /* Muri perimetrali */
-  for (int c = 0; c < COLONNE_MAPPA; c++) {
-    m->celle[0][c] = CELLA_MURO;
-    m->celle[RIGHE_MAPPA - 1][c] = CELLA_MURO;
-  }
-  for (int r = 0; r < RIGHE_MAPPA; r++) {
-    m->celle[r][0] = CELLA_MURO;
-    m->celle[r][COLONNE_MAPPA - 1] = CELLA_MURO;
-  }
-
-  /* Ostacoli interni */
-  for (int r = 2; r < RIGHE_MAPPA - 2; r += 2) {
-    for (int c = 2; c < COLONNE_MAPPA - 2; c += 2) {
-      if (rand() % 2 == 0) {
-        m->celle[r][c] = CELLA_MURO;
-      }
+  /* Ogni cella di passaggio si collega a quella sopra o a sinistra */
+  for (int r = 1; r < RIGHE_MAPPA - 1; r += 2) {
+    for (int c = 1; c < COLONNE_MAPPA - 1; c += 2) {
+      m->celle[r][c] = CELLA_LIBERA;
+      if (r > 1 && (c == 1 || rand() % 2 == 0))
+        m->celle[r - 1][c] = CELLA_LIBERA;
+      else if (c > 1)
+        m->celle[r][c - 1] = CELLA_LIBERA;
     }
   }
 
@@ -45,6 +37,12 @@ static void genera_labirinto(Labirinto *m) {
   m->celle[RIGHE_MAPPA - 1][COLONNE_MAPPA / 2] = CELLA_USCITA;
   m->celle[RIGHE_MAPPA / 2][0] = CELLA_USCITA;
   m->celle[RIGHE_MAPPA / 2][COLONNE_MAPPA - 1] = CELLA_USCITA;
+
+  /* Assicura un passaggio interno davanti a ogni uscita */
+  m->celle[1][COLONNE_MAPPA / 2] = CELLA_LIBERA;
+  m->celle[RIGHE_MAPPA - 2][COLONNE_MAPPA / 2] = CELLA_LIBERA;
+  m->celle[RIGHE_MAPPA / 2][1] = CELLA_LIBERA;
+  m->celle[RIGHE_MAPPA / 2][COLONNE_MAPPA - 2] = CELLA_LIBERA;
 
   /* Oggetti */
   for (int o = 0; o < 15;) {
