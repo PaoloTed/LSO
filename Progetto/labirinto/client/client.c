@@ -236,6 +236,9 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, sigint_handler);
   signal(SIGTERM, sigint_handler);
 
+  int uscito = 0;
+  int punteggio_giocatore = msg.punteggio;
+
   while (loop) {
     read_set = master_set;
     int activity = select(max_fd + 1, &read_set, NULL, NULL, NULL);
@@ -253,6 +256,15 @@ int main(int argc, char *argv[]) {
       fgets(buffer, sizeof(buffer), stdin);
 
       char comando = tolower(buffer[0]);
+      if (uscito) {
+        if (comando == 'q') {
+          loop = 0;
+          break;
+        }
+        mostra_schermata_uscito(punteggio_giocatore);
+        continue;
+      }
+
       Messaggio msg_invio = {0};
       if (comando == 'w' || comando == 'a' || comando == 's' ||
           comando == 'd') {
@@ -286,21 +298,34 @@ int main(int argc, char *argv[]) {
 
       switch (msg.tipo) {
       case MSG_MAPPA_LOCALE:
-        system("clear");
+        punteggio_giocatore = msg.punteggio;
+        if (strcmp(msg.testo, "Hai raggiunto l'uscita!") == 0) {
+          uscito = 1;
+        }
 
-        mostra_mappa_locale(msg.riga, msg.colonna, msg.punteggio,
-                            msg.mappa_locale);
-        mostra_avviso(msg.testo);
-        mostra_comandi();
+        if (uscito) {
+          mostra_schermata_uscito(punteggio_giocatore);
+        } else {
+          system("clear");
+          mostra_mappa_locale(msg.riga, msg.colonna, msg.punteggio,
+                              msg.mappa_locale);
+          mostra_avviso(msg.testo);
+          mostra_comandi();
+        }
         break;
 
       case MSG_MAPPA_GLOBALE:
-        mostra_mappa_globale(msg.riga, msg.colonna, msg.mappa_globale);
-        sleep(1);
-        mostra_mappa_locale(msg.riga, msg.colonna, msg.punteggio,
-                            msg.mappa_locale);
-        mostra_avviso(msg.testo);
-        mostra_comandi();
+        punteggio_giocatore = msg.punteggio;
+        if (uscito) {
+          mostra_schermata_uscito(punteggio_giocatore);
+        } else {
+          mostra_mappa_globale(msg.riga, msg.colonna, msg.mappa_globale);
+          sleep(1);
+          mostra_mappa_locale(msg.riga, msg.colonna, msg.punteggio,
+                              msg.mappa_locale);
+          mostra_avviso(msg.testo);
+          mostra_comandi();
+        }
         break;
 
       case MSG_LISTA: {
@@ -322,9 +347,11 @@ int main(int argc, char *argv[]) {
             return 1;
           }
         }
-        mostra_lista_giocatori(lista, msg.num_giocatori);
+        if (!uscito) {
+          mostra_lista_giocatori(lista, msg.num_giocatori);
+          mostra_prompt();
+        }
         free(lista);
-        mostra_prompt();
         break;
       }
 
@@ -339,6 +366,7 @@ int main(int argc, char *argv[]) {
         break;
 
       case MSG_FINE_PARTITA:
+        system("clear");
         if (msg.nickname[0] != '\0')
           printf("\n*** Partita terminata. Vincitore: %s con %d oggetti "
                  "raccolti! ***\n",

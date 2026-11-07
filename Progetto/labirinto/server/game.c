@@ -292,6 +292,7 @@ int aggiungi_giocatore(int fd, const char *nickname, const char *password,
 
 void rimuovi_giocatore(int indice) {
   pthread_mutex_lock(&partita.mutex);
+  int finita = 0;
   if (partita.giocatori[indice].attivo) {
     partita.giocatori[indice].attivo = 0;
     close(partita.giocatori[indice].fd);
@@ -299,8 +300,16 @@ void rimuovi_giocatore(int indice) {
     snprintf(log_buf, sizeof(log_buf), "Disconnessione: '%s'.",
              partita.giocatori[indice].nickname);
     log_event(log_buf);
+
+    if (tutti_usciti() && !partita.partita_finita) {
+      termina_partita();
+      finita = 1;
+    }
   }
   pthread_mutex_unlock(&partita.mutex);
+
+  if (finita)
+    broadcast_fine_partita();
 }
 
 void muovi_giocatore(int indice, char direzione) {

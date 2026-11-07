@@ -1,0 +1,14 @@
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y gcc make
+
+WORKDIR /app
+
+COPY Makefile ./
+COPY common/ ./common/
+COPY server/ ./server/
+COPY users.txt ./
+
+RUN make bin/server
+
+CMD ["./bin/server", "8080", "180", "20"]

@@ -11,5 +11,6 @@ void mostra_mappa_locale(int riga, int colonna, int punteggio,
 void mostra_mappa_globale(int riga, int colonna,
                           const char mappa[RIGHE_MAPPA][COLONNE_MAPPA]);
 void mostra_lista_giocatori(const InfoGiocatore *giocatori, int totale);
+void mostra_schermata_uscito(int punteggio);
 
 #endif
