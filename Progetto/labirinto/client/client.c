@@ -87,14 +87,6 @@ int main(int argc, char *argv[]) {
     printf("3. Esci\n");
     printf("Seleziona un'opzione: ");
     if (scanf("%d", &scelta) != 1) {
-      int c;
-      while ((c = getchar()) != '\n' && c != EOF)
-        ;
-      scelta = 0;
-    } else {
-      int c;
-      while ((c = getchar()) != '\n' && c != EOF)
-        ;
     }
     if (scelta < 1 || scelta > 3) {
       printf("Scelta non valida. Riprova.\n");
@@ -119,19 +111,9 @@ int main(int argc, char *argv[]) {
 
   printf("Inserisci il tuo nickname: ");
   scanf("%31s", nickname);
-  {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF)
-      ;
-  }
 
   printf("Inserisci la tua password: ");
   scanf("%31s", password);
-  {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF)
-      ;
-  }
 
   /* Invio richiesta di accesso / registrazione */
   Messaggio msg = {0};
@@ -188,14 +170,6 @@ int main(int argc, char *argv[]) {
     printf("2. Esci\n");
     printf("Seleziona un'opzione: ");
     if (scanf("%d", &scelta_gioco) != 1) {
-      int c;
-      while ((c = getchar()) != '\n' && c != EOF)
-        ;
-      scelta_gioco = 0;
-    } else {
-      int c;
-      while ((c = getchar()) != '\n' && c != EOF)
-        ;
     }
     if (scelta_gioco < 1 || scelta_gioco > 2) {
       printf("Scelta non valida. Riprova.\n");

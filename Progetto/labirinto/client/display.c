@@ -89,12 +89,9 @@ void mostra_lista_giocatori(const InfoGiocatore *giocatori, int totale) {
 
 void mostra_schermata_uscito(int punteggio) {
   system("clear");
-  printf("\n========================================\n");
-  printf("              SEI USCITO!               \n");
-  printf("========================================\n\n");
   printf("Hai completato il labirinto!\n");
-  printf("Oggetti raccolti: %d\n\n", punteggio);
-  printf("In attesa del termine della partita...\n\n");
+  printf("Oggetti raccolti: %d\n", punteggio);
+  printf("In attesa del termine della partita...\n");
   printf("Inserisci [q] + ENTER per uscire dal gioco\n");
   fflush(stdout);
 }
