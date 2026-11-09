@@ -90,9 +90,6 @@
 \begin{titlepage}
     \centering
     {\large \textbf{UNIVERSITÀ DEGLI STUDI DI NAPOLI FEDERICO II}}\\[0.3cm]
-    {\normalsize Scuola Politecnica e delle Scienze di Base}\\[0.2cm]
-    {\normalsize Dipartimento di Ingegneria Elettrica e delle Tecnologie dell'Informazione}\\[0.2cm]
-    {\normalsize Corso di Laurea in Informatica}\\[0.3cm]
     {\small \textbf{Laboratorio di Sistemi Operativi (A.A. 2025/2026)}}\\[1.8cm]
 
     \rule{\linewidth}{1.2pt}\\[0.5cm]
@@ -106,14 +103,12 @@
         \textbf{Paolo Tedesco}\\
         Matricola: \texttt{N86004408}\\
         \textbf{Giovanni Zapparella}\\
-        Matricola: \texttt{[Inserire Matricola]}\\
+        Matricola: \texttt{N86004763}\\
     \end{minipage}
     \hfill
     \begin{minipage}{0.45\textwidth}
         \flushright
         \vspace{1cm}
-        \textit{Data di Consegna:}\\
-        \today
     \end{minipage}
 
     \vfill
@@ -230,13 +225,6 @@ La sintassi di avvio del server è:
 \end{lstlisting}
 \textit{(Avvia il server sulla porta \texttt{5200}, con partita da 300 secondi e invio della mappa globale ogni 15 secondi).}
 
-Come richiesto dai vincoli di progetto:
-\begin{itemize}
-    \item Il server \textbf{non stampa nulla su \texttt{stdout}} e \textbf{non legge alcun input da \texttt{stdin}};
-    \item Eventuali errori critici su \texttt{stderr} vengono mostrati \textbf{solo se il server fallisce l'avvio} (es. parametri non validi o porta già in uso);
-    \item Tutte le attività (avvio, registrazioni, login, movimenti, raccolta oggetti, uscite, disconnessioni e vincitore finale) vengono salvate con data e ora nel file \texttt{server.log}.
-\end{itemize}
-
 \clearpage
 
 \subsection{Avvio e Utilizzo del Client}
@@ -252,40 +240,47 @@ Per avviare il client occorre specificare l'indirizzo IP (o nome host) e la port
 ./bin/client 127.0.0.1 5200
 \end{lstlisting}
 
-Grazie alla funzione POSIX \texttt{getaddrinfo()}, il client accetta sia indirizzi IPv4 numerici che nomi simbolici (es. \texttt{localhost} o il nome del container Docker \texttt{server}).
+Tramite \texttt{getaddrinfo()}, il client accetta sia indirizzi IPv4 numerici che nomi simbolici (es. \texttt{localhost} o il nome del container Docker \texttt{server}).
 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    node distance=0.7cm and 1.2cm,
-    startstop/.style={rectangle, rounded corners, draw=black!70, fill=gray!12, thick, text centered, inner sep=5pt, font=\small},
-    process/.style={rectangle, draw=black!70, fill=blue!6, thick, text centered, inner sep=5pt, font=\small},
-    decision/.style={diamond, aspect=2, draw=black!70, fill=yellow!12, thick, text centered, inner sep=3pt, font=\small},
+    node distance=1.0cm and 3.0cm,
+    startstop/.style={rectangle, rounded corners, draw=black!70, fill=gray!12, thick, text centered, inner sep=6pt, font=\small},
+    process/.style={rectangle, draw=black!70, fill=blue!6, thick, text centered, inner sep=6pt, font=\small},
+    decision/.style={diamond, aspect=2.2, draw=black!70, fill=yellow!12, thick, text centered, inner sep=3pt, font=\small},
     arrow/.style={thick, ->, >=Stealth}
 ]
+    % Colonna principale (Flusso di gioco)
     \node[startstop] (start) {Avvio \texttt{./bin/client host porta}};
-    \node[process, below=of start] (connect) {Connessione TCP al Server};
-    \node[decision, below=of connect] (menu1) {Menu Iniziale};
+    \node[process, below=0.8cm of start] (connect) {Connessione TCP al Server};
+    \node[decision, below=0.8cm of connect] (menu1) {Menu Iniziale};
     
-    \node[process, below left=0.9cm and 0.2cm of menu1, text width=4.2cm] (cred) {Inserimento Nickname e Password\\(Invio \texttt{MSG\_ACCESSO} o \texttt{MSG\_REG})};
-    \node[decision, below=of cred] (checkauth) {Risposta Server?};
+    \node[process, below=1.1cm of menu1, text width=4.8cm] (cred) {Inserimento Nickname e Password\\[2pt]{\footnotesize (Invio \texttt{MSG\_ACCESSO} o \texttt{MSG\_REG})}};
+    \node[decision, below=0.9cm of cred] (checkauth) {Risposta Server?};
     
-    \node[process, below=of checkauth, text width=3.8cm] (menugioco) {Menu Gioco:\\1. Gioca \quad 2. Esci};
-    \node[process, below=of menugioco, text width=4.2cm] (game) {Ricezione Mappa Iniziale\\+ Ciclo principale \texttt{select()}};
+    \node[process, below=1.1cm of checkauth, text width=4.0cm] (menugioco) {Menu Gioco:\\[2pt]1. Gioca \quad 2. Esci};
+    \node[process, below=1.0cm of menugioco, text width=4.8cm] (game) {Ricezione Mappa Iniziale\\[2pt]+ Ciclo principale \texttt{select()}};
     
-    \node[startstop, right=2.0cm of menu1] (exit1) {Chiusura socket e uscita};
-    \node[startstop, right=2.0cm of menugioco, text width=3.0cm] (exit2) {Invio \texttt{MSG\_ESCI}\\e chiusura};
+    % Colonna di destra (Uscite allineate)
+    \node[startstop, right=2.8cm of menu1, text width=3.0cm] (exit1) {Chiusura socket\\e uscita};
+    \node[startstop, right=2.8cm of menugioco, text width=3.0cm] (exit2) {Invio \texttt{MSG\_ESCI}\\e chiusura};
 
+    % Connessioni verticali flusso principale
     \draw[arrow] (start) -- (connect);
     \draw[arrow] (connect) -- (menu1);
-    \draw[arrow] (menu1) -| node[above, font=\footnotesize, pos=0.2] {3. Esci} (exit1);
-    \draw[arrow] (menu1) -| node[left, font=\footnotesize] {1. Accedi / 2. Registrati} (cred);
+    \draw[arrow] (menu1) -- node[right, font=\footnotesize, align=left] {1. Accedi /\\ 2. Registrati} (cred);
     \draw[arrow] (cred) -- (checkauth);
-    \draw[arrow] (checkauth) -| node[above, font=\footnotesize, pos=0.3] {\texttt{MSG\_ERRORE}} (exit1);
     \draw[arrow] (checkauth) -- node[right, font=\footnotesize] {\texttt{MSG\_OK}} (menugioco);
     \draw[arrow] (menugioco) -- node[right, font=\footnotesize] {1. Gioca} (game);
+
+    % Uscite verso exit1 (in alto a destra)
+    \draw[arrow] (menu1) -- node[above, font=\footnotesize] {3. Esci} (exit1);
+    \draw[arrow] (checkauth.east) -| node[above, pos=0.35, font=\footnotesize] {\texttt{MSG\_ERRORE}} (exit1.south);
+
+    % Uscite verso exit2 (in basso a destra)
     \draw[arrow] (menugioco) -- node[above, font=\footnotesize] {2. Esci} (exit2);
-    \draw[arrow] (game) -| node[above, font=\footnotesize, pos=0.3] {Fine partita o 'q' / Ctrl+C} (exit2);
+    \draw[arrow] (game.east) -| node[above, pos=0.35, font=\footnotesize, align=center] {Fine partita o\\ 'q' / Ctrl+C} (exit2.south);
 \end{tikzpicture}
 \caption{Diagramma di flusso delle fasi di esecuzione del Client.}
 \label{fig:client-flow}
@@ -296,13 +291,13 @@ Grazie alla funzione POSIX \texttt{getaddrinfo()}, il client accetta sia indiriz
 Nella cartella \texttt{docker/} è presente la configurazione per avviare il sistema con \textbf{Docker Compose}:
 \begin{itemize}
     \item Il servizio \texttt{server} avvia \texttt{./bin/server 8080 180 20} su una rete bridge dedicata (\texttt{miarete}), montando con bind-mount \texttt{users.txt} e \texttt{server.log}, applicando vincoli di sicurezza sulle risorse (\texttt{mem\_limit: 128m}, \texttt{cpus: 0.5}, \texttt{pids\_limit: 30}).
-    \item Lo script \texttt{docker/launch\_clients.py} semplifica i test: gestisce l'eventuale build, avvia il container del server e apre in automatico $N$ terminali separati per i client:
+    \item Lo script \texttt{docker/launch\_clients.sh}: gestisce l'eventuale build, avvia il container del server e apre in automatico $N$ terminali separati per i client:
 \end{itemize}
 
 \begin{lstlisting}[style=bashstyle]
 cd docker
-python3 launch_clients.py 0 3   # 0 = ricompila le immagini, 3 = avvia 3 client
-python3 launch_clients.py 1 2   # 1 = salta la build, 2 = avvia 2 client
+./launch_clients.sh 0 3   # 0 = ricompila la build, 3 = avvia 3 client
+./launch_clients.sh 1 2   # 1 = salta la build, 2 = avvia 2 client
 \end{lstlisting}
 
 \subsection{Comandi di Gioco, Interfaccia da Terminale e Regole della Partita}
@@ -333,7 +328,7 @@ Durante la partita, il giocatore interagisce digitando il comando e premendo \te
     \item \texttt{?}: cella non ancora esplorata (\textit{Fog of War}).
 \end{itemize}
 
-Quando un giocatore raggiunge una delle 4 uscite, il client mostra il messaggio di completamento (\textit{"Hai completato il labirinto"}) e resta connesso in attesa della conclusione della partita per visualizzare la proclamazione del vincitore (\texttt{MSG\_FINE\_PARTITA}), lasciando sempre la possibilità di uscire prima premendo \texttt{q}.
+Quando un giocatore raggiunge una delle 4 uscite, il client mostra il messaggio di completamento (\textit{"Hai completato il labirinto"}) e resta connesso in attesa della conclusione della partita per visualizzare il vincitore (\texttt{MSG\_FINE\_PARTITA}), lasciando sempre la possibilità di uscire premendo \texttt{q}.
 
 \clearpage
 
@@ -347,39 +342,57 @@ Quando un giocatore raggiunge una delle 4 uscite, il client mostra il messaggio 
 La comunicazione tra client e server si basa sullo scambio di strutture C definite nell'header condiviso \texttt{protocol.h}. Per quasi tutte le operazioni viene impiegata una singola struct a dimensione fissa, \texttt{Messaggio}, affiancata dalla struct \texttt{InfoGiocatore} impiegata per la trasmissione della classifica:
 
 \begin{lstlisting}[style=cstyle]
-/* Dimensioni della mappa e della finestra locale */
 #define RIGHE_MAPPA       21
 #define COLONNE_MAPPA     41
 #define VISTA_LOCALE      5
 #define RAGGIO_VISIBILITA (VISTA_LOCALE / 2)
 
-/* Limiti buffer testuali */
+#define CELLA_MURO        '#'
+#define CELLA_LIBERA      '.'
+#define CELLA_USCITA      'E'
+#define CELLA_OGGETTO     'O'
+#define CELLA_GIOCATORE   'P'
+#define CELLA_NASCOSTA    '?'
+
 #define MAX_NICK          32
 #define MAX_PASS          32
 #define MAX_TESTO         128
 
-/* Dati del singolo giocatore per la classifica (MSG_LISTA) */
+/* Tipi di messaggio */
+#define MSG_ACCESSO         1   /* Login */
+#define MSG_MOVIMENTO       2   /* Movimento */
+#define MSG_RICHIEDI_LISTA  3   /* Richiesta lista dal client */
+#define MSG_ESCI            4   /* Uscita */
+#define MSG_REGISTRAZIONE   5   /* Registrazione nuovo utente */
+
+#define MSG_OK              10  /* Conferma */
+#define MSG_ERRORE          11  /* Errore */
+#define MSG_MAPPA_LOCALE    12  /* Mappa locale */
+#define MSG_MAPPA_GLOBALE   13  /* Mappa globale */
+#define MSG_LISTA           14  /* Elenco giocatori */
+#define MSG_FINE_PARTITA    15  /* Fine partita */
+#define MSG_NOTIFICA        16  /* Notifica */
+
 typedef struct {
     char nickname[MAX_NICK];
     int  punteggio;
     int  uscito;
 } InfoGiocatore;
 
-/* Messaggio applicativo scambiato tra client e server */
 typedef struct {
-    int  tipo;                                      /* Codice identificativo (MSG_*) */
-    char nickname[MAX_NICK];                        /* Nickname utente o vincitore */
-    char password[MAX_PASS];                        /* Password per login o registrazione */
-    char direzione;                                 /* Direzione movimento: 'w','a','s','d' */
-    char testo[MAX_TESTO];                          /* Messaggio di testo o errore */
-    int  riga;                                      /* Coordinata riga corrente */
-    int  colonna;                                   /* Coordinata colonna corrente */
-    int  punteggio;                                 /* Punteggio attuale (oggetti) */
+    int  tipo;                                          /* Tipo messaggio */
+    char nickname[MAX_NICK];                           
+    char password[MAX_PASS];                           
+    char direzione;                                    
+    char testo[MAX_TESTO];                             
+    int  riga;                                 
+    int  colonna;                                   
+    int  punteggio;                                     
     
-    char mappa_locale[VISTA_LOCALE][VISTA_LOCALE];  /* Vista 5x5 attorno al giocatore */
-    char mappa_globale[RIGHE_MAPPA][COLONNE_MAPPA]; /* Mappa mascherata (Fog of War) */
+    char mappa_locale[VISTA_LOCALE][VISTA_LOCALE];      
+    char mappa_globale[RIGHE_MAPPA][COLONNE_MAPPA];    
     
-    int  num_giocatori;                             /* Numero di InfoGiocatore seguenti */
+    int  num_giocatori;                                 /* Numero di InfoGiocatore che seguono il messaggio (MSG_LISTA) */
 } Messaggio;
 \end{lstlisting}
 
@@ -387,7 +400,7 @@ L'uso di una struttura unificata a dimensione fissa rende la gestione della rete
 
 \clearpage
 
-\subsection{Codici Operativi (Opcode) e Significato dei Messaggi}
+\subsection{Codici Operativi e Significato dei Messaggi}
 
 Il protocollo prevede \textbf{12 codici messaggio}, suddivisi tra richieste inviate dal Client ($1 - 5$) e risposte o notifiche trasmesse dal Server ($10 - 16$):
 
@@ -417,6 +430,8 @@ Il protocollo prevede \textbf{12 codici messaggio}, suddivisi tra richieste invi
 \label{tab:opcodes}
 \end{table}
 
+\newpage
+
 \subsection{Flussi di Comunicazione Client--Server}
 
 Il diagramma di sequenza seguente riassume lo scambio dei messaggi durante il ciclo di vita della partita:
@@ -424,61 +439,78 @@ Il diagramma di sequenza seguente riassume lo scambio dei messaggi durante il ci
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.95, every node/.style={transform shape},
-    lifeline/.style={thick, dashed, gray},
-    entity/.style={rectangle, draw=black!70, fill=blue!8, thick, text centered, minimum width=2.5cm, minimum height=0.7cm, font=\small\bfseries},
+    scale=0.9, every node/.style={transform shape},
+    lifeline/.style={thick, dashed, gray!70},
+    entity/.style={rectangle, draw=black!70, fill=blue!8, thick, text centered, minimum width=2.6cm, minimum height=0.75cm, font=\small\bfseries},
     msg/.style={thick, ->, >=Stealth, blue!70!black},
     reply/.style={thick, ->, >=Stealth, dashed, red!70!black},
     tmsg/.style={thick, ->, >=Stealth, green!50!black}
 ]
     % Lifelines
     \node[entity] (c) at (0, 0) {Client};
-    \node[entity] (s) at (6, 0) {Server (\texttt{client\_handler})};
-    \node[entity] (t) at (12, 0) {Server (\texttt{timer\_thread})};
+    \node[entity] (s) at (7, 0) {Server (\texttt{client\_handler})};
+    \node[entity] (t) at (13.5, 0) {Server (\texttt{timer\_thread})};
 
-    \draw[lifeline] (c) -- (0, -10.2);
-    \draw[lifeline] (s) -- (6, -10.2);
-    \draw[lifeline] (t) -- (12, -10.2);
+    \draw[lifeline] (c.south) -- (0, -12.6);
+    \draw[lifeline] (s.south) -- (7, -12.6);
+    \draw[lifeline] (t.south) -- (13.5, -12.6);
 
-    % Exchange
-    \draw[msg] (0, -0.9) -- node[above, font=\footnotesize] {TCP Connect + \texttt{MSG\_ACCESSO} / \texttt{MSG\_REGISTRAZIONE}} (6, -0.9);
-    \draw[reply] (6, -1.6) -- node[above, font=\footnotesize] {\texttt{MSG\_OK} (oppure \texttt{MSG\_ERRORE} e chiusura)} (0, -1.6);
-    \draw[reply] (6, -2.3) -- node[above, font=\footnotesize] {\texttt{MSG\_MAPPA\_GLOBALE} (cella spawn scoperta)} (0, -2.3);
+    % Fase iniziale / Handshake
+    \draw[msg] (0, -1.1) -- node[above, font=\footnotesize, align=center] {TCP Connect + \texttt{MSG\_ACCESSO} /\\ \texttt{MSG\_REGISTRAZIONE}} (7, -1.1);
+    \draw[reply] (7, -2.2) -- node[above, font=\footnotesize] {\texttt{MSG\_OK} (oppure \texttt{MSG\_ERRORE} e chiusura)} (0, -2.2);
+    \draw[reply] (7, -3.3) -- node[above, font=\footnotesize] {\texttt{MSG\_MAPPA\_GLOBALE} (cella spawn scoperta)} (0, -3.3);
 
-    % Loop block
-    \draw[thick, black!40] (-0.3, -2.9) rectangle (12.3, -7.8);
-    \node[anchor=north west, font=\scriptsize\bfseries, black!70] at (-0.3, -2.9) {Ciclo di Partita};
+    % Ciclo di Partita (Loop block)
+    \draw[thick, black!40, rounded corners=2pt] (-0.5, -4.1) rectangle (14.0, -9.7);
+    \node[anchor=north west, font=\scriptsize\bfseries, black!70] at (-0.4, -4.15) {Ciclo di Partita};
 
-    \draw[msg] (0, -3.6) -- node[above, font=\footnotesize] {\texttt{MSG\_MOVIMENTO} (direzione)} (6, -3.6);
-    \draw[reply] (6, -4.3) -- node[above, font=\footnotesize] {\texttt{MSG\_MAPPA\_LOCALE} (vista 5$\times$5, coordinate, punteggio)} (0, -4.3);
+    \draw[msg] (0, -5.0) -- node[above, font=\footnotesize] {\texttt{MSG\_MOVIMENTO} (direzione)} (7, -5.0);
+    \draw[reply] (7, -6.1) -- node[above, font=\footnotesize, align=center] {\texttt{MSG\_MAPPA\_LOCALE}\\(vista 5$\times$5, coordinate, punteggio)} (0, -6.1);
 
-    \draw[msg] (0, -5.1) -- node[above, font=\footnotesize] {\texttt{MSG\_RICHIEDI\_LISTA}} (6, -5.1);
-    \draw[reply] (6, -5.8) -- node[above, font=\footnotesize] {\texttt{MSG\_LISTA} (num\_giocatori) + dati \texttt{InfoGiocatore[]}} (0, -5.8);
+    \draw[msg] (0, -7.2) -- node[above, font=\footnotesize] {\texttt{MSG\_RICHIEDI\_LISTA}} (7, -7.2);
+    \draw[reply] (7, -8.2) -- node[above, font=\footnotesize, align=center] {\texttt{MSG\_LISTA} (num\_giocatori) + dati \texttt{InfoGiocatore[]}} (0, -8.2);
 
-    \draw[tmsg] (12, -6.8) -- node[above, font=\footnotesize] {\texttt{MSG\_MAPPA\_GLOBALE} (broadcast periodico ogni $T$ secondi)} (0, -6.8);
+    % Broadcast da Timer a Client: fill=white evita che la lifeline centrale tagli la scritta
+    \draw[tmsg] (13.5, -9.1) -- node[above, font=\footnotesize, fill=white, inner sep=2pt] {\texttt{MSG\_MAPPA\_GLOBALE} (broadcast periodico ogni $T$ secondi)} (0, -9.1);
 
-    % Termination
-    \draw[reply] (6, -8.6) -- node[above, font=\footnotesize] {\texttt{MSG\_FINE\_PARTITA} (vincitore e punteggio)} (0, -8.6);
-    \draw[msg] (0, -9.5) -- node[above, font=\footnotesize] {\texttt{MSG\_ESCI} (disconnessione con 'q' o Ctrl+C)} (6, -9.5);
+    % Terminazione
+    \draw[reply] (7, -10.7) -- node[above, font=\footnotesize] {\texttt{MSG\_FINE\_PARTITA} (vincitore e punteggio)} (0, -10.7);
+    \draw[msg] (0, -11.8) -- node[above, font=\footnotesize] {\texttt{MSG\_ESCI} (disconnessione con 'q' o Ctrl+C)} (7, -11.8);
 \end{tikzpicture}
-\caption{Diagramma di sequenza delle comunicazioni Client--Server.}
-\label{fig:sequence}
 \end{figure}
 
 \clearpage
 
 \subsection{Gestione dello Stream TCP e Ricezione Dinamica (\texttt{common/protocol.c})}
 
-Poiché TCP è un protocollo di trasporto orientato al flusso di byte (\textit{byte-stream}) e non preserva i confini dei messaggi a livello applicativo, una chiamata a \texttt{read()} o \texttt{write()} non garantisce di trasferire tutti i byte richiesti in una sola operazione (\textit{short read} e \textit{short write}). Inoltre, l'arrivo di un segnale durante l'I/O può interrompere temporaneamente la system call restituendo \texttt{-1} con codice di errore \texttt{EINTR}.
+Poiché TCP è un protocollo di trasporto orientato al flusso di byte (\textit{byte-stream}) e non preserva i confini dei messaggi a livello applicativo, una chiamata a \texttt{read()} o \texttt{send()} non garantisce di trasferire tutti i byte richiesti in una sola operazione (\textit{short read} e \textit{short write}). Inoltre, l'arrivo di un segnale durante l'I/O può interrompere temporaneamente la system call restituendo \texttt{-1} con codice di errore \texttt{EINTR}.
 
-Per garantire che ogni messaggio venga trasmesso o ricevuto per intero, il modulo \texttt{protocol.c} implementa le funzioni \texttt{invia\_dati()} e \texttt{ricevi\_dati()}, che iterano finché non sono stati trasferiti esattamente tutti i byte necessari.
+Per garantire che ogni messaggio venga trasmesso o ricevuto per intero, il modulo \texttt{protocol.c} implementa le funzioni \texttt{invia\_dati()} e \texttt{ricevi\_dati()}, che iterano finché non sono stati trasferiti esattamente tutti i byte necessari. In particolare, \texttt{invia\_dati()} utilizza \texttt{send(fd, p, rimanenti, MSG\_DONTWAIT)} (invio non bloccante), così da evitare che un client lento o bloccato con il buffer TCP pieno possa bloccare il \texttt{timer\_thread} o il server.
 
+\begin{lstlisting}[style=cstyle]
+int invia_dati(int fd, const void *buf, size_t len) {
+    const char *p = (const char *)buf;
+    size_t rimanenti = len;
+
+    while (rimanenti > 0) {
+        ssize_t n = send(fd, p, rimanenti, MSG_DONTWAIT);
+        if (n <= 0) {
+            if (n < 0 && errno == EINTR)
+                continue;
+            return -1;
+        }
+        p += n;
+        rimanenti -= n;
+    }
+    return 0;
+}
+\end{lstlisting}
 
 \subsubsection{Gestione dinamica della lista giocatori (\texttt{MSG\_LISTA})}
-La traccia del progetto specifica che non ci deve essere un limite prefissato al numero di utenti collegabili contemporaneamente. Di conseguenza, la lista dei giocatori non usa un array statico di grandezza fissa dentro \texttt{Messaggio}. In \texttt{game.c} viene usata la struttura di supporto \texttt{MessaggioLista}:
+La traccia del progetto specifica che non ci deve essere un limite prefissato al numero di utenti collegabili contemporaneamente. Di conseguenza, la lista dei giocatori non usa un array statico di grandezza fissa dentro \texttt{Messaggio}. In \texttt{game.c} viene usata la struttura di supporto \texttt{MessaggioLista} con \textit{flexible array member}:
 \begin{enumerate}
-    \item Il \textbf{Server} conta i giocatori attivi (\texttt{totale}), alloca un buffer con \texttt{sizeof(MessaggioLista) + totale * sizeof(InfoGiocatore)}, imposta \texttt{ml->msg.tipo = MSG\_LISTA} e \texttt{ml->msg.num\_giocatori = totale}, popola gli elementi dell'array e trasmette il blocco con una singola chiamata a \texttt{invia\_dati()}.
-    \item Il \textbf{Client}, quando riceve un \texttt{Messaggio} con \texttt{msg.tipo == MSG\_LISTA}, legge il valore di \texttt{msg.num\_giocatori}, alloca con \texttt{malloc} un buffer per contenere i relativi \texttt{InfoGiocatore} e chiama \texttt{ricevi\_dati(sock\_fd, lista, msg.num\_giocatori * sizeof(InfoGiocatore))}. Subito dopo aver formattato e mostrato a video la classifica, il client esegue \texttt{free(lista)}, evitando qualsiasi memory leak.
+    \item Il \textbf{Server} conta i giocatori attivi (\texttt{totale}), alloca un buffer con \texttt{sizeof(MessaggioLista) + totale * sizeof(InfoGiocatore)}, imposta \texttt{ml->msg.tipo = MSG\_LISTA} e \texttt{ml->msg.num\_giocatori = totale}, popola gli elementi dell'array, trasmette il blocco con una singola chiamata a \texttt{invia\_dati()} sotto la protezione di \texttt{partita.mutex} e infine libera il buffer con \texttt{free(ml)}.
+    \item Il \textbf{Client}, quando riceve un \texttt{Messaggio} con \texttt{msg.tipo == MSG\_LISTA}, legge il valore di \texttt{msg.num\_giocatori}, alloca con \texttt{malloc} un buffer per contenere i relativi \texttt{InfoGiocatore} e chiama \texttt{ricevi\_dati(sock\_fd, lista, msg.num\_giocatori * sizeof(InfoGiocatore))}. Subito dopo aver formattato e mostrato a video la classifica, il client esegue \texttt{free(lista)}, evitando memory leak.
 \end{enumerate}
 
 \clearpage
@@ -490,7 +522,7 @@ La traccia del progetto specifica che non ci deve essere un limite prefissato al
 
 \subsection{Server Concorrente: Modello \textit{Thread-per-Client} e \textit{Timer Thread} (\texttt{server/server.c})}
 
-Il server deve portare avanti tre compiti simultanei senza mai bloccarsi:
+Il server deve portare avanti tre compiti:
 \begin{enumerate}
     \item Accettare nuove connessioni dai client sulla porta in ascolto;
     \item Ricevere ed elaborare i comandi di gioco inviati da ciascun utente connesso;
@@ -543,24 +575,22 @@ typedef struct {
 \end{lstlisting}
 
 \subsubsection{Gestione Dinamica dell'Array Giocatori (\texttt{realloc})}
-Per non porre alcun limite rigido al numero di utenti collegabili, l'array \texttt{partita.giocatori} è gestito dinamicamente in \texttt{aggiungi\_giocatore()}:
+Per non porre alcun limite al numero di utenti in partita, l'array \texttt{partita.giocatori} è gestito dinamicamente in \texttt{aggiungi\_giocatore()}:
 \begin{enumerate}
-    \item Quando un utente accede, il server cerca innanzitutto se esiste uno slot non più attivo (\texttt{!partita.giocatori[i].attivo}) lasciato libero da un giocatore disconnesso in precedenza.
+    \item Quando un utente accede, il server cerca innanzitutto se esiste uno slot non ancora utilizzato nella partita corrente (\texttt{!partita.giocatori[i].partecipante}). Usare il flag \texttt{partecipante} anziché \texttt{attivo} garantisce che i risultati (\texttt{punteggio} e stato \texttt{uscito}) dei giocatori che hanno preso parte alla partita e si sono poi disconnessi non vengano sovrascritti da nuovi ingressi, restando disponibili a fine partita per il calcolo del vincitore.
     \item Se tutti gli slot allocati risultano occupati, l'array viene espanso tramite \texttt{realloc()}, partendo da 8 posizioni e raddoppiando la capacità (\texttt{partita.num\_giocatori * 2}) ad ogni saturazione.
 \end{enumerate}
 
-\subsubsection{Sincronizzazione e Invio su Socket Fuori Sezione Critica}
-Dato che più thread \texttt{client\_handler} e il \texttt{timer\_thread} accedono contemporaneamente alla variabile \texttt{partita}, ogni operazione di lettura e modifica dello stato è protetta dal mutex \texttt{partita.mutex}.
+\subsubsection{Sincronizzazione con \texttt{partita.mutex} e Invio Non Bloccante (\texttt{MSG\_DONTWAIT})}
+Dato che più thread \texttt{client\_handler} e il \texttt{timer\_thread} accedono contemporaneamente alla variabile condivisa \texttt{partita}, ogni operazione di lettura e modifica dello stato di gioco (incluso il controllo di \texttt{partita.partita\_finita} e il dimensionamento \texttt{partita.num\_giocatori}) è protetta dal mutex \texttt{partita.mutex}.
 
-Tuttavia, \textbf{le scritture di rete (\texttt{invia\_messaggio} / \texttt{invia\_dati}) non vengono mai eseguite tenendo bloccato il mutex di gioco}:
+Anche le trasmissioni verso i giocatori (\texttt{invia\_mappa\_locale}, \texttt{invia\_mappa\_globale}, \texttt{invia\_lista\_giocatori}, \texttt{broadcast\_fine\_partita} e l'invio iniziale di \texttt{MSG\_OK} in \texttt{aggiungi\_giocatore}) avvengono all'interno della sezione critica protetta da \texttt{partita.mutex}. Questa scelta architetturale garantisce due proprietà fondamentali:
 \begin{enumerate}
-    \item Il thread acquisisce il lock con \texttt{pthread\_mutex\_lock(\&partita.mutex)}, copia i dati necessari in variabili locali (o estrae i descrittori dei socket attivi) e \textbf{rilascia subito il mutex} con \texttt{pthread\_mutex\_unlock(\&partita.mutex)}.
-    \item Solo dopo aver rilasciato il lock, procede con le chiamate di invio su socket.
+    \item \textbf{Assenza di race condition e di scritture concorrenti sullo stesso socket:} impedisce che il \texttt{timer\_thread} e un \texttt{client\_handler} scrivano contemporaneamente sullo stesso descrittore \texttt{fd} (evitando il mescolamento dei byte sullo stream TCP), che il \texttt{timer\_thread} invii una mappa globale a un client prima della conferma \texttt{MSG\_OK}, o che si tenti di scrivere su un descrittore già chiuso da \texttt{rimuovi\_giocatore()}.
+    \item \textbf{Assenza di blocchi grazie a \texttt{MSG\_DONTWAIT}:} poiché \texttt{invia\_dati()} utilizza \texttt{send(..., MSG\_DONTWAIT)}, la scrittura sul socket non è mai bloccante; pertanto, anche se un client dovesse avere una connessione lenta o il buffer TCP pieno, l'invio ritorna immediatamente senza trattenere il mutex di gioco e senza rallentare gli altri giocatori.
 \end{enumerate}
 
-Questa strategia è essenziale in un server di rete: se un client ha una connessione lenta, la relativa chiamata di scrittura sul socket non blocca l'accesso alla partita per tutti gli altri partecipanti.
-
-Inoltre, \textbf{non ci sono rischi di deadlock} tra il mutex di gioco \texttt{partita.mutex} e il mutex di tracciamento \texttt{log\_mutex}: i due lock sono completamente distinti e non vengono mai annidati (nessuna funzione tenta di acquisire un mutex mentre tiene già occupato l'altro).
+Inoltre, \textbf{non ci sono rischi di deadlock} tra il mutex di gioco \texttt{partita.mutex} e il mutex di tracciamento \texttt{log\_mutex}: i due lock hanno responsabilità distinte e \texttt{log\_mutex} viene acquisito solo brevemente all'interno di \texttt{log\_event()} senza mai acquisire \texttt{partita.mutex}.
 
 \clearpage
 
@@ -576,10 +606,10 @@ All'avvio del server, \texttt{genera\_labirinto()} costruisce la mappa di dimens
 \end{enumerate}
 
 \subsubsection{Movimento e \textit{Fog of War} (\texttt{muovi\_giocatore}, \texttt{scopri\_dintorni})}
-Al momento dell'accesso, il giocatore viene posizionato in una cella libera casuale e inizialmente vede solo la propria casella (\texttt{p->scoperte[riga][colonna] = 1}).
+Al momento dell'accesso, il giocatore viene posizionato in una cella libera casuale priva di oggetti (\texttt{celle[riga][colonna] == CELLA\_LIBERA \&\& !oggetti[riga][colonna]}) e inizialmente vede solo la propria casella (\texttt{p->scoperte[riga][colonna] = 1}).
 Quando il client invia un messaggio di movimento \texttt{MSG\_MOVIMENTO}, il server esegue \texttt{muovi\_giocatore()}.
 
-Ad ogni passo effettuato con successo, la funzione \texttt{scopri\_dintorni()} imposta a 1 le celle scoperte nella matrice personale \texttt{p->scoperte[r][c]} nel quadrato di raggio \texttt{RAGGIO\_VISIBILITA = 2}. Quando il server compone la vista locale o la mappa globale per quel client, tutte le celle con valore 0 vengono sostituite con il carattere nasconditore \texttt{CELLA\_NASCOSTA} (\texttt{?})
+Ad ogni passo effettuato con successo, la funzione \texttt{scopri\_dintorni()} imposta a 1 le celle scoperte nella matrice personale \texttt{p->scoperte[r][c]} nel quadrato di raggio \texttt{RAGGIO\_VISIBILITA = 2}. Quando il server compone la vista locale o la mappa globale per quel client, tutte le celle con valore 0 vengono sostituite con il carattere nasconditore \texttt{CELLA\_NASCOSTA} (\texttt{?}).
 
 \clearpage
 
@@ -591,54 +621,19 @@ La partita si chiude non appena si verifica una delle due condizioni:
     \item \textbf{Uscita di tutti i giocatori}: rilevata da \texttt{tutti\_usciti()} quando tutti gli utenti ancora attivi nel labirinto raggiungono un'uscita \texttt{E} (oppure si disconnettono lasciando in partita solo utenti già usciti).
 \end{enumerate}
 
-Al termine della partita, \texttt{termina\_partita()} chiama \texttt{trova\_vincitore()}, che applica le regole stabilite:
+Al verificarsi di una di queste condizioni, viene invocata sotto mutex \texttt{termina\_partita()}, che restituisce \texttt{1} solo al primo thread che chiude effettivamente la partita (e \texttt{0} se era già conclusa, garantendo così che \texttt{broadcast\_fine\_partita()} venga eseguita una sola volta) e chiama \texttt{trova\_vincitore()}, che applica le regole stabilite:
 
-\begin{lstlisting}[style=cstyle]
-static int trova_vincitore(void) {
-    int usciti = 0;
-    int ultimo_uscito = -1;
-
-    for (int i = 0; i < partita.num_giocatori; i++) {
-        if (partita.giocatori[i].uscito) {
-            usciti++;
-            ultimo_uscito = i;
-        }
-    }
-
-    /* Caso 1: e uscito un solo giocatore -> ha vinto lui */
-    if (usciti == 1)
-        return ultimo_uscito;
-
-    int migliore = -1;
-    int punteggio_max = -1;
-
-    /* Caso 2: sono usciti piu giocatori -> vince chi ha piu punti tra gli usciti */
-    if (usciti > 1) {
-        for (int i = 0; i < partita.num_giocatori; i++) {
-            if (partita.giocatori[i].uscito &&
-                partita.giocatori[i].punteggio > punteggio_max) {
-                punteggio_max = partita.giocatori[i].punteggio;
-                migliore = i;
-            }
-        }
-        return migliore;
-    }
-
-    /* Caso 3: nessuno e uscito in tempo -> vince chi ha raccolto piu oggetti */
-    for (int i = 0; i < partita.num_giocatori; i++) {
-        if (partita.giocatori[i].partecipante &&
-            partita.giocatori[i].punteggio > punteggio_max) {
-            punteggio_max = partita.giocatori[i].punteggio;
-            migliore = i;
-        }
-    }
-    return migliore;
-}
-\end{lstlisting}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Conteggio dei giocatori usciti:} esamina l'elenco dei partecipanti per verificare quanti hanno raggiunto con successo un'uscita (\texttt{uscito == 1}).
+    \item \textbf{Caso 1 --- Un solo giocatore uscito:} se un solo concorrente è uscito dal labirinto, vince lui, a prescindere dal numero di oggetti raccolti.
+    \item \textbf{Caso 2 --- Più giocatori usciti:} se due o più partecipanti hanno completato il labirinto, si confrontano i punteggi e vince chi tra loro ha raccolto più oggetti.
+    \item \textbf{Caso 3 --- Nessun giocatore uscito:} se il tempo scade senza che nessuno abbia raggiunto l'uscita, la vittoria viene assegnata al partecipante con il punteggio più alto.
+    \item \textbf{Valore restituito:} la funzione ritorna l'indice del vincitore nell'array (oppure \texttt{-1} in assenza di vincitori).
+\end{itemize}
 
 \clearpage
 
-\subsection{Autenticazione Persistente (\texttt{users.txt}) e Logging POSIX Thread-Safe (\texttt{server/log.c})}
+\subsection{Autenticazione Persistente (\texttt{users.txt}) e Logging (\texttt{server/log.c})}
 
 \subsubsection{Autenticazione Persistente (\texttt{autentica\_utente})}
 La funzione \texttt{autentica\_utente()} gestisce le credenziali inviate dai client durante la fase iniziale:
@@ -648,7 +643,7 @@ La funzione \texttt{autentica\_utente()} gestisce le credenziali inviate dai cli
 \end{itemize}
 
 \subsubsection{Logging Thread-Safe (\texttt{log.c})}
-Il modulo di logging è realizzato usando le system call dirette POSIX \texttt{open()} e \texttt{write()}, protette da un mutex dedicato \texttt{log\_mutex}:
+Il modulo di logging è realizzato usando le system call  \texttt{open()} e \texttt{write()}, protette da un mutex dedicato \texttt{log\_mutex}:
 
 \begin{lstlisting}[style=cstyle]
 static int log_fd = -1;
@@ -673,14 +668,16 @@ void log_event(const char *msg) {
 
     char log_line[512];
     int n = snprintf(log_line, sizeof(log_line), "[%s] %s\n", ts, msg);
-    if (n > 0)
-        write(log_fd, log_line, n);
+    if (n > 0) {
+        size_t len = (size_t)n < sizeof(log_line) ? (size_t)n : sizeof(log_line) - 1;
+        write(log_fd, log_line, len);
+    }
 
     pthread_mutex_unlock(&log_mutex);
 }
 \end{lstlisting}
 
-La scelta di usare \texttt{open()} con il flag \texttt{O\_APPEND} combinato con \texttt{log\_mutex} garantisce che le scritture contemporanee provenienti dai vari thread non si accavallino e non sovrascrivano i dati, producendo un file \texttt{server.log} coerente e ordinato nel tempo:
+La scelta di usare \texttt{open()} con il flag \texttt{O\_APPEND} combinato con \texttt{log\_mutex} garantisce che le scritture contemporanee provenienti dai vari thread non si accavallino e non sovrascrivano i dati:
 
 \begin{lstlisting}[style=bashstyle]
 [2026-11-08 12:30:01] Server avviato sulla porta 5200 (timeout=180, intervallo=20).
@@ -705,39 +702,10 @@ Durante il gioco, il client deve ascoltare contemporaneamente due canali di I/O 
     \item Il socket di rete \texttt{sock\_fd}: da cui riceve sia le risposte immediate ai comandi (\texttt{MSG\_MAPPA\_LOCALE}, \texttt{MSG\_LISTA}), sia i messaggi asincroni inviati dal server (\texttt{MSG\_MAPPA\_GLOBALE} periodica e \texttt{MSG\_FINE\_PARTITA}).
 \end{enumerate}
 
-Se il client facesse una normale lettura bloccante da tastiera (\texttt{fgets} o \texttt{scanf}), resterebbe fermo in attesa dell'utente e non potrebbe mostrare né le mappe globali inviate dal server né la notifica di fine partita. Per questo motivo, \texttt{client.c} impiega la system call \textbf{\texttt{select()}}:
-
-
-
-\begin{lstlisting}[style=cstyle]
-fd_set master_set, read_set;
-FD_ZERO(&master_set);
-FD_SET(STDIN_FILENO, &master_set);
-FD_SET(sock_fd, &master_set);
-int max_fd = (sock_fd > STDIN_FILENO) ? sock_fd : STDIN_FILENO;
-
-while (loop) {
-    read_set = master_set;
-    int activity = select(max_fd + 1, &read_set, NULL, NULL, NULL);
-    if (activity < 0) {
-        if (errno == EINTR)
-            continue;
-        perror("select");
-        close(sock_fd);
-        return 1;
-    }
-
-    if (FD_ISSET(STDIN_FILENO, &read_set)) {
-        /* Lettura ed elaborazione immediata del comando da tastiera */
-    }
-    if (FD_ISSET(sock_fd, &read_set)) {
-        /* Lettura ed elaborazione immediata dei pacchetti arrivati dal server */
-    }
-}
-\end{lstlisting}
+Se il client facesse una normale lettura bloccante da tastiera (\texttt{fgets} o \texttt{scanf}), resterebbe fermo in attesa dell'utente e non potrebbe mostrare né le mappe globali inviate dal server né la notifica di fine partita. Per questo motivo, dopo la fase iniziale di menu e login (in cui l'input con \texttt{scanf} è seguito dallo svuotamento del buffer di riga fino a \texttt{'\textbackslash n'} o \texttt{EOF} per prevenire cicli infiniti su input non numerici), il ciclo di gioco di \texttt{client.c} impiega la system call \textbf{\texttt{select()}} per monitorare simultaneamente \texttt{STDIN\_FILENO} e \texttt{sock\_fd}, gestendo anche la chiusura dello standard input (\texttt{Ctrl+D} / \texttt{EOF}).
 
 \subsubsection{Gestione dei Segnali POSIX (\texttt{SIGINT}, \texttt{SIGTERM}, \texttt{SIGPIPE})}
-Sia nel client che nel server viene impostato \texttt{signal(SIGPIPE, SIG\_IGN)}: questo evita che un tentativo di scrittura su un socket chiuso improvvisamente dal peer generi il segnale \texttt{SIGPIPE} con conseguente crash del processo, consentendo alla \texttt{write()} di fallire normalmente restituendo \texttt{-1} con \texttt{errno == EPIPE}.
+Sia nel client che nel server viene impostato \texttt{signal(SIGPIPE, SIG\_IGN)}: questo evita che un tentativo di scrittura su un socket chiuso improvvisamente dal peer generi il segnale \texttt{SIGPIPE} con conseguente crash del processo, consentendo alla \texttt{send()} di fallire normalmente restituendo \texttt{-1} con \texttt{errno == EPIPE}.
 
 Nel client, la chiusura da tastiera (\texttt{Ctrl+C} / \texttt{SIGINT}) e la terminazione (\texttt{SIGTERM}) sono intercettate da una variabile atomica e da un apposito handler:
 

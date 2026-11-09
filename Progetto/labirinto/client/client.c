@@ -14,7 +14,7 @@
 #include "display.h"
 #include "protocol.h"
 
-static int loop = 1;
+static volatile sig_atomic_t loop = 1;
 
 static void sigint_handler(int sig) {
   (void)sig;
@@ -79,6 +79,7 @@ int main(int argc, char *argv[]) {
 
   /* Menu iniziale: Accesso, Registrazione o Uscita */
   int scelta = 0;
+  int c;
   while (scelta < 1 || scelta > 3) {
     system("clear");
     printf("\n=== Labirinto ===\n");
@@ -87,6 +88,13 @@ int main(int argc, char *argv[]) {
     printf("3. Esci\n");
     printf("Seleziona un'opzione: ");
     if (scanf("%d", &scelta) != 1) {
+      scelta = 0;
+    }
+    while ((c = getchar()) != '\n' && c != EOF)
+      ;
+    if (c == EOF) {
+      close(sock_fd);
+      return 0;
     }
     if (scelta < 1 || scelta > 3) {
       printf("Scelta non valida. Riprova.\n");
@@ -111,9 +119,13 @@ int main(int argc, char *argv[]) {
 
   printf("Inserisci il tuo nickname: ");
   scanf("%31s", nickname);
+  while ((c = getchar()) != '\n' && c != EOF)
+    ;
 
   printf("Inserisci la tua password: ");
   scanf("%31s", password);
+  while ((c = getchar()) != '\n' && c != EOF)
+    ;
 
   /* Invio richiesta di accesso / registrazione */
   Messaggio msg = {0};
@@ -170,6 +182,13 @@ int main(int argc, char *argv[]) {
     printf("2. Esci\n");
     printf("Seleziona un'opzione: ");
     if (scanf("%d", &scelta_gioco) != 1) {
+      scelta_gioco = 0;
+    }
+    while ((c = getchar()) != '\n' && c != EOF)
+      ;
+    if (c == EOF) {
+      close(sock_fd);
+      return 0;
     }
     if (scelta_gioco < 1 || scelta_gioco > 2) {
       printf("Scelta non valida. Riprova.\n");
@@ -227,7 +246,10 @@ int main(int argc, char *argv[]) {
     /* Input tastiera */
     if (FD_ISSET(STDIN_FILENO, &read_set)) {
       char buffer[64];
-      fgets(buffer, sizeof(buffer), stdin);
+      if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+        loop = 0;
+        break;
+      }
 
       char comando = tolower(buffer[0]);
       if (uscito) {

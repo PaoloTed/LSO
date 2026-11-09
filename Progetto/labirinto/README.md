@@ -87,7 +87,7 @@ Esempio:
 
 - Il server rispetta rigorosamente i requisiti della traccia: **non produce output su stdout e non legge da stdin**.
 - Tutti gli eventi (connessioni, disconnessioni, raccolte oggetti, uscite, vincitore) vengono registrati nel file `server.log` con timestamp.
-- Le credenziali degli utenti (nickname e password) vengono memorizzate in modo permanente nel file `users.txt`: se un utente accede per la prima volta viene registrato automaticamente; agli accessi successivi viene verificata la password.
+- Le credenziali degli utenti (nickname e password) vengono memorizzate in modo permanente nel file `users.txt`: dal menu iniziale del client è possibile registrare un nuovo utente (`MSG_REGISTRAZIONE`) oppure accedere con un profilo già registrato (`MSG_ACCESSO`).
 
 ## Uso del client
 
@@ -166,7 +166,8 @@ Nel caso del messaggio `MSG_LISTA`, il server invia la struct `Messaggio` seguit
 | `MSG_MOVIMENTO` | `2` | Client invia la direzione di movimento (`w`/`a`/`s`/`d`) |
 | `MSG_RICHIEDI_LISTA` | `3` | Client richiede la lista dei giocatori connessi |
 | `MSG_ESCI` | `4` | Client notifica la disconnessione volontaria |
-| `MSG_OK` | `10` | Server conferma l'accesso con successo |
+| `MSG_REGISTRAZIONE` | `5` | Client invia nickname e password per registrare un nuovo utente |
+| `MSG_OK` | `10` | Server conferma l'accesso o la registrazione con successo |
 | `MSG_ERRORE` | `11` | Server segnala errore (password errata, nickname duplicato, partita finita) |
 | `MSG_MAPPA_LOCALE` | `12` | Server invia la vista 5×5 centrata sul giocatore |
 | `MSG_MAPPA_GLOBALE` | `13` | Server invia periodicamente la mappa globale mascherata |
@@ -193,7 +194,7 @@ CLIENT                                  SERVER
 ## Note implementative e scelte tecniche
 
 - **Concorrenza Multithread**: il server gestisce le connessioni con un ciclo `while (1)` su `accept()` e alloca un thread dedicato per ciascun client connesso (`pthread_create` + `pthread_detach`) affidato alla funzione `client_handler`. Un thread separato `timer_thread` gestisce il conteggio dei secondi per il timeout e i broadcast periodici della mappa globale.
-- **Sincronizzazione**: il mutex `partita.mutex` protegge l'accesso concorrente allo stato di gioco (`StatoGioco partita`), alle coordinate dei giocatori e alla matrice del labirinto. Le operazioni di I/O di rete potenzialmente bloccanti vengono eseguite a lock rilasciato per garantire che un client lento non blocchi l'intero server.
+- **Sincronizzazione**: il mutex `partita.mutex` protegge l'accesso concorrente allo stato di gioco (`StatoGioco partita`), alle coordinate dei giocatori, alla matrice del labirinto e agli invii sui descrittori dei client. Per evitare che un client lento o con buffer TCP pieno possa trattenere il mutex, `invia_dati()` utilizza `send(..., MSG_DONTWAIT)` non bloccante.
 - **Logging Thread-Safe (`log.c`)**:
   - Utilizza le system call UNIX a basso livello `open("server.log", O_WRONLY | O_CREAT | O_APPEND, 0644)` e `write()`.
   - Timestamp formattato con `strftime` nel formato `[AAAA-MM-GG HH:MM:SS]`.

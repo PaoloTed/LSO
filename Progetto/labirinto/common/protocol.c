@@ -1,4 +1,5 @@
 #include "protocol.h"
+#include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
 
@@ -8,7 +9,7 @@ int invia_dati(int fd, const void *buf, size_t len) {
     size_t rimanenti = len;
 
     while (rimanenti > 0) {
-        ssize_t n = write(fd, p, rimanenti);
+        ssize_t n = send(fd, p, rimanenti, MSG_DONTWAIT);
         if (n <= 0) {
             if (n < 0 && errno == EINTR)
                 continue;

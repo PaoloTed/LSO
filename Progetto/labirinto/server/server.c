@@ -102,11 +102,6 @@ static void *client_handler(void *arg) {
     return NULL;
   }
 
-  /* Conferma accesso */
-  Messaggio ok = {0};
-  ok.tipo = MSG_OK;
-  invia_messaggio(client_fd, &ok);
-
   /* Invio mappa iniziale */
   invia_mappa_globale(indice_giocatore);
 
@@ -130,27 +125,36 @@ static void *timer_thread(void *arg) {
   (void)arg;
   int secondi = 0;
 
-  while (!partita.partita_finita) {
+  while (1) {
     sleep(1);
     secondi++;
 
+    pthread_mutex_lock(&partita.mutex);
+    if (partita.partita_finita) {
+      pthread_mutex_unlock(&partita.mutex);
+      break;
+    }
+
     /* Scadenza timeout */
     if (secondi >= partita.timeout) {
-      char log_buf[128];
-      snprintf(log_buf, sizeof(log_buf),
-               "Partita terminata per timeout (%d secondi).", partita.timeout);
-      log_event(log_buf);
-
-      pthread_mutex_lock(&partita.mutex);
-      termina_partita();
+      int finita = termina_partita();
       pthread_mutex_unlock(&partita.mutex);
 
-      broadcast_fine_partita();
-    } else {
-      /* Invio periodico mappa */
-      if (secondi % partita.intervallo == 0) {
-        broadcast_mappe_globali();
+      if (finita) {
+        char log_buf[128];
+        snprintf(log_buf, sizeof(log_buf),
+                 "Partita terminata per timeout (%d secondi).",
+                 partita.timeout);
+        log_event(log_buf);
+        broadcast_fine_partita();
       }
+      break;
+    }
+    pthread_mutex_unlock(&partita.mutex);
+
+    /* Invio periodico mappa */
+    if (secondi % partita.intervallo == 0) {
+      broadcast_mappe_globali();
     }
   }
   return NULL;
@@ -229,6 +233,10 @@ int main(int argc, char *argv[]) {
     }
 
     int *pfd = malloc(sizeof(int));
+    if (!pfd) {
+      close(client_fd);
+      continue;
+    }
     *pfd = client_fd;
 
     pthread_t tid;

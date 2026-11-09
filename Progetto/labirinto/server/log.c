@@ -28,8 +28,10 @@ void log_event(const char *msg) {
     /* Scrittura su file */
     char log_line[512];
     int n = snprintf(log_line, sizeof(log_line), "[%s] %s\n", ts, msg);
-    if (n > 0)
-        write(log_fd, log_line, n);
+    if (n > 0) {
+        size_t len = (size_t)n < sizeof(log_line) ? (size_t)n : sizeof(log_line) - 1;
+        write(log_fd, log_line, len);
+    }
 
     pthread_mutex_unlock(&log_mutex);
 }

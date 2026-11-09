@@ -294,9 +294,9 @@ sequenceDiagram
 
 ### 2.4 Gestione dello Stream TCP e Ricezione Dinamica (`common/protocol.c`)
 
-Poiché TCP è un protocollo di trasporto orientato al flusso di byte (*byte-stream*) e non preserva i confini dei messaggi a livello applicativo, una chiamata a `read()` o `write()` non garantisce di trasferire tutti i byte richiesti in una sola operazione (*short read* e *short write*). Inoltre, l'arrivo di un segnale durante l'I/O può interrompere temporaneamente la system call con codice di errore `EINTR`.
+Poiché TCP è un protocollo di trasporto orientato al flusso di byte (*byte-stream*) e non preserva i confini dei messaggi a livello applicativo, una chiamata a `read()` o `send()` non garantisce di trasferire tutti i byte richiesti in una sola operazione (*short read* e *short write*). Inoltre, l'arrivo di un segnale durante l'I/O può interrompere temporaneamente la system call con codice di errore `EINTR`.
 
-Per garantire che ogni messaggio venga trasmesso o ricevuto per intero, il modulo `protocol.c` implementa le funzioni `invia_dati()` e `ricevi_dati()`, che iterano finché non sono stati trasferiti esattamente tutti i byte necessari:
+Per garantire che ogni messaggio venga trasmesso o ricevuto per intero, il modulo `protocol.c` implementa le funzioni `invia_dati()` e `ricevi_dati()`, che iterano finché non sono stati trasferiti esattamente tutti i byte necessari. In particolare, `invia_dati()` utilizza `send(fd, p, rimanenti, MSG_DONTWAIT)` (invio non bloccante), evitando che un client lento o bloccato con il buffer TCP pieno possa bloccare il `timer_thread` o il server:
 
 ```c
 /* Invia esattamente len byte sul socket, gestendo short write ed EINTR */
@@ -305,7 +305,7 @@ int invia_dati(int fd, const void *buf, size_t len) {
     size_t rimanenti = len;
 
     while (rimanenti > 0) {
-        ssize_t n = write(fd, p, rimanenti);
+        ssize_t n = send(fd, p, rimanenti, MSG_DONTWAIT);
         if (n <= 0) {
             if (n < 0 && errno == EINTR)
                 continue;
@@ -419,19 +419,17 @@ typedef struct {
 
 #### Gestione Dinamica dell'Array Giocatori (`realloc`)
 Per non porre alcun limite rigido al numero di utenti collegabili, l'array `partita.giocatori` è gestito dinamicamente in `aggiungi_giocatore()`:
-1. Quando un utente accede, il server cerca innanzitutto se esiste uno slot non più attivo (`!partita.giocatori[i].attivo`) lasciato libero da un giocatore disconnesso in precedenza.
+1. Quando un utente accede, il server cerca innanzitutto se esiste uno slot non ancora utilizzato nella partita corrente (`!partita.giocatori[i].partecipante`). Usare il flag `partecipante` anziché `attivo` evita di sovrascrivere i risultati (`punteggio` e stato `uscito`) dei giocatori che hanno partecipato alla partita e si sono poi disconnessi, preservandoli fino al calcolo del vincitore.
 2. Se tutti gli slot allocati risultano occupati, l'array viene espanso tramite `realloc()`, partendo da `8` posizioni e raddoppiando la capacità (`partita.num_giocatori * 2`) ad ogni saturazione.
 
-#### Sincronizzazione e Invio su Socket Fuori Sezione Critica
+#### Sincronizzazione con `partita.mutex` e Invio Non Bloccante (`MSG_DONTWAIT`)
 Dato che più thread `client_handler` e il `timer_thread` accedono contemporaneamente alla variabile `partita`, ogni operazione di lettura e modifica dello stato è protetta dal mutex `partita.mutex`.
 
-Tuttavia, **le scritture di rete (`invia_messaggio` / `invia_dati`) non vengono mai eseguite tenendo bloccato il mutex di gioco**:
-- Il thread acquisisce il lock con `pthread_mutex_lock(&partita.mutex)`, copia i dati necessari in variabili locali (o estrae i descrittori dei socket attivi) e **rilascia subito il mutex** con `pthread_mutex_unlock(&partita.mutex)`.
-- Solo dopo aver rilasciato il lock, procede con le chiamate di invio su socket.
+Anche le trasmissioni verso i giocatori (`invia_mappa_locale`, `invia_mappa_globale`, `invia_lista_giocatori`, `broadcast_fine_partita` e l'invio iniziale di `MSG_OK` in `aggiungi_giocatore`) avvengono all'interno della sezione critica protetta da `partita.mutex`:
+- **Assenza di race condition e di scritture concorrenti sullo stesso socket:** impedisce che il `timer_thread` e un `client_handler` scrivano contemporaneamente sullo stesso descrittore `fd`, che il `timer_thread` invii una mappa globale prima di `MSG_OK`, o che si scriva su un descrittore già chiuso da `rimuovi_giocatore()`.
+- **Assenza di blocchi grazie a `MSG_DONTWAIT`:** poiché `invia_dati()` utilizza `send(..., MSG_DONTWAIT)`, la scrittura sul socket non è mai bloccante; pertanto, anche se un client ha una connessione lenta o il buffer TCP pieno, l'invio ritorna immediatamente senza trattenere il mutex di gioco.
 
-Questa strategia è essenziale in un server di rete: se un client ha una connessione lenta, la relativa chiamata di scrittura sul socket non blocca l'accesso alla partita per tutti gli altri partecipanti.
-
-Inoltre, **non ci sono rischi di deadlock** tra il mutex di gioco `partita.mutex` e il mutex di tracciamento `log_mutex`: i due blocchi sono completamente distinti e non vengono mai annidati (nessuna funzione tenta di acquisire un mutex mentre tiene già occupato l'altro).
+Inoltre, **non ci sono rischi di deadlock** tra il mutex di gioco `partita.mutex` e il mutex di tracciamento `log_mutex`: i due blocchi hanno responsabilità distinte e `log_mutex` viene acquisito solo brevemente all'interno di `log_event()` senza mai acquisire `partita.mutex`.
 
 ---
 
@@ -449,7 +447,7 @@ All'avvio del server, `genera_labirinto()` costruisce la mappa di dimensione `21
 ---
 
 #### Movimento e *Fog of War* (`muovi_giocatore`, `scopri_dintorni`)
-Al momento dell'accesso, il giocatore viene posizionato in una cella libera casuale e inizialmente vede solo la propria casella (`p->scoperte[riga][colonna] = 1`).
+Al momento dell'accesso, il giocatore viene posizionato in una cella libera casuale priva di oggetti (`celle[riga][colonna] == CELLA_LIBERA && !oggetti[riga][colonna]`) e inizialmente vede solo la propria casella (`p->scoperte[riga][colonna] = 1`).
 Quando il client invia un messaggio di movimento `MSG_MOVIMENTO`, il server esegue `muovi_giocatore()`, il cui flusso è rappresentato nello schema:
 
 ```mermaid
@@ -562,8 +560,10 @@ void log_event(const char *msg) {
 
     char log_line[512];
     int n = snprintf(log_line, sizeof(log_line), "[%s] %s\n", ts, msg);
-    if (n > 0)
-        write(log_fd, log_line, n);
+    if (n > 0) {
+        size_t len = (size_t)n < sizeof(log_line) ? (size_t)n : sizeof(log_line) - 1;
+        write(log_fd, log_line, len);
+    }
 
     pthread_mutex_unlock(&log_mutex);
 }
@@ -635,7 +635,7 @@ while (loop) {
 ```
 
 #### Gestione dei Segnali POSIX (`SIGINT`, `SIGTERM`, `SIGPIPE`)
-Sia nel client che nel server viene impostato `signal(SIGPIPE, SIG_IGN)`: questo evita che un tentativo di scrittura su un socket chiuso improvvisamente dal peer generi il segnale `SIGPIPE` con conseguente crash del processo, consentendo alla `write()` di fallire normalmente restituendo `-1` con `errno == EPIPE`.
+Sia nel client che nel server viene impostato `signal(SIGPIPE, SIG_IGN)`: questo evita che un tentativo di scrittura su un socket chiuso improvvisamente dal peer generi il segnale `SIGPIPE` con conseguente crash del processo, consentendo alla `send()` di fallire normalmente restituendo `-1` con `errno == EPIPE`.
 
 Nel client, la chiusura da tastiera (`Ctrl+C` / `SIGINT`) e la terminazione (`SIGTERM`) sono gestite da una variabile atomica e da un apposito handler:
 
