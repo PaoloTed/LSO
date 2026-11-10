@@ -1,10 +1,5 @@
 admin admin
 mario 1234
+paolo lolo
 luigi 1234
-testuser testpass
-paolo paolo
-s s
-pippo pippo
-dasdasddasdddasdasdasddasdasdas sdsdsdsd
-p p
-popo popo
+giovanni gg
