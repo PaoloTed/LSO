@@ -34,7 +34,6 @@ void mostra_comandi() {
   fflush(stdout);
 }
 
-/* Vista locale */
 void mostra_mappa_locale(int riga, int colonna, int punteggio,
                          const char mappa[VISTA_LOCALE][VISTA_LOCALE]) {
 
@@ -55,7 +54,6 @@ void mostra_avviso(const char *msg) {
   }
 }
 
-/* Mappa globale */
 void mostra_mappa_globale(int riga, int colonna,
                           const char mappa[RIGHE_MAPPA][COLONNE_MAPPA]) {
   system("clear");

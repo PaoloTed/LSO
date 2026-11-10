@@ -14,7 +14,7 @@
 #include "display.h"
 #include "protocol.h"
 
-static volatile sig_atomic_t loop = 1;
+static int loop = 1;
 
 static void sigint_handler(int sig) {
   (void)sig;
@@ -92,10 +92,6 @@ int main(int argc, char *argv[]) {
     }
     while ((c = getchar()) != '\n' && c != EOF)
       ;
-    if (c == EOF) {
-      close(sock_fd);
-      return 0;
-    }
     if (scelta < 1 || scelta > 3) {
       printf("Scelta non valida. Riprova.\n");
     }
@@ -369,6 +365,9 @@ int main(int argc, char *argv[]) {
                  msg.nickname, msg.punteggio);
         else
           printf("\n*** Partita terminata. Nessun vincitore. ***\n");
+        printf("\nPremi INVIO per terminare...");
+        fflush(stdout);
+        getchar();
         close(sock_fd);
         return 0;
 
@@ -378,7 +377,6 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  /* Invio disconnessione in uscita */
   printf("\nDisconnessione in corso...\n");
   Messaggio msg_uscita = {0};
   msg_uscita.tipo = MSG_ESCI;

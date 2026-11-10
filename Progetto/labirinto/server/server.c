@@ -102,7 +102,7 @@ static void *client_handler(void *arg) {
     return NULL;
   }
 
-  /* Invio mappa iniziale */
+  /* Invio mappa  iniziale */
   invia_mappa_globale(indice_giocatore);
 
   /* Ciclo comandi client */

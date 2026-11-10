@@ -23,9 +23,6 @@ services:
       - miarete
     depends_on:
       - server
-    command: ["./bin/client", "server", "8080"]
-    stdin_open: true
-    tty: true
 
 networks:
   miarete:

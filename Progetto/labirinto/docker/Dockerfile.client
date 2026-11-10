@@ -10,5 +10,4 @@ COPY client/ ./client/
 
 RUN make bin/client
 
-
 CMD ["./bin/client", "server", "8080"]

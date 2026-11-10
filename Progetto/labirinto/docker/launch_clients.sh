@@ -18,6 +18,6 @@ sleep 1
 TERM_CMD=$(command -v x-terminal-emulator || command -v alacritty || command -v konsole || command -v xterm)
 
 for ((i = 1; i <= num_clients; i++)); do
-    "$TERM_CMD" -e bash -c "docker compose run --rm client" &
+   "$TERM_CMD" -e bash -c "docker compose run -it --rm client" &
 done
 
