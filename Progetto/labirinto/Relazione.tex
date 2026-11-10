@@ -669,10 +669,7 @@ void log_event(const char *msg) {
 
     char log_line[512];
     int n = snprintf(log_line, sizeof(log_line), "[%s] %s\n", ts, msg);
-    if (n > 0) {
-        size_t len = (size_t)n < sizeof(log_line) ? (size_t)n : sizeof(log_line) - 1;
-        write(log_fd, log_line, len);
-    }
+    write(log_fd, log_line, n);
 
     pthread_mutex_unlock(&log_mutex);
 }
@@ -709,7 +706,7 @@ Sia nel client che nel server viene impostato \texttt{signal(SIGPIPE, SIG\_IGN)}
 Nel client, all'ingresso nel ciclo di gioco, viene installato un handler per la chiusura da tastiera (\texttt{Ctrl+C} / \texttt{SIGINT}) e la terminazione (\texttt{SIGTERM}):
 
 \begin{lstlisting}[style=cstyle]
-static volatile sig_atomic_t loop = 1;
+static int loop = 1;
 
 static void sigint_handler(int sig) {
     (void)sig;
@@ -718,6 +715,6 @@ static void sigint_handler(int sig) {
 \end{lstlisting}
 
 
-Quando l'utente preme \texttt{Ctrl+C}, l'handler si limita ad azzerare il flag (\texttt{loop = 0}). Se il segnale interrompe \texttt{select()}, la chiamata restituisce \texttt{-1} con \texttt{errno == EINTR}. Il ciclo \texttt{while (loop)} termina al successivo controllo del flag e il client invia \texttt{MSG\_ESCI} prima di chiudere il socket. Se invece riceve \texttt{MSG\_FINE\_PARTITA}, il client stampa il risultato e chiude direttamente il socket.
+Quando l'utente preme \texttt{Ctrl+C}, l'handler si limita ad azzerare il flag (\texttt{loop = 0}). Se il segnale interrompe \texttt{select()}, la chiamata restituisce \texttt{-1} con \texttt{errno == EINTR}. Il ciclo \texttt{while (loop)} termina al successivo controllo del flag e il client invia \texttt{MSG\_ESCI} prima di chiudere il socket. Se invece riceve \texttt{MSG\_FINE\_PARTITA}, il client stampa il risultato e attende \texttt{INVIO} prima di chiudere il socket.
 
 \end{document}
