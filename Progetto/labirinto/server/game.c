@@ -32,7 +32,7 @@ static void genera_labirinto(Labirinto *m) {
     }
   }
 
-  /* Un'uscita per lato, davanti a una cella interna già libera */
+  /* Un'uscita per lato, davanti a una cella interna già libera dispari */
   int nord = 1 + 2 * (rand() % ((COLONNE_MAPPA - 1) / 2));
   int sud = 1 + 2 * (rand() % ((COLONNE_MAPPA - 1) / 2));
   int ovest = 1 + 2 * (rand() % ((RIGHE_MAPPA - 1) / 2));
@@ -201,7 +201,8 @@ int aggiungi_giocatore(int fd, const char *nickname, const char *password,
     switch (esito_auth) {
     case -4:
       snprintf(log_buf, sizeof(log_buf),
-               "Tentativo di login fallito per '%s': password errata.", nickname);
+               "Tentativo di login fallito per '%s': password errata.",
+               nickname);
       log_event(log_buf);
       break;
     case -5:

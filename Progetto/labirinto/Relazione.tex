@@ -225,7 +225,7 @@ Il codice sorgente è suddiviso in tre moduli principali:
 
 Completano il progetto il file \texttt{Makefile} per la compilazione e la cartella \texttt{docker/} per l'esecuzione in container.
 
-Per compilare il progetto su ambiente Linux (o WSL su Windows), posizionarsi nella cartella radice \texttt{labirinto/} ed eseguire:
+Per compilare il progetto su ambiente Linux, posizionarsi nella cartella radice \texttt{labirinto/} ed eseguire:
 \begin{lstlisting}[style=bashstyle]
 make
 \end{lstlisting}
@@ -404,18 +404,17 @@ La comunicazione tra client e server si basa sullo scambio di strutture C defini
 
 /* Tipi di messaggio */
 #define MSG_ACCESSO         1   /* Login */
-#define MSG_MOVIMENTO       2   /* Movimento */
+#define MSG_MOVIMENTO       2   
 #define MSG_RICHIEDI_LISTA  3   /* Richiesta lista dal client */
-#define MSG_ESCI            4   /* Uscita */
+#define MSG_ESCI            4   
 #define MSG_REGISTRAZIONE   5   /* Registrazione nuovo utente */
 
 #define MSG_OK              10  /* Conferma */
-#define MSG_ERRORE          11  /* Errore */
-#define MSG_MAPPA_LOCALE    12  /* Mappa locale */
-#define MSG_MAPPA_GLOBALE   13  /* Mappa globale */
+#define MSG_ERRORE          11  /
+#define MSG_MAPPA_LOCALE    12  
+#define MSG_MAPPA_GLOBALE   13  
 #define MSG_LISTA           14  /* Elenco giocatori */
-#define MSG_FINE_PARTITA    15  /* Fine partita */
-#define MSG_NOTIFICA        16  /* Notifica */
+#define MSG_FINE_PARTITA    15  
 
 typedef struct {
     char nickname[MAX_NICK];
@@ -444,7 +443,7 @@ L'uso di una struttura unificata a dimensione fissa rende la gestione della rete
 
 \subsection{Codici Operativi e Significato dei Messaggi}
 
-L'header del protocollo definisce \textbf{12 codici messaggio}, suddivisi tra richieste del Client ($1 - 5$) e risposte o notifiche del Server ($10 - 16$):
+L'header del protocollo definisce \textbf{12 codici messaggio}, suddivisi tra richieste del Client ($1 - 5$) e risposte o notifiche del Server ($10 - 15$):
 
 \begin{table}[htbp]
 \centering
@@ -465,7 +464,6 @@ L'header del protocollo definisce \textbf{12 codici messaggio}, suddivisi tra ri
 \texttt{MSG\_MAPPA\_GLOBALE} & 13 & S $\rightarrow$ C & \texttt{riga}, \texttt{colonna}, \texttt{punteggio}, \texttt{mappa\_locale}, \texttt{mappa\_globale} & Mappa intera mascherata (al login e periodica). \\
 \texttt{MSG\_LISTA} & 14 & S $\rightarrow$ C & \texttt{num\_giocatori} + payload & Conteggio utenti seguito dai dati \texttt{InfoGiocatore[]}. \\
 \texttt{MSG\_FINE\_PARTITA} & 15 & S $\rightarrow$ C & \texttt{nickname}, \texttt{punteggio} & Broadcast finale con vincitore e punteggio. \\
-\texttt{MSG\_NOTIFICA} & 16 & S $\rightarrow$ C & \texttt{testo} & Gestito dal client, attualmente mai inviato dal server. \\
 \bottomrule
 \end{tabularx}
 \caption{Codici operativi (Opcode) del protocollo applicativo.}
@@ -549,7 +547,7 @@ int invia_dati(int fd, const void *buf, size_t len) {
 \end{lstlisting}
 
 \subsubsection{Gestione dinamica della lista giocatori (\texttt{MSG\_LISTA})}
-La traccia del progetto specifica che non ci deve essere un limite prefissato al numero di utenti collegabili contemporaneamente. Di conseguenza, la lista dei giocatori non usa un array statico di grandezza fissa dentro \texttt{Messaggio}. In \texttt{game.c} viene usata la struttura di supporto \texttt{MessaggioLista} con \textit{flexible array member}:
+La traccia del progetto specifica che non ci deve essere un limite prefissato al numero di utenti collegabili contemporaneamente. Di conseguenza, la lista dei giocatori non usa un array statico di grandezza fissa dentro \texttt{Messaggio}. In \texttt{game.c} viene usata la struttura di supporto \texttt{MessaggioLista} con \textit{array dinamico}:
 \begin{enumerate}
     \item Il \textbf{Server} conta i giocatori attivi (\texttt{totale}) e alloca un buffer di \texttt{sizeof(MessaggioLista)} più \texttt{totale * sizeof(InfoGiocatore)} byte. Imposta il tipo a \texttt{MSG\_LISTA} e \texttt{num\_giocatori} a \texttt{totale}, popola l'array e trasmette il blocco con una chiamata a \texttt{invia\_dati()} sotto la protezione di \texttt{partita.mutex}. Infine libera il buffer con \texttt{free(ml)}.
     \item Il \textbf{Client}, quando riceve \texttt{MSG\_LISTA} con \texttt{num\_giocatori} positivo, alloca con \texttt{malloc} un buffer per contenere i relativi \texttt{InfoGiocatore} e lo riempie con \texttt{ricevi\_dati()}. Mostra l'elenco dei giocatori se è ancora nel labirinto e libera il buffer con \texttt{free(lista)}.

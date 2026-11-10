@@ -35,7 +35,6 @@
 #define MSG_MAPPA_GLOBALE 13
 #define MSG_LISTA 14 /* Elenco giocatori */
 #define MSG_FINE_PARTITA 15
-#define MSG_NOTIFICA 16
 
 /* Info giocatore per lista */
 typedef struct {

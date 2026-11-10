@@ -208,7 +208,6 @@ Per `MSG_LISTA`, il server invia la struttura `Messaggio` seguita, nello stream 
 | `MSG_MAPPA_GLOBALE` | `13` | Server invia la mappa globale mascherata e la vista locale all'ingresso e periodicamente |
 | `MSG_LISTA` | `14` | Server invia l'elenco dei giocatori e dei punteggi |
 | `MSG_FINE_PARTITA` | `15` | Server notifica la fine della partita e il vincitore |
-| `MSG_NOTIFICA` | `16` | Tipo previsto dal protocollo e gestito dal client. Gli avvisi di gioco del server arrivano nel campo `testo` di `MSG_MAPPA_LOCALE` |
 
 ### Sequenza tipica di comunicazione
 

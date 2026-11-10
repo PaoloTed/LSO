@@ -347,11 +347,6 @@ int main(int argc, char *argv[]) {
         break;
       }
 
-      case MSG_NOTIFICA:
-        printf("\n[server] %s\n", msg.testo);
-        mostra_prompt();
-        break;
-
       case MSG_ERRORE:
         printf("\n[server] Errore: %s\n", msg.testo);
         mostra_prompt();
