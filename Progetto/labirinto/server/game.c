@@ -32,17 +32,15 @@ static void genera_labirinto(Labirinto *m) {
     }
   }
 
-  /* Uscite */
-  m->celle[0][COLONNE_MAPPA / 2] = CELLA_USCITA;
-  m->celle[RIGHE_MAPPA - 1][COLONNE_MAPPA / 2] = CELLA_USCITA;
-  m->celle[RIGHE_MAPPA / 2][0] = CELLA_USCITA;
-  m->celle[RIGHE_MAPPA / 2][COLONNE_MAPPA - 1] = CELLA_USCITA;
-
-  /* Assicura un passaggio interno davanti a ogni uscita */
-  m->celle[1][COLONNE_MAPPA / 2] = CELLA_LIBERA;
-  m->celle[RIGHE_MAPPA - 2][COLONNE_MAPPA / 2] = CELLA_LIBERA;
-  m->celle[RIGHE_MAPPA / 2][1] = CELLA_LIBERA;
-  m->celle[RIGHE_MAPPA / 2][COLONNE_MAPPA - 2] = CELLA_LIBERA;
+  /* Un'uscita per lato, davanti a una cella interna già libera */
+  int nord = 1 + 2 * (rand() % ((COLONNE_MAPPA - 1) / 2));
+  int sud = 1 + 2 * (rand() % ((COLONNE_MAPPA - 1) / 2));
+  int ovest = 1 + 2 * (rand() % ((RIGHE_MAPPA - 1) / 2));
+  int est = 1 + 2 * (rand() % ((RIGHE_MAPPA - 1) / 2));
+  m->celle[0][nord] = CELLA_USCITA;
+  m->celle[RIGHE_MAPPA - 1][sud] = CELLA_USCITA;
+  m->celle[ovest][0] = CELLA_USCITA;
+  m->celle[est][COLONNE_MAPPA - 1] = CELLA_USCITA;
 
   /* Oggetti */
   for (int o = 0; o < 15;) {

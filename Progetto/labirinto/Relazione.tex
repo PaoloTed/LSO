@@ -111,8 +111,52 @@
         \vspace{1cm}
     \end{minipage}
 
+    \par\vspace{1.3cm}
+    \begin{minipage}{255pt}
+        \definecolor{mazebg}{HTML}{F8FAFC}
+        \definecolor{mazeframe}{HTML}{DCE3EC}
+        \definecolor{mazefg}{HTML}{334155}
+        \definecolor{mazeplayer}{HTML}{B42335}
+        \definecolor{mazeitem}{HTML}{9B6900}
+        \definecolor{mazelocal}{HTML}{1C5FA8}
+        % Mappa di genera_labirinto(), seme 2026 su Linux.
+        % P è la posizione di esempio. Le parentesi indicano la vista locale.
+        \begin{lstlisting}[
+            basicstyle=\ttfamily\fontsize{10}{12.3}\selectfont\color{mazefg},
+            backgroundcolor=\color{mazebg},
+            rulecolor=\color{mazeframe},
+            frame=single, framesep=10pt, framerule=0.35pt,
+            numbers=none, breaklines=false,
+            columns=fixed, basewidth=6.2pt,
+            aboveskip=0pt, belowskip=0pt,
+            moredelim={[is][\color{mazelocal}]{[}{]}},
+            literate={P}{{{\color{mazeplayer}P}}}1
+                     {O}{{{\color{mazeitem}O}}}1
+        ]
+###########################E#############
+#.....................O....O............E
+#.###.#####.#####O#.#####.#.#######.###.#
+#...#.....#.....#O#.....#.#.......#...#.#
+#.###.###.#.#.###.#.###.#.###.#.#.#######
+#...#...#.#.#...#.#...#.#...#.#.#.......#
+#.#######.#######.#.#####.#.#.#.#.#.#.###
+E.......#.......#.#.....#.#.#.#.#.#.#...#
+#.###.#######.#.###.###.#.#.#####.#.#.###
+#...#O..O..O#.#...#...#.#[.#...]..#.#.#...#
+#.#.#.###.#.###.#.#.#.#.#[#####]#.###.#.###
+#.#.#...#.#...#.#.#.#.#..[O.P..]#...#.#...#
+#.#####.#####.#.#.#.#.#.#[##.#.]#.#.#.#.#.#
+#..O..#.....#.#.#.#.#.#..[.#.#.]#.#.#.#.#.#
+#.###.#######.#.#.###.#.#.#####.#.#.#.#.#
+#...#.......#.#.#...#.#.#.....#.#.#.#.#.#
+#O#.#.#.#.#.###.#.#####.#.#.#.#####.###.#
+#.#.#.#.#.#...#.#.....#O#O#.#.O...#...#.#
+#.#.###.#.###.#O#.#.#.#.#############.#.#
+#.#...#.#...#.#.#.#.#.#.............#.#O#
+#########################E###############
+\end{lstlisting}
+    \end{minipage}
     \vfill
-    {\small Piattaforma di sviluppo: Linux / POSIX C }
 \end{titlepage}
 
 \newpage
@@ -599,7 +643,7 @@ All'avvio del server, \texttt{genera\_labirinto()} costruisce la mappa di dimens
 \begin{enumerate}
     \item L'intera griglia viene inizializzata con muri \texttt{CELLA\_MURO} (\texttt{\#}) e la matrice degli oggetti viene azzerata.
     \item Si scandiscono tutte le celle con indici dispari $(r, c)$ per $r \in [1, 19]$ e $c \in [1, 39]$: ciascuna viene impostata come libera \texttt{CELLA\_LIBERA} (\texttt{.}). Si apre un passaggio verso l'alto ($r - 1$) o verso sinistra ($c - 1$), scegliendo a caso quando sono possibili entrambe le direzioni. La cella $(1, 1)$ non apre passaggi. Questo approccio assicura che tutte le celle libere siano reciprocamente collegate (nessuna cella resta isolata).
-    \item Vengono collocate \textbf{4 uscite} \texttt{CELLA\_USCITA} (\texttt{E}) al centro dei 4 bordi esterni: $(0, 20)$, $(20, 20)$, $(10, 0)$ e $(10, 40)$, assicurandosi che la cella interna adiacente sia sempre libera.
+    \item Vengono collocate \textbf{4 uscite} \texttt{CELLA\_USCITA} (\texttt{E}), una per bordo. Su ogni bordo si sceglie casualmente una coordinata dispari, così l'uscita è adiacente a una cella interna già libera.
     \item Vengono infine posizionati 15 oggetti raccoglibili (\texttt{O}) in coordinate casuali libere e distinte tra loro.
 \end{enumerate}
 

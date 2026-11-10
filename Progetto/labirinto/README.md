@@ -155,7 +155,7 @@ Durante la partita, conferma ogni comando digitato con Invio.
 2. **Spawn**: il server posiziona ciascun giocatore in una cella interna percorribile, scelta a caso tra quelle senza oggetti. All'inizio il giocatore vede soltanto la propria cella.
 3. **Movimento**: digitando `w`/`a`/`s`/`d` e premendo Invio, il giocatore si sposta. Ad ogni passo valido il server "rivela" una zona attorno a lui (raggio di 2 celle, vista 5×5) che resta permanentemente scoperta.
 4. **Oggetti (`O`)**: entrando in una cella contenente un oggetto, il giocatore lo raccoglie: l'oggetto viene rimosso dalla mappa e il punteggio del giocatore aumenta di 1.
-5. **Uscite (`E`)**: sono presenti **4 uscite** posizionate al centro dei 4 bordi del labirinto (nord, sud, ovest, est).
+5. **Uscite (`E`)**: sono presenti **4 uscite**, una per lato, ciascuna in una posizione casuale adiacente a un corridoio interno.
 6. **Mappa Globale**: periodicamente (ogni T secondi), il server invia a ogni giocatore l'intera mappa mascherata, in cui le celle non ancora esplorate da quel giocatore sono contrassegnate dal simbolo `?`.
 7. **Fine partita e vincitore**: chi raggiunge un'uscita può restare connesso in attesa del risultato oppure disconnettersi con `q`. La partita termina allo scadere del timeout oppure quando, dopo un'uscita dal labirinto o una disconnessione, nessun giocatore connesso è ancora nel labirinto.
    - Se un solo giocatore ha raggiunto un'uscita, vince lui.
